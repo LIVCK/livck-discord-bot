@@ -1,6 +1,6 @@
 import StatuspageService from "../services/statuspage.js";
 import models from "../models/index.js";
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, Colors } from 'discord.js';
 import LIVCK from "../api/livck.js";
 import { htmlToText } from "html-to-text";
 import { truncate } from "../util/String.js";
@@ -22,30 +22,24 @@ export const handleAlerts = async (statuspageId, client) => {
         const alerts = statuspageService.alerts;
 
         for (const newsItem of alerts) {
+            let color = Colors.Blurple;
+            if (newsItem.type === 'INCIDENT') {
+                color = Colors.Red;
+            } else if (newsItem.scheduled_for) {
+                color = Colors.Yellow;
+            }
+
             const embed = new EmbedBuilder()
-                .setTitle(`${newsItem.title}`)
+                .setColor(color)
+                .setTitle(newsItem.title)
                 .setDescription(truncate(htmlToText(newsItem.message), 500))
                 .setURL(newsItem.link)
                 .setTimestamp(new Date(newsItem.created_at))
                 .setFooter({ text: statuspageRecord.name });
 
-            if (newsItem.alerts.length > 0) {
-                const alertDescriptions = newsItem.alerts.map(
-                    (alert) => `**${alert.title}**\n${htmlToText(alert.message)}\n[Read More](${alert.link})`
-                );
-                embed.addFields([
-                    {
-                        name: "Updates",
-                        value: truncate(alertDescriptions.join("\n\n"), 250),
-                    }
-                ]);
-            }
-
             for (const subscription of statuspageRecord.Subscriptions) {
-                if (!subscription.eventTypes.NEWS)
-                    continue;
+                if (!subscription.eventTypes.NEWS) continue;
 
-                // Prevent sending news items that were created before the subscription was created - only send new news items
                 if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) {
                     continue;
                 }
@@ -56,33 +50,76 @@ export const handleAlerts = async (statuspageId, client) => {
                     continue;
                 }
 
-                const existingMessage = await models.Message.findOne({
+                let mainMessage = await models.Message.findOne({
                     where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
                 });
 
-                if (existingMessage) {
+                if (mainMessage) {
                     try {
-                        const message = await channel.messages.fetch(existingMessage.messageId);
-                        await message.edit({ embeds: [embed] });
+                        mainMessage = await channel.messages.fetch(mainMessage.messageId);
+                        await mainMessage.edit({ embeds: [embed] });
                     } catch (error) {
-                        if (error.code === 10008) { // Message not found
+                        if (error.code === 10008) {
                             await models.Message.destroy({
                                 where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
                             });
+                            mainMessage = null;
                         }
                     }
                 } else {
-                    const message = await channel.send({ embeds: [embed] });
+                    mainMessage = await channel.send({ embeds: [embed] });
                     await models.Message.create({
                         subscriptionId: subscription.id,
-                        messageId: message.id,
+                        messageId: mainMessage.id,
                         category: 'NEWS',
                         serviceId: newsItem.id,
                     });
                 }
+
+                for (const subAlert of newsItem.alerts) {
+                    const existingSubAlertMessage = await models.Message.findOne({
+                        where: { subscriptionId: subscription.id, serviceId: subAlert.id, category: 'ALERT' },
+                    });
+
+                    const subAlertEmbed = new EmbedBuilder()
+                        .setColor(color)
+                        .setTitle(subAlert.title)
+                        .setDescription(truncate(htmlToText(subAlert.message), 500))
+                        .setURL(newsItem.link)
+                        .setTimestamp(new Date(subAlert.created_at))
+                        .setFooter({ text: statuspageRecord.name });
+
+                    const button = new ButtonBuilder()
+                        .setLabel('Zum Update')
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(newsItem.link);
+
+                    const row = new ActionRowBuilder().addComponents(button);
+
+                    if (existingSubAlertMessage) {
+                        try {
+                            const message = await channel.messages.fetch(existingSubAlertMessage.messageId);
+                            await message.edit({ embeds: [subAlertEmbed], components: [row] });
+                        } catch (error) {
+                            if (error.code === 10008) {
+                                await models.Message.destroy({
+                                    where: { subscriptionId: subscription.id, serviceId: subAlert.id, category: 'ALERT' },
+                                });
+                            }
+                        }
+                    } else {
+                        const subAlertMessage = await mainMessage.reply({ embeds: [subAlertEmbed], components: [row] });
+                        await models.Message.create({
+                            subscriptionId: subscription.id,
+                            messageId: subAlertMessage.id,
+                            category: 'ALERT',
+                            serviceId: subAlert.id,
+                        });
+                    }
+                }
             }
         }
     } catch (error) {
-        console.error(`Error processing news updates for statuspage ${statuspageId}: ${error.message}`, error);
+        console.error(`Error processing alerts for statuspage ${statuspageId}: ${error.message}`, error);
     }
 };
