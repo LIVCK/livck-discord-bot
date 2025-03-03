@@ -10,8 +10,8 @@ dotenv.config();
 const client = await bot(models)
 
 const BATCH_SIZE = 100;
-const LOCK_TTL = 30;
-const INTERVAL = 30 * 1000;
+const LOCK_TTL = 5;
+const INTERVAL = 15 * 1000;
 
 const scheduleStatusPageUpdates = async (client) => {
     try {
@@ -45,13 +45,27 @@ const scheduleStatusPageUpdates = async (client) => {
 };
 
 const startUpdateLoop = async (client) => {
-    try {
-        await scheduleStatusPageUpdates(client);
-    } catch (error) {
-        console.error("Error in update loop", error);
-    } finally {
-        setTimeout(() => startUpdateLoop(client), INTERVAL);
+    while (true) {
+        const startTime = Date.now();
+
+        try {
+            await scheduleStatusPageUpdates(client);
+        } catch (error) {
+            console.error("Error in update loop", error);
+        }
+
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(INTERVAL - elapsed, 0);
+
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
+    // try {
+    //     await scheduleStatusPageUpdates(client);
+    // } catch (error) {
+    //     console.error("Error in update loop", error);
+    // } finally {
+    //     setTimeout(() => startUpdateLoop(client), INTERVAL);
+    // }
 };
 
 startUpdateLoop(client);
