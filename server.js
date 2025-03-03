@@ -36,7 +36,7 @@ const scheduleStatusPageUpdates = async (client) => {
                     handleAlerts(statuspage.id, client)
                 ]);
 
-                await cache.set(cacheKey, 'true', 'EX', LOCK_TTL);
+                await cacheKey.set(cacheKey, 'true', { EX: LOCK_TTL });
             }));
         }
     } catch (error) {
@@ -45,27 +45,13 @@ const scheduleStatusPageUpdates = async (client) => {
 };
 
 const startUpdateLoop = async (client) => {
-    while (true) {
-        const startTime = Date.now();
-
-        try {
-            await scheduleStatusPageUpdates(client);
-        } catch (error) {
-            console.error("Error in update loop", error);
-        }
-
-        const elapsed = Date.now() - startTime;
-        const delay = Math.max(INTERVAL - elapsed, 0);
-
-        await new Promise(resolve => setTimeout(resolve, delay));
+    try {
+        await scheduleStatusPageUpdates(client);
+    } catch (error) {
+        console.error("Error in update loop", error);
+    } finally {
+        setTimeout(() => startUpdateLoop(client), INTERVAL);
     }
-    // try {
-    //     await scheduleStatusPageUpdates(client);
-    // } catch (error) {
-    //     console.error("Error in update loop", error);
-    // } finally {
-    //     setTimeout(() => startUpdateLoop(client), INTERVAL);
-    // }
 };
 
 startUpdateLoop(client);
