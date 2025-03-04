@@ -4,6 +4,6 @@ export default (models) => ({
         description: 'Replies with Pong!',
     },
     async execute(interaction, client) {
-        await interaction.reply('Hey there! I am alive! 🎉');
+        await interaction.reply({ content: 'Hey there! I am alive! 🎉', ephemeral: true });
     },
 });
