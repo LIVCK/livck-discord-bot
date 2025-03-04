@@ -34,4 +34,5 @@ export default class Statuspage {
     catchErrors(error) {
         console.error('Error:', error);
     }
+
 }

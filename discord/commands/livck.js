@@ -1,5 +1,6 @@
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
+import LIVCK from "../../api/livck.js";
 
 export default (models) => ({
     data: {
@@ -19,9 +20,9 @@ export default (models) => ({
                         description: 'Select event types to subscribe to',
                         required: true,
                         choices: [
-                            { name: 'BOTH', value: 'All' },
-                            { name: 'STATUS', value: 'Only Status' },
-                            { name: 'NEWS', value: 'Only News' },
+                            { name: 'All', value: 'ALL' },
+                            { name: 'Status', value: 'STATUS' },
+                            { name: 'News', value: 'NEWS' },
                         ],
                     },
                 ],
@@ -65,6 +66,15 @@ export default (models) => ({
 
                 try {
                     url = normalizeUrl(url, true);
+
+                    let livck = new LIVCK(url);
+                    if (!await livck.ensureIsLIVCK()) {
+                        await interaction.reply({
+                            content: 'The URL provided does not appear to be a valid LIVCK status page.',
+                            ephemeral: true,
+                        });
+                        return;
+                    }
 
                     let statuspage = await models.Statuspage.findOne({ where: { url } });
                     if (!statuspage) {

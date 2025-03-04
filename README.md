@@ -2,6 +2,12 @@
 
 The bot can soon be added to your own discord server, it is currently still under development. The bot is intended to provide information about the status of your services and to inform you about news.
 
+IMPORTANT NOTE:
+- Private Page Feature currently not supported
+- Cloudflare Bot Shield / Cloudflare Tunnel not supported
+- Design Layout only in German / Command Output in English (Translation Support coming soon)
+- No customizations possible (coming soon)
+
 # Sneak Peek
 
 ## Status

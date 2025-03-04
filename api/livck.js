@@ -26,7 +26,17 @@ export default class LIVCK {
     }
 
     async get(path, query = {}, apiVersion = this.apiVersion) {
-        return await this.request('GET', path, {}, query, apiVersion);
+        try {
+            return await this.request('GET', path, {}, query, apiVersion);
+        } catch (error) {
+            console.error('Error:', error, { path, query, apiVersion, statuspage: this.baseURL });
+            return new Promise((resolve) => resolve({data: []}));
+        }
+    }
+
+    async ensureIsLIVCK() {
+        const response = await fetch(this.baseURL).catch((error) => console.error('Error [ensureIsLIVCK]:', error));
+        return response.headers.has('lvk-version');
     }
 
 }

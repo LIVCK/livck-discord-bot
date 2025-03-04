@@ -27,9 +27,9 @@ const scheduleStatusPageUpdates = async (client) => {
             await Promise.allSettled(batch.map(async (statuspage) => {
                 let cacheKey = `dc-bot:statuspage:${statuspage.id}`;
                 let cacheValue = await cache.get(cacheKey) || false;
-                // if (cacheValue) {
-                //     return;
-                // }
+                if (cacheValue) {
+                    return;
+                }
 
                 await Promise.all([
                     handleStatusPage(statuspage.id, client),
