@@ -37,6 +37,13 @@ export const handleAlerts = async (statuspageId, client) => {
                 .setTimestamp(new Date(newsItem.created_at))
                 .setFooter({ text: statuspageRecord.name });
 
+            const button = new ButtonBuilder()
+                .setLabel('Ansehen')
+                .setStyle(ButtonStyle.Link)
+                .setURL(newsItem.link);
+
+            const row = new ActionRowBuilder().addComponents(button);
+
             for (const subscription of statuspageRecord.Subscriptions) {
                 if (!subscription.eventTypes.NEWS) continue;
 
@@ -57,7 +64,7 @@ export const handleAlerts = async (statuspageId, client) => {
                 if (mainMessage) {
                     try {
                         mainMessage = await channel.messages.fetch(mainMessage.messageId);
-                        await mainMessage.edit({ embeds: [embed] });
+                        await mainMessage.edit({ embeds: [embed], components: [row] });
                     } catch (error) {
                         if (error.code === 10008) {
                             await models.Message.destroy({
@@ -67,7 +74,7 @@ export const handleAlerts = async (statuspageId, client) => {
                         }
                     }
                 } else {
-                    mainMessage = await channel.send({ embeds: [embed] });
+                    mainMessage = await channel.send({ embeds: [embed], components: [row] });
                     await models.Message.create({
                         subscriptionId: subscription.id,
                         messageId: mainMessage.id,
