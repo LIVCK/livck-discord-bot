@@ -21,7 +21,15 @@ export const handleAlerts = async (statuspageId, client) => {
 
         const alerts = statuspageService.alerts;
 
-        await Promise.all(alerts.map(async (newsItem) => {
+        const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        const recentAlerts = alerts.filter(newsItem => {
+            const alertAge = now - new Date(newsItem.created_at).getTime();
+            return alertAge <= THREE_DAYS_MS;
+        });
+
+        await Promise.all(recentAlerts.map(async (newsItem) => {
             let color = Colors.Blurple;
             if (newsItem.type === 'INCIDENT') {
                 color = Colors.Red;
@@ -45,17 +53,18 @@ export const handleAlerts = async (statuspageId, client) => {
             const row = new ActionRowBuilder().addComponents(button);
 
             await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
-                if (!subscription.eventTypes.NEWS) return;
+                try {
+                    if (!subscription.eventTypes.NEWS) return;
 
-                if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) {
-                    return;
-                }
+                    if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) {
+                        return;
+                    }
 
-                const channel = await client.channels.fetch(subscription.channelId);
+                    const channel = await client.channels.fetch(subscription.channelId);
 
-                if (!channel) {
-                    return;
-                }
+                    if (!channel) {
+                        return;
+                    }
 
                 let mainMessage = await models.Message.findOne({
                     where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
@@ -124,6 +133,17 @@ export const handleAlerts = async (statuspageId, client) => {
                             category: 'ALERT',
                             serviceId: subAlert.id,
                         });
+                    }
+                }
+                } catch (error) {
+                    if (error.code === 10003) {
+                        console.warn(`[Discord] Unknown channel ${subscription.channelId}, deleting subscription ${subscription.id}`);
+                        await models.Subscription.destroy({ where: { id: subscription.id } });
+                    } else if (error.code === 50001) {
+                        console.warn(`[Discord] Missing access to channel ${subscription.channelId}, deleting subscription ${subscription.id}`);
+                        await models.Subscription.destroy({ where: { id: subscription.id } });
+                    } else {
+                        throw error;
                     }
                 }
             }));

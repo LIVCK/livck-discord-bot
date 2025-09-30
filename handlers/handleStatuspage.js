@@ -20,37 +20,49 @@ export const handleStatusPage = async (statuspageId, client) => {
         const embed = generateEmbed(statuspageService, statuspageRecord);
 
         await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
-            if (!subscription.eventTypes.STATUS)
-                return;
+            try {
+                if (!subscription.eventTypes.STATUS)
+                    return;
 
-            const channel = await client.channels.fetch(subscription.channelId);
+                const channel = await client.channels.fetch(subscription.channelId);
 
-            if (!channel) {
-                return;
-            }
-
-            const existingMessage = await models.Message.findOne({
-                where: { subscriptionId: subscription.id, category: 'STATUS' },
-            });
-
-            if (existingMessage) {
-                try {
-                    const message = await channel.messages.fetch(existingMessage.messageId);
-                    await message.edit({ embeds: [embed] });
-                } catch (error) {
-                    if (error.code === 10008) {
-                        await models.Message.destroy({
-                            where: { subscriptionId: subscription.id, category: 'STATUS' },
-                        });
-                    }
+                if (!channel) {
+                    return;
                 }
-            } else {
-                const message = await channel.send({ embeds: [embed] });
-                await models.Message.create({
-                    subscriptionId: subscription.id,
-                    messageId: message.id,
-                    category: 'STATUS',
+
+                const existingMessage = await models.Message.findOne({
+                    where: { subscriptionId: subscription.id, category: 'STATUS' },
                 });
+
+                if (existingMessage) {
+                    try {
+                        const message = await channel.messages.fetch(existingMessage.messageId);
+                        await message.edit({ embeds: [embed] });
+                    } catch (error) {
+                        if (error.code === 10008) {
+                            await models.Message.destroy({
+                                where: { subscriptionId: subscription.id, category: 'STATUS' },
+                            });
+                        }
+                    }
+                } else {
+                    const message = await channel.send({ embeds: [embed] });
+                    await models.Message.create({
+                        subscriptionId: subscription.id,
+                        messageId: message.id,
+                        category: 'STATUS',
+                    });
+                }
+            } catch (error) {
+                if (error.code === 10003) {
+                    console.warn(`[Discord] Unknown channel ${subscription.channelId}, deleting subscription ${subscription.id}`);
+                    await models.Subscription.destroy({ where: { id: subscription.id } });
+                } else if (error.code === 50001) {
+                    console.warn(`[Discord] Missing access to channel ${subscription.channelId}, deleting subscription ${subscription.id}`);
+                    await models.Subscription.destroy({ where: { id: subscription.id } });
+                } else {
+                    throw error;
+                }
             }
         }));
     } catch (error) {

@@ -41,8 +41,16 @@ export default class LIVCK {
         try {
             return await this.request('GET', path, {}, query, apiVersion);
         } catch (error) {
-            console.error('Error:', error, { path, query, apiVersion, statuspage: this.baseURL });
-            return new Promise((resolve) => resolve({data: []}));
+            if (error.message && error.message.includes('HTTP 403')) {
+                console.warn(`[LIVCK] Access denied (403) for ${this.baseURL}: ${path}`);
+            } else if (error.cause?.code === 'UND_ERR_CONNECT_TIMEOUT') {
+                console.warn(`[LIVCK] Connection timeout for ${this.baseURL}: ${path}`);
+            } else if (error.message && error.message.includes('fetch failed')) {
+                console.warn(`[LIVCK] Network error for ${this.baseURL}: ${path}`);
+            } else {
+                console.error('Error:', error, { path, query, apiVersion, statuspage: this.baseURL });
+            }
+            return { data: [] };
         }
     }
 
