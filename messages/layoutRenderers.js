@@ -54,25 +54,35 @@ const getCategoryStatus = (monitors) => {
 
 /**
  * Calculate overall status across all categories
+ * RED: All monitors down
+ * YELLOW: Some monitors down (partial outage)
+ * GREEN: All monitors up
+ *
  * @param {Array} categories - Array of categories with monitors
  * @returns {string} Overall status (AVAILABLE, UNAVAILABLE, or DEGRADED)
  */
 const getOverallStatus = (categories) => {
     if (!categories || categories.length === 0) return 'AVAILABLE';
 
-    const categoryStatuses = categories.map(cat => {
+    // Collect all monitors across all categories
+    const allMonitors = categories.reduce((acc, cat) => {
         const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
-        return getCategoryStatus(monitors);
-    });
+        return acc.concat(monitors);
+    }, []);
 
-    const hasUnavailable = categoryStatuses.includes('UNAVAILABLE');
-    const hasDegraded = categoryStatuses.includes('DEGRADED');
-    const allAvailable = categoryStatuses.every(status => status === 'AVAILABLE');
+    if (allMonitors.length === 0) return 'AVAILABLE';
 
-    if (allAvailable) return 'AVAILABLE';
-    if (hasUnavailable) return 'UNAVAILABLE';
-    if (hasDegraded) return 'DEGRADED';
-    return 'AVAILABLE';
+    const availableCount = allMonitors.filter(m => m.state === 'AVAILABLE').length;
+    const totalCount = allMonitors.length;
+
+    // GREEN: All monitors operational
+    if (availableCount === totalCount) return 'AVAILABLE';
+
+    // RED: All monitors down
+    if (availableCount === 0) return 'UNAVAILABLE';
+
+    // YELLOW: Partial outage (some down, some up)
+    return 'DEGRADED';
 };
 
 /**
@@ -207,23 +217,33 @@ export const renderCompactLayout = (statuspageService, statuspage, locale = 'de'
             statusText += `\n┗━ ${statusDot} ${statusLabel}`;
         }
 
-        // Always inline for compact, max 2 per row
-        const shouldBeInline = (index % 2 === 0 && index < categories.length - 1) || (index % 2 === 1);
-
         return {
             name: category.name || translation.trans('messages.status.unknown_category'),
             value: statusText || translation.trans('messages.status.no_services'),
-            inline: shouldBeInline
+            inline: true
         };
     });
 
+    // Fill incomplete rows with empty fields (3 per row)
+    const remainder = fields.length % 3;
+    if (remainder !== 0) {
+        const emptyFieldsNeeded = 3 - remainder;
+        for (let i = 0; i < emptyFieldsNeeded; i++) {
+            fields.push({
+                name: '\u200B', // Zero-width space
+                value: '\u200B',
+                inline: true
+            });
+        }
+    }
+
     const embed = new EmbedBuilder()
-        .setTitle(statuspage.name)
+        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
         .setColor(embedColor)
         .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
-        .setFooter({ text: translation.trans('messages.status.compact_footer') });
+        .setFooter({ text: statuspage.name });
 
     return [{ embed, type: 'single' }];
 };
@@ -283,12 +303,13 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         statusSummary = `${overallStatusDot} ${translation.trans('messages.status.partial_degradation')}`;
     }
 
-    // Create description with clean layout
-    let description = `${statusSummary}\n\`\`\`\n${totalAvailable}/${totalMonitors} ${translation.trans('messages.status.services_online')}`;
+    // Create description with clean status summary
+    let description = `${statusSummary}`;
     if (totalUnavailable > 0) {
-        description += ` • ${totalUnavailable} ${translation.trans('messages.status.down')}`;
+        description += `\n\`\`\`diff\n- ${totalUnavailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.down')}\n+ ${totalAvailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
+    } else {
+        description += `\n\`\`\`diff\n+ ${totalAvailable}/${totalMonitors} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
     }
-    description += `\n\`\`\``;
 
     // Build fields for each category with cleaner layout
     const fields = categories.map((category) => {
@@ -317,28 +338,41 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         };
     });
 
+    // Fill incomplete rows with empty fields (3 per row)
+    const remainder = fields.length % 3;
+    if (remainder !== 0) {
+        const emptyFieldsNeeded = 3 - remainder;
+        for (let i = 0; i < emptyFieldsNeeded; i++) {
+            fields.push({
+                name: '\u200B', // Zero-width space
+                value: '\u200B',
+                inline: true
+            });
+        }
+    }
+
     const embed = new EmbedBuilder()
-        .setTitle(statuspage.name)
+        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
         .setDescription(description)
         .setColor(embedColor)
         .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
-        .setFooter({ text: translation.trans('messages.status.overview_footer') });
+        .setFooter({ text: statuspage.name });
 
     return [{ embed, type: 'single' }];
 };
 
 /**
- * Embed List Layout - Creates separate embeds for each category in 2-column grid
- * Maximum of 10 embeds due to Discord limitations
+ * Tree Layout - Shows categories and services in a hierarchical tree structure
+ * Uses visual separators between categories for better readability
  *
  * @param {Object} statuspageService - Statuspage service instance
  * @param {Object} statuspage - Statuspage record
  * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with multiple embeds
+ * @returns {Array<Object>} Array with single embed
  */
-export const renderEmbedListLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderTreeLayout = (statuspageService, statuspage, locale = 'de') => {
     translation.setLocale(locale);
 
     const categories = statuspageService.categories || [];
@@ -351,62 +385,110 @@ export const renderEmbedListLayout = (statuspageService, statuspage, locale = 'd
                 .setURL(statuspage.url)
                 .setTimestamp(new Date())
                 .setFooter({ text: statuspage.name }),
-            type: 'multiple'
+            type: 'single'
         }];
     }
 
-    // Discord allows max 10 embeds per message
-    const limitedCategories = categories.slice(0, 10);
+    // Calculate overall status
+    const overallStatus = getOverallStatus(categories);
+    const embedColor = getEmbedColor(overallStatus);
 
-    const embeds = limitedCategories.map((category, index) => {
+    // Build tree as description with better formatting
+    let description = '';
+
+    categories.forEach((category, catIndex) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
         const categoryName = category.name || translation.trans('messages.status.unknown_category');
         const categoryStatus = getCategoryStatus(monitors);
-        const statusEmoji = getCategoryStatusEmoji(categoryStatus);
-        const embedColor = getEmbedColor(categoryStatus);
+        const categoryDot = getStatusDot(categoryStatus);
 
-        // Build fields in 2-column grid
-        const fields = monitors.map((monitor, monitorIndex) => {
-            const emoji = getStatusEmoji(monitor.state);
-            const shouldBeInline = (monitorIndex % 2 === 0 && monitorIndex < monitors.length - 1) || (monitorIndex % 2 === 1);
+        // Add category header with bold text
+        description += `**${categoryDot} ${categoryName}**\n`;
 
-            return {
-                name: monitor.name,
-                value: `${emoji} ${monitor.state === 'AVAILABLE' ? translation.trans('messages.status.operational') : translation.trans('messages.status.down')}`,
-                inline: shouldBeInline
-            };
+        // Add monitors under category with indentation
+        monitors.forEach((monitor, monIndex) => {
+            const monitorDot = getStatusDot(monitor.state === 'AVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE');
+            description += `    ${monitorDot} ${monitor.name}\n`;
         });
 
-        // If no monitors, show a message
-        if (fields.length === 0) {
-            fields.push({
-                name: '\u200B',
-                value: translation.trans('messages.status.no_services'),
-                inline: false
-            });
+        // Add visual separator between categories (except last one)
+        if (catIndex < categories.length - 1) {
+            description += '\n';
         }
-
-        // Count stats for title
-        const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
-        const totalCount = monitors.length;
-
-        const embed = new EmbedBuilder()
-            .setTitle(`${statusEmoji} ${categoryName}`)
-            .setColor(embedColor)
-            .setDescription(`**${availableCount}/${totalCount}** ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}`)
-            .setFields(fields)
-            .setURL(statuspage.url);
-
-        // Add timestamp and footer on first embed only
-        if (index === 0) {
-            embed.setTimestamp(new Date());
-            embed.setFooter({ text: statuspage.name });
-        }
-
-        return { embed, type: 'multiple' };
     });
 
-    return embeds;
+    const embed = new EmbedBuilder()
+        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
+        .setDescription(description)
+        .setColor(embedColor)
+        .setURL(statuspage.url)
+        .setTimestamp(new Date())
+        .setFooter({ text: statuspage.name });
+
+    return [{ embed, type: 'single' }];
+};
+
+/**
+ * Minimal Layout - Ultra-clean display with only status dots and names
+ * No counts, no extra info - just pure status overview
+ *
+ * @param {Object} statuspageService - Statuspage service instance
+ * @param {Object} statuspage - Statuspage record
+ * @param {string} locale - User's locale
+ * @returns {Array<Object>} Array with single embed
+ */
+export const renderMinimalLayout = (statuspageService, statuspage, locale = 'de') => {
+    translation.setLocale(locale);
+
+    const categories = statuspageService.categories || [];
+
+    if (categories.length === 0) {
+        return [{
+            embed: new EmbedBuilder()
+                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
+                .setDescription(translation.trans('messages.status.no_categories'))
+                .setURL(statuspage.url)
+                .setTimestamp(new Date())
+                .setFooter({ text: statuspage.name }),
+            type: 'single'
+        }];
+    }
+
+    // Calculate overall status
+    const overallStatus = getOverallStatus(categories);
+    const embedColor = getEmbedColor(overallStatus);
+
+    // Build description with minimal formatting
+    let description = '';
+
+    categories.forEach((category, catIndex) => {
+        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
+        const categoryName = category.name || translation.trans('messages.status.unknown_category');
+
+        // Category name without status indicator
+        description += `**${categoryName}**\n`;
+
+        // Just monitor name with dot - nothing else
+        monitors.forEach((monitor) => {
+            const monitorDot = getStatusDot(monitor.state === 'AVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE');
+            description += `${monitorDot} ${monitor.name}\n`;
+        });
+
+        // Single line break between categories
+        if (catIndex < categories.length - 1) {
+            description += '\n';
+        }
+    });
+
+    const embed = new EmbedBuilder()
+        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
+        .setDescription(description)
+        .setColor(embedColor)
+        .setURL(statuspage.url)
+        .setTimestamp(new Date())
+        .setFooter({ text: statuspage.name });
+
+    return [{ embed, type: 'single' }];
 };
 
 /**
@@ -424,8 +506,10 @@ export const getLayoutRenderer = (layoutKey) => {
             return renderCompactLayout;
         case 'OVERVIEW':
             return renderOverviewLayout;
-        case 'EMBED_LIST':
-            return renderEmbedListLayout;
+        case 'TREE':
+            return renderTreeLayout;
+        case 'MINIMAL':
+            return renderMinimalLayout;
         default:
             return renderDetailedLayout; // Fallback to default
     }
@@ -435,7 +519,8 @@ export default {
     renderDetailedLayout,
     renderCompactLayout,
     renderOverviewLayout,
-    renderEmbedListLayout,
+    renderTreeLayout,
+    renderMinimalLayout,
     getLayoutRenderer,
     getStatusEmoji
 };

@@ -50,20 +50,24 @@
       },
       "layouts": {
         "detailed": {
-          "name": "📋 Detailliert",
-          "description": "Alle Monitore mit Status-Indikatoren"
+          "name": "Detailliert",
+          "description": "Vollständige Liste aller Monitore"
         },
         "compact": {
-          "name": "📑 Kompakt",
-          "description": "Kategorien mit Status-Zählern (inline)"
+          "name": "Kompakt",
+          "description": "Rasteransicht mit Status-Zählern"
         },
         "overview": {
-          "name": "📊 Übersicht",
-          "description": "Nur Kategorien mit Gesamt-Status"
+          "name": "Übersicht",
+          "description": "Zusammenfassung mit Kennzahlen"
         },
-        "embed_list": {
-          "name": "📚 Embed-Liste",
-          "description": "Separate Embeds pro Kategorie"
+        "tree": {
+          "name": "Baum",
+          "description": "Hierarchische Kategoriestruktur"
+        },
+        "minimal": {
+          "name": "Minimal",
+          "description": "Nur Status-Indikatoren"
         }
       },
       "subscribe": {
@@ -76,12 +80,12 @@
         "modal_url_label": "Status-Seiten URL",
         "modal_events_label": "Events (all/status/news)",
         "modal_locale_label": "Sprache (de/en)",
-        "modal_layout_label": "Layout (detailed/compact/overview/embed_list)",
+        "modal_layout_label": "Layout (detailed/compact/overview/tree/minimal)",
         "select_channel": "Channel auswählen",
         "select_events": "Event-Typen auswählen",
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
-        "select_channel_final": "✅ Wähle nun den Channel für **:url**"
+        "select_channel_final": "Wähle nun den Channel für **:url**"
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
@@ -91,46 +95,46 @@
         "missing_params": "Bitte gib eine URL oder einen Channel an, um das Abonnement zu entfernen."
       },
       "edit": {
-        "select_prompt": "📝 Wähle ein Abonnement zum Bearbeiten (:count verfügbar):",
+        "select_prompt": "Wähle ein Abonnement zum Bearbeiten (:count verfügbar):",
         "select_placeholder": "Abonnement auswählen...",
-        "editing": "⚙️ Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
-        "editing_full": "⚙️ Bearbeite **:name** in <#:channelId>\nÄndere Channel, Events oder Sprache:",
-        "updated": "✅ **:field** aktualisiert!\n\n⚙️ Bearbeite **:name** in <#:channelId>\nWähle weitere Änderungen oder klicke Fertig:",
+        "editing": "Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
+        "editing_full": "Bearbeite **:name** in <#:channelId>\nÄndere Channel, Events oder Sprache:",
+        "updated": "**:field** aktualisiert!\n\nBearbeite **:name** in <#:channelId>\nWähle weitere Änderungen oder klicke Fertig:",
         "done_button": "Fertig",
-        "completed": "✅ Bearbeitung abgeschlossen!",
+        "completed": "Bearbeitung abgeschlossen!",
         "select_channel": "Channel auswählen...",
         "manage_links_button": "Links verwalten",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
       },
       "custom_links": {
-        "title": "🔗 Custom Links für **:name**",
-        "add_button": "➕ Link hinzufügen",
-        "back_button": "⬅️ Zurück",
+        "title": "Custom Links für **:name**",
+        "add_button": "Link hinzufügen",
+        "back_button": "Zurück",
         "modal_title_add": "Custom Link hinzufügen",
         "modal_title_edit": "Custom Link bearbeiten",
         "modal_label_label": "Button Text (max 80 Zeichen)",
         "modal_label_url": "URL (muss mit https:// beginnen)",
         "modal_label_emoji": "Emoji (optional, z.B. 🔗)",
         "no_links": "Keine Custom Links vorhanden.",
-        "list_item": "🔗 **:label**",
+        "list_item": "**:label**",
         "select_placeholder": "Link auswählen...",
-        "link_details": "🔗 Link Details für **:name**",
+        "link_details": "Link Details für **:name**",
         "position": "Position",
         "edit_button": "Bearbeiten",
         "delete_button": "Löschen",
         "move_up": "Nach oben",
         "move_down": "Nach unten",
-        "added": "✅ Link erfolgreich hinzugefügt!",
-        "updated": "✅ Link erfolgreich aktualisiert!",
-        "deleted": "✅ Link erfolgreich gelöscht!",
-        "error": "❌ Ein Fehler ist aufgetreten.",
-        "invalid_url": "❌ Ungültige URL.",
-        "max_links": "❌ Maximum von 25 Links erreicht."
+        "added": "Link erfolgreich hinzugefügt!",
+        "updated": "Link erfolgreich aktualisiert!",
+        "deleted": "Link erfolgreich gelöscht!",
+        "error": "Ein Fehler ist aufgetreten.",
+        "invalid_url": "Ungültige URL.",
+        "max_links": "Maximum von 25 Links erreicht."
       },
       "list": {
-        "title": "📋 Deine Abonnements",
+        "title": "Deine Abonnements",
         "no_subscriptions": "Keine Abonnements für diesen Server gefunden.",
-        "header": "📋 **Deine Abonnements** • :count Abos • :channels Channels • :pages Status-Seiten",
+        "header": "**Deine Abonnements** • :count Abos • :channels Channels • :pages Status-Seiten",
         "channel_label": "Channel",
         "language_label": "Sprache",
         "layout_label": "Layout",
@@ -139,21 +143,21 @@
         "delete_button": "Löschen",
         "open_button": "Öffnen",
         "unsubscribe_button": "Abmelden",
-        "edit_prompt": "⚙️ Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
+        "edit_prompt": "Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
         "edit_select_events": "Event-Typen auswählen",
         "edit_select_locale": "Sprache auswählen",
-        "subscription_not_found": "❌ Abonnement nicht gefunden.",
+        "subscription_not_found": "Abonnement nicht gefunden.",
         "edit_hint": "Nutze den Button unten oder `/livck edit` um Abonnements zu bearbeiten",
         "edit_action": "Bearbeiten",
-        "showing_limited": "⚠️ Zeige :shown von :total Abonnements (Discord Limit)",
-        "refreshed": "✅ Liste aktualisiert!",
+        "showing_limited": "Zeige :shown von :total Abonnements (Discord Limit)",
+        "refreshed": "Liste aktualisiert!",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
       },
       "resume": {
-        "success": "✅ Status-Seite **:url** wurde erfolgreich fortgesetzt. Grund für Pause war: :reason",
-        "failed": "❌ Status-Seite **:url** konnte nicht fortgesetzt werden: :message",
-        "not_found": "❌ Status-Seite **:url** wurde nicht gefunden oder du hast keine Abonnements dafür.",
-        "not_paused": "ℹ️ Status-Seite **:url** ist nicht pausiert.",
+        "success": "Status-Seite **:url** wurde erfolgreich fortgesetzt. Grund für Pause war: :reason",
+        "failed": "Status-Seite **:url** konnte nicht fortgesetzt werden: :message",
+        "not_found": "Status-Seite **:url** wurde nicht gefunden oder du hast keine Abonnements dafür.",
+        "not_paused": "Status-Seite **:url** ist nicht pausiert.",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
         "reasons": {
           "TIMEOUT": "Verbindungs-Timeout",
@@ -183,7 +187,9 @@
       "partial_degradation": "Teilweise Beeinträchtigungen",
       "services_online": "Dienste online",
       "overview_footer": "Übersicht • Zuletzt aktualisiert",
-      "compact_footer": "Kompaktansicht"
+      "compact_footer": "Kompaktansicht",
+      "detailed_footer": "Detailliert",
+      "tree_footer": "Baumansicht"
     },
     "alerts": {
       "view_button": "Ansehen",
@@ -194,7 +200,7 @@
     "channel_not_found": "Channel wurde nicht gefunden.",
     "unknown_channel": "Unbekannter Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
     "missing_access": "Fehlende Zugriffsrechte für Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
-    "missing_permissions": "❌ Du hast keine Berechtigung für diesen Befehl. Erforderlich: **Server verwalten**",
+    "missing_permissions": "Du hast keine Berechtigung für diesen Befehl. Erforderlich: **Server verwalten**",
     "api_error": "API-Fehler: :message",
     "api_forbidden": "Zugriff verweigert (403) für :url: :path",
     "api_timeout": "Verbindungszeitüberschreitung für :url: :path",

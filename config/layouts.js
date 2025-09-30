@@ -13,45 +13,52 @@ export const LAYOUT_REGISTRY = {
     DETAILED: {
         key: 'DETAILED',
         translationKey: 'detailed',
-        description: 'Shows all monitors with status indicators',
-        emoji: '📋',
+        description: 'Complete list of all monitors',
         renderer: 'renderDetailedLayout'
     },
 
     /**
      * Compact Layout
-     * Shows monitors in a more condensed format with inline status
+     * Shows monitors in a condensed grid format with status counters
      */
     COMPACT: {
         key: 'COMPACT',
         translationKey: 'compact',
-        description: 'Compact view with inline status',
-        emoji: '📑',
+        description: 'Grid view with status counters',
         renderer: 'renderCompactLayout'
     },
 
     /**
      * Overview Layout
-     * Shows only categories with their overall status
+     * Shows categories with summary metrics and overall status
      */
     OVERVIEW: {
         key: 'OVERVIEW',
         translationKey: 'overview',
-        description: 'Shows only categories with overall status',
-        emoji: '📊',
+        description: 'Summary with key metrics',
         renderer: 'renderOverviewLayout'
     },
 
+    // /**
+    //  * Tree Layout
+    //  * Shows hierarchical category structure with indented monitors
+    //  */
+    // TREE: {
+    //     key: 'TREE',
+    //     translationKey: 'tree',
+    //     description: 'Hierarchical category structure',
+    //     renderer: 'renderTreeLayout'
+    // },
+
     /**
-     * Embed List Layout
-     * Creates separate embeds for each category
+     * Minimal Layout
+     * Ultra-clean display with only status dots and names
      */
-    EMBED_LIST: {
-        key: 'EMBED_LIST',
-        translationKey: 'embed_list',
-        description: 'Separate embeds for each category',
-        emoji: '📚',
-        renderer: 'renderEmbedListLayout'
+    MINIMAL: {
+        key: 'MINIMAL',
+        translationKey: 'minimal',
+        description: 'Clean status indicators only',
+        renderer: 'renderMinimalLayout'
     }
 };
 

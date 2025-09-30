@@ -50,20 +50,24 @@
       },
       "layouts": {
         "detailed": {
-          "name": "📋 Detailed",
-          "description": "All monitors with status indicators"
+          "name": "Detailed",
+          "description": "Complete list of all monitors"
         },
         "compact": {
-          "name": "📑 Compact",
-          "description": "Categories with status counters (inline)"
+          "name": "Compact",
+          "description": "Grid view with status counters"
         },
         "overview": {
-          "name": "📊 Overview",
-          "description": "Categories with overall status only"
+          "name": "Overview",
+          "description": "Summary with key metrics"
         },
-        "embed_list": {
-          "name": "📚 Embed List",
-          "description": "Separate embeds per category"
+        "tree": {
+          "name": "Tree",
+          "description": "Hierarchical category structure"
+        },
+        "minimal": {
+          "name": "Minimal",
+          "description": "Clean status indicators only"
         }
       },
       "subscribe": {
@@ -76,12 +80,12 @@
         "modal_url_label": "Status page URL",
         "modal_events_label": "Events (all/status/news)",
         "modal_locale_label": "Language (de/en)",
-        "modal_layout_label": "Layout (detailed/compact/overview/embed_list)",
+        "modal_layout_label": "Layout (detailed/compact/overview/tree/minimal)",
         "select_channel": "Select channel",
         "select_events": "Select event types",
         "select_locale": "Select language",
         "select_layout": "Select layout",
-        "select_channel_final": "✅ Now select the channel for **:url**"
+        "select_channel_final": "Now select the channel for **:url**"
       },
       "unsubscribe": {
         "success": "Subscription for **:url** successfully removed.",
@@ -91,46 +95,46 @@
         "missing_params": "Please provide a URL or channel to unsubscribe from."
       },
       "edit": {
-        "select_prompt": "📝 Select a subscription to edit (:count available):",
+        "select_prompt": "Select a subscription to edit (:count available):",
         "select_placeholder": "Choose subscription...",
-        "editing": "⚙️ Editing **:name** in <#:channelId>\nSelect from menus below:",
-        "editing_full": "⚙️ Editing **:name** in <#:channelId>\nChange channel, events, or language:",
-        "updated": "✅ **:field** updated!\n\n⚙️ Editing **:name** in <#:channelId>\nMake more changes or click Done:",
+        "editing": "Editing **:name** in <#:channelId>\nSelect from menus below:",
+        "editing_full": "Editing **:name** in <#:channelId>\nChange channel, events, or language:",
+        "updated": "**:field** updated!\n\nEditing **:name** in <#:channelId>\nMake more changes or click Done:",
         "done_button": "Done",
-        "completed": "✅ Editing completed!",
+        "completed": "Editing completed!",
         "select_channel": "Select channel...",
         "manage_links_button": "Manage Links",
         "error": "An error occurred. Please try again later."
       },
       "custom_links": {
-        "title": "🔗 Custom Links for **:name**",
-        "add_button": "➕ Add Link",
-        "back_button": "⬅️ Back",
+        "title": "Custom Links for **:name**",
+        "add_button": "Add Link",
+        "back_button": "Back",
         "modal_title_add": "Add Custom Link",
         "modal_title_edit": "Edit Custom Link",
         "modal_label_label": "Button Text (max 80 characters)",
         "modal_label_url": "URL (must start with https://)",
         "modal_label_emoji": "Emoji (optional, e.g. 🔗)",
         "no_links": "No custom links available.",
-        "list_item": "🔗 **:label**",
+        "list_item": "**:label**",
         "select_placeholder": "Select link...",
-        "link_details": "🔗 Link Details for **:name**",
+        "link_details": "Link Details for **:name**",
         "position": "Position",
         "edit_button": "Edit",
         "delete_button": "Delete",
         "move_up": "Move Up",
         "move_down": "Move Down",
-        "added": "✅ Link successfully added!",
-        "updated": "✅ Link successfully updated!",
-        "deleted": "✅ Link successfully deleted!",
-        "error": "❌ An error occurred.",
-        "invalid_url": "❌ Invalid URL.",
-        "max_links": "❌ Maximum of 25 links reached."
+        "added": "Link successfully added!",
+        "updated": "Link successfully updated!",
+        "deleted": "Link successfully deleted!",
+        "error": "An error occurred.",
+        "invalid_url": "Invalid URL.",
+        "max_links": "Maximum of 25 links reached."
       },
       "list": {
-        "title": "📋 Your Subscriptions",
+        "title": "Your Subscriptions",
         "no_subscriptions": "No subscriptions found for this server.",
-        "header": "📋 **Your Subscriptions** • :count subs • :channels channels • :pages status pages",
+        "header": "**Your Subscriptions** • :count subs • :channels channels • :pages status pages",
         "channel_label": "Channel",
         "language_label": "Language",
         "layout_label": "Layout",
@@ -139,21 +143,21 @@
         "delete_button": "Delete",
         "open_button": "Open",
         "unsubscribe_button": "Unsubscribe",
-        "edit_prompt": "⚙️ Edit **:name** in <#:channelId>\nSelect from menus below:",
+        "edit_prompt": "Edit **:name** in <#:channelId>\nSelect from menus below:",
         "edit_select_events": "Select event types",
         "edit_select_locale": "Select language",
-        "subscription_not_found": "❌ Subscription not found.",
+        "subscription_not_found": "Subscription not found.",
         "edit_hint": "Use the button below or `/livck edit` to edit subscriptions",
         "edit_action": "Edit",
-        "showing_limited": "⚠️ Showing :shown of :total subscriptions (Discord limit)",
-        "refreshed": "✅ List refreshed!",
+        "showing_limited": "Showing :shown of :total subscriptions (Discord limit)",
+        "refreshed": "List refreshed!",
         "error": "An error occurred. Please try again later."
       },
       "resume": {
-        "success": "✅ Status page **:url** has been successfully resumed. Pause reason was: :reason",
-        "failed": "❌ Status page **:url** could not be resumed: :message",
-        "not_found": "❌ Status page **:url** was not found or you have no subscriptions for it.",
-        "not_paused": "ℹ️ Status page **:url** is not paused.",
+        "success": "Status page **:url** has been successfully resumed. Pause reason was: :reason",
+        "failed": "Status page **:url** could not be resumed: :message",
+        "not_found": "Status page **:url** was not found or you have no subscriptions for it.",
+        "not_paused": "Status page **:url** is not paused.",
         "error": "An error occurred. Please try again later.",
         "reasons": {
           "TIMEOUT": "Connection timeout",
@@ -183,7 +187,9 @@
       "partial_degradation": "Partial service degradation",
       "services_online": "services online",
       "overview_footer": "Overview • Last updated",
-      "compact_footer": "Compact View"
+      "compact_footer": "Compact View",
+      "detailed_footer": "Detailed",
+      "tree_footer": "Tree View"
     },
     "alerts": {
       "view_button": "View",
@@ -194,7 +200,7 @@
     "channel_not_found": "Channel not found.",
     "unknown_channel": "Unknown channel :channelId, deleting subscription :subscriptionId.",
     "missing_access": "Missing access to channel :channelId, deleting subscription :subscriptionId.",
-    "missing_permissions": "❌ You don't have permission to use this command. Required: **Manage Server**",
+    "missing_permissions": "You don't have permission to use this command. Required: **Manage Server**",
     "api_error": "API error: :message",
     "api_forbidden": "Access denied (403) for :url: :path",
     "api_timeout": "Connection timeout for :url: :path",
