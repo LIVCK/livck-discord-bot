@@ -25,16 +25,24 @@ export const getStatusEmoji = (status) => {
 // };
 
 export const generateStatusFields = (categories) => {
-    return categories.map((category) => ({
-        name: `${category.name}`,
-        value: Object.values(category.monitors)
+    if (!categories || !Array.isArray(categories)) {
+        return [{ name: 'Fehler', value: 'Keine Kategorien verfügbar.' }];
+    }
+
+    return categories.map((category) => {
+        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
+        const monitorList = monitors
             .map((monitor) => {
                 const emoji = getStatusEmoji(monitor.state);
-                // const status = getStatus(monitor.state);
                 return `${emoji} **${monitor.name}**`;
             })
-            .join('\n') || 'Keine Dienste vorhanden.',
-    }));
+            .join('\n') || 'Keine Dienste vorhanden.';
+
+        return {
+            name: `${category.name || 'Unbekannte Kategorie'}`,
+            value: monitorList
+        };
+    });
 };
 
 export const generateEmbed = (statuspageService, statuspage) => {
