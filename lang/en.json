@@ -1,0 +1,103 @@
+{
+  "commands": {
+    "ping": {
+      "description": "Replies with Pong!",
+      "response": "Hey there! I'm alive! 🎉"
+    },
+    "livck": {
+      "description": "Manage status page subscriptions",
+      "subcommands": {
+        "subscribe": {
+          "description": "Subscribe to a status page"
+        },
+        "unsubscribe": {
+          "description": "Unsubscribe from a status page"
+        },
+        "list": {
+          "description": "List all subscriptions for this server"
+        }
+      },
+      "options": {
+        "url": {
+          "description": "The status page URL"
+        },
+        "channel": {
+          "description": "The target channel"
+        },
+        "events": {
+          "description": "Select event types to subscribe to"
+        },
+        "locale": {
+          "description": "Language for status updates"
+        }
+      },
+      "choices": {
+        "all": "All",
+        "status": "Status",
+        "news": "News"
+      },
+      "subscribe": {
+        "success": "Successfully subscribed to **:url** in <#:channelId> (:flag :locale).",
+        "error": "An error occurred. Please try again later.",
+        "already_subscribed": "You are already subscribed to **:url** in <#:channelId> (:locale).",
+        "invalid_url": "The URL provided does not appear to be a valid LIVCK status page.",
+        "statuspage_not_found": "The status page **:url** was not found."
+      },
+      "unsubscribe": {
+        "success": "Subscription for **:url** successfully removed.",
+        "success_channel": "All subscriptions in <#:channelId> successfully removed.",
+        "no_subscriptions": "No subscriptions found for **:url**.|No subscriptions found in <#:channelId>.",
+        "error": "An error occurred. Please try again later.",
+        "missing_params": "Please provide a URL or channel to unsubscribe from."
+      },
+      "list": {
+        "title": "Your Subscriptions",
+        "no_subscriptions": "No subscriptions found for this server.",
+        "language_label": "Language",
+        "events_label": "Events",
+        "channel_label": "Channel",
+        "statuspage_label": "Status Page",
+        "error": "An error occurred. Please try again later."
+      }
+    }
+  },
+  "messages": {
+    "status": {
+      "title": "Services from :name",
+      "no_services": "No services available.",
+      "unknown_category": "Unknown Category",
+      "error": "Error",
+      "no_categories": "No categories available."
+    },
+    "alerts": {
+      "view_button": "View",
+      "update_button": "View Update"
+    }
+  },
+  "errors": {
+    "channel_not_found": "Channel not found.",
+    "unknown_channel": "Unknown channel :channelId, deleting subscription :subscriptionId.",
+    "missing_access": "Missing access to channel :channelId, deleting subscription :subscriptionId.",
+    "api_error": "API error: :message",
+    "api_forbidden": "Access denied (403) for :url: :path",
+    "api_timeout": "Connection timeout for :url: :path",
+    "api_network": "Network error for :url: :path",
+    "unknown": "An unknown error occurred."
+  },
+  "pluralization": {
+    "subscription_count": "no subscriptions|one subscription|:count subscriptions",
+    "monitor_count": "no monitor|one monitor|:count monitors",
+    "alert_count": "no alert|one alert|:count alerts",
+    "days_ago": "one day ago|:count days ago",
+    "hours_ago": "one hour ago|:count hours ago",
+    "minutes_ago": "one minute ago|:count minutes ago"
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning"
+  }
+}

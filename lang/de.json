@@ -1,0 +1,103 @@
+{
+  "commands": {
+    "ping": {
+      "description": "Antwortet mit Pong!",
+      "response": "Hey! Ich bin am Leben! 🎉"
+    },
+    "livck": {
+      "description": "Verwalte Abonnements von Status-Seiten",
+      "subcommands": {
+        "subscribe": {
+          "description": "Abonniere eine Status-Seite"
+        },
+        "unsubscribe": {
+          "description": "Beende ein Status-Seiten-Abonnement"
+        },
+        "list": {
+          "description": "Liste alle Abonnements für diesen Server"
+        }
+      },
+      "options": {
+        "url": {
+          "description": "Die URL der Status-Seite"
+        },
+        "channel": {
+          "description": "Der Ziel-Channel"
+        },
+        "events": {
+          "description": "Wähle Event-Typen für das Abonnement"
+        },
+        "locale": {
+          "description": "Sprache für Status-Updates"
+        }
+      },
+      "choices": {
+        "all": "Alle",
+        "status": "Status",
+        "news": "Neuigkeiten"
+      },
+      "subscribe": {
+        "success": "Erfolgreich **:url** in <#:channelId> abonniert (:flag :locale).",
+        "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
+        "already_subscribed": "Du hast **:url** bereits in <#:channelId> abonniert (:locale).",
+        "invalid_url": "Die angegebene URL scheint keine gültige LIVCK-Statusseite zu sein.",
+        "statuspage_not_found": "Die Statusseite **:url** wurde nicht gefunden."
+      },
+      "unsubscribe": {
+        "success": "Abonnement für **:url** erfolgreich entfernt.",
+        "success_channel": "Alle Abonnements in <#:channelId> erfolgreich entfernt.",
+        "no_subscriptions": "Keine Abonnements für **:url** gefunden.|Keine Abonnements in <#:channelId> gefunden.",
+        "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
+        "missing_params": "Bitte gib eine URL oder einen Channel an, um das Abonnement zu entfernen."
+      },
+      "list": {
+        "title": "Deine Abonnements",
+        "no_subscriptions": "Keine Abonnements für diesen Server gefunden.",
+        "language_label": "Sprache",
+        "events_label": "Events",
+        "channel_label": "Channel",
+        "statuspage_label": "Statusseite",
+        "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
+      }
+    }
+  },
+  "messages": {
+    "status": {
+      "title": "Dienste von :name",
+      "no_services": "Keine Dienste vorhanden.",
+      "unknown_category": "Unbekannte Kategorie",
+      "error": "Fehler",
+      "no_categories": "Keine Kategorien verfügbar."
+    },
+    "alerts": {
+      "view_button": "Ansehen",
+      "update_button": "Zum Update"
+    }
+  },
+  "errors": {
+    "channel_not_found": "Channel wurde nicht gefunden.",
+    "unknown_channel": "Unbekannter Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
+    "missing_access": "Fehlende Zugriffsrechte für Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
+    "api_error": "API-Fehler: :message",
+    "api_forbidden": "Zugriff verweigert (403) für :url: :path",
+    "api_timeout": "Verbindungszeitüberschreitung für :url: :path",
+    "api_network": "Netzwerkfehler für :url: :path",
+    "unknown": "Ein unbekannter Fehler ist aufgetreten."
+  },
+  "pluralization": {
+    "subscription_count": "keine Abonnements|ein Abonnement|:count Abonnements",
+    "monitor_count": "kein Monitor|ein Monitor|:count Monitore",
+    "alert_count": "keine Meldung|eine Meldung|:count Meldungen",
+    "days_ago": "vor einem Tag|vor :count Tagen",
+    "hours_ago": "vor einer Stunde|vor :count Stunden",
+    "minutes_ago": "vor einer Minute|vor :count Minuten"
+  },
+  "common": {
+    "yes": "Ja",
+    "no": "Nein",
+    "loading": "Lädt...",
+    "success": "Erfolgreich",
+    "error": "Fehler",
+    "warning": "Warnung"
+  }
+}
