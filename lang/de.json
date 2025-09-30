@@ -15,6 +15,9 @@
         },
         "list": {
           "description": "Liste alle Abonnements für diesen Server"
+        },
+        "edit": {
+          "description": "Bearbeite ein bestehendes Abonnement"
         }
       },
       "options": {
@@ -29,6 +32,9 @@
         },
         "locale": {
           "description": "Sprache für Status-Updates"
+        },
+        "subscription": {
+          "description": "Wähle das zu bearbeitende Abonnement"
         }
       },
       "choices": {
@@ -41,7 +47,13 @@
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
         "already_subscribed": "Du hast **:url** bereits in <#:channelId> abonniert (:locale).",
         "invalid_url": "Die angegebene URL scheint keine gültige LIVCK-Statusseite zu sein.",
-        "statuspage_not_found": "Die Statusseite **:url** wurde nicht gefunden."
+        "statuspage_not_found": "Die Statusseite **:url** wurde nicht gefunden.",
+        "modal_title": "Status-Seite abonnieren",
+        "modal_url_label": "Status-Seiten URL",
+        "configure": "📝 Konfiguriere Abonnement für **:url**\nWähle Channel, Events und Sprache:",
+        "select_channel": "Channel auswählen",
+        "select_events": "Event-Typen auswählen",
+        "select_locale": "Sprache auswählen"
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
@@ -50,13 +62,36 @@
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
         "missing_params": "Bitte gib eine URL oder einen Channel an, um das Abonnement zu entfernen."
       },
+      "edit": {
+        "select_prompt": "📝 Wähle ein Abonnement zum Bearbeiten (:count verfügbar):",
+        "select_placeholder": "Abonnement auswählen...",
+        "editing": "⚙️ Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
+        "editing_full": "⚙️ Bearbeite **:name** in <#:channelId>\nÄndere Channel, Events oder Sprache:",
+        "updated": "✅ **:field** aktualisiert!\n\n⚙️ Bearbeite **:name** in <#:channelId>\nWähle weitere Änderungen oder klicke Fertig:",
+        "done_button": "Fertig",
+        "completed": "✅ Bearbeitung abgeschlossen!",
+        "select_channel": "Channel auswählen...",
+        "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
+      },
       "list": {
-        "title": "Deine Abonnements",
+        "title": "📋 Deine Abonnements",
         "no_subscriptions": "Keine Abonnements für diesen Server gefunden.",
+        "header": "📋 **Deine Abonnements** • :count Abos • :channels Channels • :pages Status-Seiten",
+        "channel_label": "Channel",
         "language_label": "Sprache",
         "events_label": "Events",
-        "channel_label": "Channel",
-        "statuspage_label": "Statusseite",
+        "edit_button": "Bearbeiten",
+        "delete_button": "Löschen",
+        "open_button": "Öffnen",
+        "unsubscribe_button": "Abmelden",
+        "edit_prompt": "⚙️ Bearbeite **:name** in <#:channelId>\nWähle aus den Menüs unten:",
+        "edit_select_events": "Event-Typen auswählen",
+        "edit_select_locale": "Sprache auswählen",
+        "subscription_not_found": "❌ Abonnement nicht gefunden.",
+        "edit_hint": "Nutze den Button unten oder `/livck edit` um Abonnements zu bearbeiten",
+        "edit_action": "Bearbeiten",
+        "showing_limited": "⚠️ Zeige :shown von :total Abonnements (Discord Limit)",
+        "refreshed": "✅ Liste aktualisiert!",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
       }
     }
@@ -78,6 +113,7 @@
     "channel_not_found": "Channel wurde nicht gefunden.",
     "unknown_channel": "Unbekannter Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
     "missing_access": "Fehlende Zugriffsrechte für Channel :channelId, Abonnement :subscriptionId wird gelöscht.",
+    "missing_permissions": "❌ Du hast keine Berechtigung für diesen Befehl. Erforderlich: **Server verwalten**",
     "api_error": "API-Fehler: :message",
     "api_forbidden": "Zugriff verweigert (403) für :url: :path",
     "api_timeout": "Verbindungszeitüberschreitung für :url: :path",

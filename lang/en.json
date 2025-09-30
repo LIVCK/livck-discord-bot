@@ -15,6 +15,9 @@
         },
         "list": {
           "description": "List all subscriptions for this server"
+        },
+        "edit": {
+          "description": "Edit an existing subscription"
         }
       },
       "options": {
@@ -29,6 +32,9 @@
         },
         "locale": {
           "description": "Language for status updates"
+        },
+        "subscription": {
+          "description": "Select the subscription to edit"
         }
       },
       "choices": {
@@ -41,7 +47,13 @@
         "error": "An error occurred. Please try again later.",
         "already_subscribed": "You are already subscribed to **:url** in <#:channelId> (:locale).",
         "invalid_url": "The URL provided does not appear to be a valid LIVCK status page.",
-        "statuspage_not_found": "The status page **:url** was not found."
+        "statuspage_not_found": "The status page **:url** was not found.",
+        "modal_title": "Subscribe to status page",
+        "modal_url_label": "Status page URL",
+        "configure": "📝 Configure subscription for **:url**\nSelect channel, events and language:",
+        "select_channel": "Select channel",
+        "select_events": "Select event types",
+        "select_locale": "Select language"
       },
       "unsubscribe": {
         "success": "Subscription for **:url** successfully removed.",
@@ -50,13 +62,36 @@
         "error": "An error occurred. Please try again later.",
         "missing_params": "Please provide a URL or channel to unsubscribe from."
       },
+      "edit": {
+        "select_prompt": "📝 Select a subscription to edit (:count available):",
+        "select_placeholder": "Choose subscription...",
+        "editing": "⚙️ Editing **:name** in <#:channelId>\nSelect from menus below:",
+        "editing_full": "⚙️ Editing **:name** in <#:channelId>\nChange channel, events, or language:",
+        "updated": "✅ **:field** updated!\n\n⚙️ Editing **:name** in <#:channelId>\nMake more changes or click Done:",
+        "done_button": "Done",
+        "completed": "✅ Editing completed!",
+        "select_channel": "Select channel...",
+        "error": "An error occurred. Please try again later."
+      },
       "list": {
-        "title": "Your Subscriptions",
+        "title": "📋 Your Subscriptions",
         "no_subscriptions": "No subscriptions found for this server.",
+        "header": "📋 **Your Subscriptions** • :count subs • :channels channels • :pages status pages",
+        "channel_label": "Channel",
         "language_label": "Language",
         "events_label": "Events",
-        "channel_label": "Channel",
-        "statuspage_label": "Status Page",
+        "edit_button": "Edit",
+        "delete_button": "Delete",
+        "open_button": "Open",
+        "unsubscribe_button": "Unsubscribe",
+        "edit_prompt": "⚙️ Edit **:name** in <#:channelId>\nSelect from menus below:",
+        "edit_select_events": "Select event types",
+        "edit_select_locale": "Select language",
+        "subscription_not_found": "❌ Subscription not found.",
+        "edit_hint": "Use the button below or `/livck edit` to edit subscriptions",
+        "edit_action": "Edit",
+        "showing_limited": "⚠️ Showing :shown of :total subscriptions (Discord limit)",
+        "refreshed": "✅ List refreshed!",
         "error": "An error occurred. Please try again later."
       }
     }
@@ -78,6 +113,7 @@
     "channel_not_found": "Channel not found.",
     "unknown_channel": "Unknown channel :channelId, deleting subscription :subscriptionId.",
     "missing_access": "Missing access to channel :channelId, deleting subscription :subscriptionId.",
+    "missing_permissions": "❌ You don't have permission to use this command. Required: **Manage Server**",
     "api_error": "API error: :message",
     "api_forbidden": "Access denied (403) for :url: :path",
     "api_timeout": "Connection timeout for :url: :path",
