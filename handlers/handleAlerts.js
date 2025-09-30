@@ -21,7 +21,7 @@ export const handleAlerts = async (statuspageId, client) => {
 
         const alerts = statuspageService.alerts;
 
-        for (const newsItem of alerts) {
+        await Promise.all(alerts.map(async (newsItem) => {
             let color = Colors.Blurple;
             if (newsItem.type === 'INCIDENT') {
                 color = Colors.Red;
@@ -44,17 +44,17 @@ export const handleAlerts = async (statuspageId, client) => {
 
             const row = new ActionRowBuilder().addComponents(button);
 
-            for (const subscription of statuspageRecord.Subscriptions) {
-                if (!subscription.eventTypes.NEWS) continue;
+            await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
+                if (!subscription.eventTypes.NEWS) return;
 
                 if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) {
-                    continue;
+                    return;
                 }
 
                 const channel = await client.channels.fetch(subscription.channelId);
 
                 if (!channel) {
-                    continue;
+                    return;
                 }
 
                 let mainMessage = await models.Message.findOne({
@@ -73,7 +73,9 @@ export const handleAlerts = async (statuspageId, client) => {
                             mainMessage = null;
                         }
                     }
-                } else {
+                }
+
+                if (!mainMessage) {
                     mainMessage = await channel.send({ embeds: [embed], components: [row] });
                     await models.Message.create({
                         subscriptionId: subscription.id,
@@ -124,8 +126,8 @@ export const handleAlerts = async (statuspageId, client) => {
                         });
                     }
                 }
-            }
-        }
+            }));
+        }));
     } catch (error) {
         console.error(`Error processing alerts for statuspage ${statuspageId}: ${error.message}`, error);
     }

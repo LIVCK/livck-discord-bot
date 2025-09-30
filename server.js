@@ -10,7 +10,7 @@ dotenv.config();
 const client = await bot(models)
 
 const BATCH_SIZE = 100;
-const LOCK_TTL = 5;
+const LOCK_TTL = 20;
 const INTERVAL = 15 * 1000;
 
 const scheduleStatusPageUpdates = async (client) => {
@@ -36,7 +36,7 @@ const scheduleStatusPageUpdates = async (client) => {
                     handleAlerts(statuspage.id, client)
                 ]);
 
-                await cacheKey.set(cacheKey, 'true', { EX: LOCK_TTL });
+                await cache.set(cacheKey, 'true', { EX: LOCK_TTL });
             }));
         }
     } catch (error) {

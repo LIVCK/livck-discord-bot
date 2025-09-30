@@ -19,14 +19,14 @@ export const handleStatusPage = async (statuspageId, client) => {
 
         const embed = generateEmbed(statuspageService, statuspageRecord);
 
-        for (const subscription of statuspageRecord.Subscriptions) {
+        await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
             if (!subscription.eventTypes.STATUS)
-                continue;
+                return;
 
             const channel = await client.channels.fetch(subscription.channelId);
 
             if (!channel) {
-                continue;
+                return;
             }
 
             const existingMessage = await models.Message.findOne({
@@ -52,7 +52,7 @@ export const handleStatusPage = async (statuspageId, client) => {
                     category: 'STATUS',
                 });
             }
-        }
+        }));
     } catch (error) {
         console.error(`Error processing status updates for statuspage ${statuspageId}: ${error.message}`, error);
     }

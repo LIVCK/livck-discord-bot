@@ -20,7 +20,19 @@ export default class LIVCK {
                 'Accept': 'application/json'
             },
             ...params
-        }).catch((error) => console.error('Error:', error));
+        }).catch((error) => {
+            console.error('Error:', error);
+            throw error;
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Expected JSON response, got: ${contentType}`);
+        }
 
         return response.json();
     }
