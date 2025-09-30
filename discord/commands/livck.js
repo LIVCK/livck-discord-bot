@@ -921,6 +921,13 @@ export default (models) => ({
                 include: [{ model: models.Statuspage }]
             });
 
+            // Trigger status page refresh with new locale (fire-and-forget)
+            if (subscription && subscription.Statuspage) {
+                handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                    console.error('[Locale Update] Failed to regenerate status message:', error);
+                });
+            }
+
             const eventSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_events_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))

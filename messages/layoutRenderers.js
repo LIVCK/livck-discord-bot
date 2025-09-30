@@ -1,5 +1,6 @@
 import { EmbedBuilder } from "discord.js";
 import translation from "../util/Translation.js";
+import { getStatusDot } from "../config/emojis.js";
 
 /**
  * Get status emoji for a monitor
@@ -188,13 +189,22 @@ export const renderCompactLayout = (statuspageService, statuspage, locale = 'de'
         const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
         const totalCount = monitors.length;
 
-        // Status bar using blocks
-        const statusBar = '█'.repeat(availableCount) + (unavailableCount > 0 ? '▓'.repeat(unavailableCount) : '');
-        const percentage = totalCount > 0 ? Math.round((availableCount / totalCount) * 100) : 100;
+        // Status indicator with custom emoji dot
+        const statusDot = getStatusDot(categoryStatus);
+        let statusLabel;
+        if (categoryStatus === 'AVAILABLE') {
+            statusLabel = translation.trans('messages.status.operational');
+        } else if (categoryStatus === 'UNAVAILABLE') {
+            statusLabel = translation.trans('messages.status.critical');
+        } else {
+            statusLabel = translation.trans('messages.status.degraded');
+        }
 
-        let statusText = `\`${percentage}%\` ${statusBar}\n${availableCount}/${totalCount} operational`;
+        let statusText = `┃ **${availableCount}/${totalCount}** ${translation.trans('messages.status.services')}`;
         if (unavailableCount > 0) {
-            statusText += ` • ${unavailableCount} down`;
+            statusText += `\n┗━ ${statusDot} **${unavailableCount}** ${translation.trans('messages.status.down')}`;
+        } else {
+            statusText += `\n┗━ ${statusDot} ${statusLabel}`;
         }
 
         // Always inline for compact, max 2 per row
@@ -208,12 +218,12 @@ export const renderCompactLayout = (statuspageService, statuspage, locale = 'de'
     });
 
     const embed = new EmbedBuilder()
-        .setTitle(`📊 ${statuspage.name}`)
+        .setTitle(statuspage.name)
         .setColor(embedColor)
         .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+        .setFooter({ text: translation.trans('messages.status.compact_footer') });
 
     return [{ embed, type: 'single' }];
 };
@@ -244,11 +254,43 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         }];
     }
 
-    // Calculate overall status for embed color
+    // Calculate overall status for embed color and summary
     const overallStatus = getOverallStatus(categories);
     const embedColor = getEmbedColor(overallStatus);
 
-    // Build fields with visual status bars
+    // Calculate totals for description
+    const totalMonitors = categories.reduce((sum, cat) => {
+        const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
+        return sum + monitors.length;
+    }, 0);
+
+    const totalAvailable = categories.reduce((sum, cat) => {
+        const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
+        return sum + monitors.filter(m => m.state === 'AVAILABLE').length;
+    }, 0);
+
+    const totalUnavailable = totalMonitors - totalAvailable;
+    const overallPercentage = totalMonitors > 0 ? Math.round((totalAvailable / totalMonitors) * 100) : 100;
+
+    // Create overall status indicator
+    const overallStatusDot = getStatusDot(overallStatus);
+    let statusSummary;
+    if (overallStatus === 'AVAILABLE') {
+        statusSummary = `${overallStatusDot} ${translation.trans('messages.status.all_systems_operational')}`;
+    } else if (overallStatus === 'UNAVAILABLE') {
+        statusSummary = `${overallStatusDot} ${translation.trans('messages.status.system_issues_detected')}`;
+    } else {
+        statusSummary = `${overallStatusDot} ${translation.trans('messages.status.partial_degradation')}`;
+    }
+
+    // Create description with clean layout
+    let description = `${statusSummary}\n\`\`\`\n${totalAvailable}/${totalMonitors} ${translation.trans('messages.status.services_online')}`;
+    if (totalUnavailable > 0) {
+        description += ` • ${totalUnavailable} ${translation.trans('messages.status.down')}`;
+    }
+    description += `\n\`\`\``;
+
+    // Build fields for each category with cleaner layout
     const fields = categories.map((category) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
         const categoryStatus = getCategoryStatus(monitors);
@@ -259,39 +301,30 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
         const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
 
-        // Create visual progress bar
-        const percentage = totalMonitors > 0 ? Math.round((availableCount / totalMonitors) * 100) : 100;
-        const filledBlocks = Math.round((availableCount / totalMonitors) * 10);
-        const emptyBlocks = 10 - filledBlocks;
+        // Use custom emoji dots
+        const statusDot = getStatusDot(categoryStatus);
 
-        let statusBar;
-        if (categoryStatus === 'AVAILABLE') {
-            statusBar = '🟩'.repeat(10);
-        } else if (categoryStatus === 'UNAVAILABLE') {
-            statusBar = '🟥'.repeat(emptyBlocks) + '⬜'.repeat(filledBlocks);
-        } else {
-            statusBar = '🟨'.repeat(emptyBlocks) + '🟩'.repeat(filledBlocks);
-        }
-
-        let statusText = `${statusBar}\n**${percentage}%** operational • ${availableCount}/${totalMonitors} services`;
+        // Build clean status line
+        let statusText = `${statusDot} ${availableCount}/${totalMonitors}`;
         if (unavailableCount > 0) {
-            statusText += `\n⚠️ ${unavailableCount} service${unavailableCount > 1 ? 's' : ''} down`;
+            statusText += ` • **${unavailableCount}** ${translation.trans('messages.status.down')}`;
         }
 
         return {
-            name: `${getCategoryStatusEmoji(categoryStatus)} ${categoryName}`,
+            name: categoryName,
             value: statusText,
-            inline: false
+            inline: true
         };
     });
 
     const embed = new EmbedBuilder()
-        .setTitle(`📊 ${statuspage.name} - Overview`)
+        .setTitle(statuspage.name)
+        .setDescription(description)
         .setColor(embedColor)
         .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+        .setFooter({ text: translation.trans('messages.status.overview_footer') });
 
     return [{ embed, type: 'single' }];
 };
@@ -339,7 +372,7 @@ export const renderEmbedListLayout = (statuspageService, statuspage, locale = 'd
 
             return {
                 name: monitor.name,
-                value: `${emoji} ${monitor.state === 'AVAILABLE' ? 'Operational' : 'Down'}`,
+                value: `${emoji} ${monitor.state === 'AVAILABLE' ? translation.trans('messages.status.operational') : translation.trans('messages.status.down')}`,
                 inline: shouldBeInline
             };
         });
@@ -360,7 +393,7 @@ export const renderEmbedListLayout = (statuspageService, statuspage, locale = 'd
         const embed = new EmbedBuilder()
             .setTitle(`${statusEmoji} ${categoryName}`)
             .setColor(embedColor)
-            .setDescription(`**${availableCount}/${totalCount}** services operational`)
+            .setDescription(`**${availableCount}/${totalCount}** ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}`)
             .setFields(fields)
             .setURL(statuspage.url);
 
