@@ -1,45 +1,98 @@
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
 import LIVCK from "../../api/livck.js";
+import translation from "../../util/Translation.js";
 
 export default (models) => ({
     data: {
         name: 'livck',
-        description: 'Manage subscriptions to status pages',
+        description: translation.trans('commands.livck.description', {}, null, 'en'),
+        description_localizations: translation.localizeExcept('commands.livck.description'),
         options: [
             {
                 type: 1, // Subcommand
                 name: 'subscribe',
-                description: 'Subscribe to a status page',
+                description: translation.trans('commands.livck.subcommands.subscribe.description', {}, null, 'en'),
+                description_localizations: translation.localizeExcept('commands.livck.subcommands.subscribe.description'),
                 options: [
-                    { type: 3, name: 'url', description: 'The status page URL', required: true }, // String
-                    { type: 7, name: 'channel', description: 'The target channel', required: true }, // Channel
                     {
-                        type: 3, // String
+                        type: 3,
+                        name: 'url',
+                        description: translation.trans('commands.livck.options.url.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.url.description'),
+                        required: true
+                    },
+                    {
+                        type: 7,
+                        name: 'channel',
+                        description: translation.trans('commands.livck.options.channel.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.channel.description'),
+                        required: true
+                    },
+                    {
+                        type: 3,
                         name: 'events',
-                        description: 'Select event types to subscribe to',
+                        description: translation.trans('commands.livck.options.events.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.events.description'),
                         required: true,
                         choices: [
-                            { name: 'All', value: 'ALL' },
-                            { name: 'Status', value: 'STATUS' },
-                            { name: 'News', value: 'NEWS' },
+                            {
+                                name: translation.trans('commands.livck.choices.all', {}, null, 'en'),
+                                name_localizations: translation.localizeExcept('commands.livck.choices.all'),
+                                value: 'ALL'
+                            },
+                            {
+                                name: translation.trans('commands.livck.choices.status', {}, null, 'en'),
+                                name_localizations: translation.localizeExcept('commands.livck.choices.status'),
+                                value: 'STATUS'
+                            },
+                            {
+                                name: translation.trans('commands.livck.choices.news', {}, null, 'en'),
+                                name_localizations: translation.localizeExcept('commands.livck.choices.news'),
+                                value: 'NEWS'
+                            },
+                        ],
+                    },
+                    {
+                        type: 3,
+                        name: 'locale',
+                        description: translation.trans('commands.livck.options.locale.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.locale.description'),
+                        required: false,
+                        choices: [
+                            { name: '🇩🇪 Deutsch', value: 'de' },
+                            { name: '🇬🇧 English', value: 'en' },
                         ],
                     },
                 ],
             },
             {
-                type: 1, // Subcommand
+                type: 1,
                 name: 'unsubscribe',
-                description: 'Unsubscribe from a status page',
+                description: translation.trans('commands.livck.subcommands.unsubscribe.description', {}, null, 'en'),
+                description_localizations: translation.localizeExcept('commands.livck.subcommands.unsubscribe.description'),
                 options: [
-                    { type: 3, name: 'url', description: 'The status page URL', required: false }, // String
-                    { type: 7, name: 'channel', description: 'The target channel', required: false }, // Channel
+                    {
+                        type: 3,
+                        name: 'url',
+                        description: translation.trans('commands.livck.options.url.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.url.description'),
+                        required: false
+                    },
+                    {
+                        type: 7,
+                        name: 'channel',
+                        description: translation.trans('commands.livck.options.channel.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.channel.description'),
+                        required: false
+                    },
                 ],
             },
             {
-                type: 1, // Subcommand
+                type: 1,
                 name: 'list',
-                description: 'List all subscriptions for this server',
+                description: translation.trans('commands.livck.subcommands.list.description', {}, null, 'en'),
+                description_localizations: translation.localizeExcept('commands.livck.subcommands.list.description'),
                 options: [],
             },
         ],
@@ -51,6 +104,7 @@ export default (models) => ({
             case 'subscribe': {
                 let url = interaction.options.getString('url');
                 const channel = interaction.options.getChannel('channel');
+                const locale = interaction.options.getString('locale') || 'de';
 
                 let eventTypes;
                 switch (interaction.options.getString('events')) {
@@ -65,12 +119,16 @@ export default (models) => ({
                 }
 
                 try {
+                    // Determine user's locale for command response
+                    const userLocale = interaction.locale?.split('-')[0] || 'de';
+                    translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
                     url = normalizeUrl(url, true);
 
                     let livck = new LIVCK(url);
                     if (!await livck.ensureIsLIVCK()) {
                         await interaction.reply({
-                            content: 'The URL provided does not appear to be a valid LIVCK status page.',
+                            content: translation.trans('commands.livck.subscribe.invalid_url'),
                             ephemeral: true,
                         });
                         return;
@@ -86,12 +144,17 @@ export default (models) => ({
                             guildId: interaction.guildId,
                             channelId: channel.id,
                             statuspageId: statuspage.id,
+                            locale: locale,
                         },
                     });
 
                     if (existingSubscription) {
                         await interaction.reply({
-                            content: `You are already subscribed to **${url}** in <#${channel.id}>.`,
+                            content: translation.trans('commands.livck.subscribe.already_subscribed', {
+                                url,
+                                channelId: channel.id,
+                                locale: locale.toUpperCase()
+                            }),
                             ephemeral: true,
                         });
                         return;
@@ -103,18 +166,25 @@ export default (models) => ({
                         statuspageId: statuspage.id,
                         eventTypes: eventTypes,
                         interval: 60,
+                        locale: locale,
                     });
 
                     await handleStatusPage(statuspage.id, client)
 
+                    const langFlag = locale === 'de' ? '🇩🇪' : '🇬🇧';
                     await interaction.reply({
-                        content: `Successfully subscribed to **${url}** in <#${channel.id}>.`,
+                        content: translation.trans('commands.livck.subscribe.success', {
+                            url,
+                            channelId: channel.id,
+                            flag: langFlag,
+                            locale: locale.toUpperCase()
+                        }),
                         ephemeral: true,
                     });
                 } catch (error) {
                     console.error('Error creating subscription:', error);
                     await interaction.reply({
-                        content: 'An error occurred. Please try again later.',
+                        content: translation.trans('commands.livck.subscribe.error'),
                         ephemeral: true,
                     });
                 }
@@ -126,11 +196,14 @@ export default (models) => ({
                 const channel = interaction.options.getChannel('channel');
 
                 try {
+                    const userLocale = interaction.locale?.split('-')[0] || 'de';
+                    translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
                     url = normalizeUrl(url, true);
 
                     if (!url && !channel) {
                         await interaction.reply({
-                            content: 'Please provide a URL or channel to unsubscribe from.',
+                            content: translation.trans('commands.livck.unsubscribe.missing_params'),
                             ephemeral: true,
                         });
                         return;
@@ -140,7 +213,7 @@ export default (models) => ({
                         const statuspage = await models.Statuspage.findOne({ where: { url } });
                         if (!statuspage) {
                             await interaction.reply({
-                                content: `The status page **${url}** was not found.`,
+                                content: translation.trans('commands.livck.subscribe.statuspage_not_found', { url }),
                                 ephemeral: true,
                             });
                             return;
@@ -156,12 +229,12 @@ export default (models) => ({
 
                         if (deletedCount === 0) {
                             await interaction.reply({
-                                content: `No subscriptions found for **${url}**.`,
+                                content: translation.trans('commands.livck.unsubscribe.no_subscriptions', { url }, 0),
                                 ephemeral: true,
                             });
                         } else {
                             await interaction.reply({
-                                content: `Subscription for **${url}** successfully removed.`,
+                                content: translation.trans('commands.livck.unsubscribe.success', { url }),
                                 ephemeral: true,
                             });
                         }
@@ -175,12 +248,12 @@ export default (models) => ({
 
                         if (deletedCount === 0) {
                             await interaction.reply({
-                                content: `No subscriptions found in <#${channel.id}>.`,
+                                content: translation.trans('commands.livck.unsubscribe.no_subscriptions', { channelId: channel.id }, 1),
                                 ephemeral: true,
                             });
                         } else {
                             await interaction.reply({
-                                content: `All subscriptions in <#${channel.id}> successfully removed.`,
+                                content: translation.trans('commands.livck.unsubscribe.success_channel', { channelId: channel.id }),
                                 ephemeral: true,
                             });
                         }
@@ -188,7 +261,7 @@ export default (models) => ({
                 } catch (error) {
                     console.error('Error removing subscription:', error);
                     await interaction.reply({
-                        content: 'An error occurred. Please try again later.',
+                        content: translation.trans('commands.livck.unsubscribe.error'),
                         ephemeral: true,
                     });
                 }
@@ -197,6 +270,9 @@ export default (models) => ({
 
             case 'list': {
                 try {
+                    const userLocale = interaction.locale?.split('-')[0] || 'de';
+                    translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
                     const subscriptions = await models.Subscription.findAll({
                         where: { guildId: interaction.guildId },
                         include: [{ model: models.Statuspage }],
@@ -204,21 +280,26 @@ export default (models) => ({
 
                     if (subscriptions.length === 0) {
                         await interaction.reply({
-                            content: 'No subscriptions found for this server.',
+                            content: translation.trans('commands.livck.list.no_subscriptions'),
                             ephemeral: true,
                         });
                         return;
                     }
 
-                    const fields = subscriptions.map((sub) => ({
-                        name: sub.Statuspage.name,
-                        value: `**Statuspage:** [${sub.Statuspage.name}](${sub.Statuspage.url})\n**Events:** ${Object.keys(sub.eventTypes).filter(key => sub.eventTypes[key]).join(', ')}\n**Channel:** <#${sub.channelId}>\n\n`,
-                    }));
+                    const fields = subscriptions.map((sub) => {
+                        const langFlag = sub.locale === 'de' ? '🇩🇪' : '🇬🇧';
+                        const events = Object.keys(sub.eventTypes).filter(key => sub.eventTypes[key]).join(', ');
+
+                        return {
+                            name: sub.Statuspage.name,
+                            value: `**${translation.trans('commands.livck.list.statuspage_label')}:** [${sub.Statuspage.name}](${sub.Statuspage.url})\n**${translation.trans('commands.livck.list.events_label')}:** ${events}\n**${translation.trans('commands.livck.list.channel_label')}:** <#${sub.channelId}>\n**${translation.trans('commands.livck.list.language_label')}:** ${langFlag} ${sub.locale.toUpperCase()}\n\n`,
+                        };
+                    });
 
                     await interaction.reply({
                         embeds: [
                             {
-                                title: 'Your Subscriptions',
+                                title: translation.trans('commands.livck.list.title'),
                                 fields,
                                 color: 0x00ff00,
                             },
@@ -228,7 +309,7 @@ export default (models) => ({
                 } catch (error) {
                     console.error('Error fetching subscriptions:', error);
                     await interaction.reply({
-                        content: 'An error occurred. Please try again later.',
+                        content: translation.trans('commands.livck.list.error'),
                         ephemeral: true,
                     });
                 }
