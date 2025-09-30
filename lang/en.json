@@ -171,7 +171,19 @@
       "unknown_category": "Unknown Category",
       "error": "Error",
       "no_categories": "No categories available.",
-      "available": "available"
+      "available": "available",
+      "operational": "Operational",
+      "critical": "Critical",
+      "degraded": "Degraded",
+      "services": "services",
+      "down": "down",
+      "up": "up",
+      "all_systems_operational": "All systems operational",
+      "system_issues_detected": "System issues detected",
+      "partial_degradation": "Partial service degradation",
+      "services_online": "services online",
+      "overview_footer": "Overview • Last updated",
+      "compact_footer": "Compact View"
     },
     "alerts": {
       "view_button": "View",

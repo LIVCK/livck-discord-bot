@@ -171,7 +171,19 @@
       "unknown_category": "Unbekannte Kategorie",
       "error": "Fehler",
       "no_categories": "Keine Kategorien verfügbar.",
-      "available": "verfügbar"
+      "available": "verfügbar",
+      "operational": "Betriebsbereit",
+      "critical": "Kritisch",
+      "degraded": "Eingeschränkt",
+      "services": "Dienste",
+      "down": "ausgefallen",
+      "up": "aktiv",
+      "all_systems_operational": "Alle Systeme betriebsbereit",
+      "system_issues_detected": "Systemprobleme erkannt",
+      "partial_degradation": "Teilweise Beeinträchtigungen",
+      "services_online": "Dienste online",
+      "overview_footer": "Übersicht • Zuletzt aktualisiert",
+      "compact_footer": "Kompaktansicht"
     },
     "alerts": {
       "view_button": "Ansehen",
