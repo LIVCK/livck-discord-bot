@@ -1,9 +1,19 @@
+import translation from "../../util/Translation.js";
+
 export default (models) => ({
     data: {
         name: 'livck-ping',
-        description: 'Replies with Pong!',
+        description: translation.trans('commands.ping.description', {}, null, 'en'),
+        description_localizations: translation.localizeExcept('commands.ping.description'),
     },
     async execute(interaction, client) {
-        await interaction.reply({ content: 'Hey there! I am alive! 🎉', ephemeral: true });
+        // Detect user's locale
+        const userLocale = interaction.locale?.split('-')[0] || 'de';
+        translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
+        await interaction.reply({
+            content: translation.trans('commands.ping.response'),
+            ephemeral: true
+        });
     },
 });
