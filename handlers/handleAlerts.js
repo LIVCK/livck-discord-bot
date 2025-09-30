@@ -5,6 +5,68 @@ import LIVCK from "../api/livck.js";
 import { htmlToText } from "html-to-text";
 import { truncate } from "../util/String.js";
 
+// Convert HTML to Discord Markdown
+const convertHtmlToMarkdown = (html) => {
+    if (!html) return '';
+
+    let text = html;
+
+    // Convert HTML tags to Discord markdown
+    text = text.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');           // Bold
+    text = text.replace(/<b>(.*?)<\/b>/gi, '**$1**');                     // Bold (b tag)
+    text = text.replace(/<em>(.*?)<\/em>/gi, '*$1*');                     // Italic
+    text = text.replace(/<i>(.*?)<\/i>/gi, '*$1*');                       // Italic (i tag)
+    text = text.replace(/<s>(.*?)<\/s>/gi, '~~$1~~');                     // Strikethrough
+    text = text.replace(/<del>(.*?)<\/del>/gi, '~~$1~~');                 // Strikethrough (del tag)
+    text = text.replace(/<code>(.*?)<\/code>/gi, '`$1`');                 // Inline code
+    text = text.replace(/<mark>(.*?)<\/mark>/gi, '**$1**');               // Marked (as bold, Discord has no highlight)
+    text = text.replace(/<u>(.*?)<\/u>/gi, '__$1__');                     // Underline
+
+    // Headings
+    text = text.replace(/<h1>(.*?)<\/h1>/gi, '\n**$1**\n');               // H1 as bold
+    text = text.replace(/<h2>(.*?)<\/h2>/gi, '\n**$1**\n');               // H2 as bold
+    text = text.replace(/<h3>(.*?)<\/h3>/gi, '\n**$1**\n');               // H3 as bold
+    text = text.replace(/<h4>(.*?)<\/h4>/gi, '\n**$1**\n');               // H4 as bold
+    text = text.replace(/<h5>(.*?)<\/h5>/gi, '\n**$1**\n');               // H5 as bold
+    text = text.replace(/<h6>(.*?)<\/h6>/gi, '\n**$1**\n');               // H6 as bold
+
+    // Links
+    text = text.replace(/<a\s+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+
+    // Lists
+    text = text.replace(/<li>(.*?)<\/li>/gi, '• $1\n');                   // List items
+    text = text.replace(/<\/?ul>/gi, '\n');                               // Unordered lists
+    text = text.replace(/<\/?ol>/gi, '\n');                               // Ordered lists
+
+    // Paragraphs and line breaks
+    text = text.replace(/<\/p><p>/gi, '\n\n');                            // Paragraph breaks
+    text = text.replace(/<p>/gi, '');                                     // Remove opening p tags
+    text = text.replace(/<\/p>/gi, '\n');                                 // Closing p to newline
+    text = text.replace(/<br\s*\/?>/gi, '\n');                            // Line breaks
+
+    // Pre and code blocks
+    text = text.replace(/<pre><code>(.*?)<\/code><\/pre>/gis, '```\n$1\n```'); // Code blocks
+    text = text.replace(/<pre>(.*?)<\/pre>/gis, '```\n$1\n```');          // Pre blocks
+
+    // Remove remaining HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+
+    // Decode HTML entities
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+
+    // Clean up excessive whitespace and line breaks
+    text = text.replace(/\n{3,}/g, '\n\n');                               // Max 2 consecutive newlines
+    text = text.replace(/[ \t]+/g, ' ');                                  // Multiple spaces to single space
+    text = text.replace(/\n /g, '\n');                                    // Remove spaces after newlines
+
+    return text.trim();
+};
+
 export const handleAlerts = async (statuspageId, client) => {
     try {
         const statuspageRecord = await models.Statuspage.findOne({
@@ -40,7 +102,7 @@ export const handleAlerts = async (statuspageId, client) => {
             const embed = new EmbedBuilder()
                 .setColor(color)
                 .setTitle(newsItem.title)
-                .setDescription(truncate(htmlToText(newsItem.message), 500))
+                .setDescription(truncate(convertHtmlToMarkdown(newsItem.message), 500))
                 .setURL(newsItem.link)
                 .setTimestamp(new Date(newsItem.created_at))
                 .setFooter({ text: statuspageRecord.name });
@@ -102,7 +164,7 @@ export const handleAlerts = async (statuspageId, client) => {
                     const subAlertEmbed = new EmbedBuilder()
                         .setColor(color)
                         .setTitle(subAlert.title)
-                        .setDescription(truncate(htmlToText(subAlert.message), 500))
+                        .setDescription(truncate(convertHtmlToMarkdown(subAlert.message), 500))
                         .setURL(newsItem.link)
                         .setTimestamp(new Date(subAlert.created_at))
                         .setFooter({ text: statuspageRecord.name });

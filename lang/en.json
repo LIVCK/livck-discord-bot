@@ -18,6 +18,9 @@
         },
         "edit": {
           "description": "Edit an existing subscription"
+        },
+        "resume": {
+          "description": "Resume a paused status page"
         }
       },
       "options": {
@@ -33,6 +36,9 @@
         "locale": {
           "description": "Language for status updates"
         },
+        "layout": {
+          "description": "Display layout for status messages"
+        },
         "subscription": {
           "description": "Select the subscription to edit"
         }
@@ -41,6 +47,24 @@
         "all": "All",
         "status": "Status",
         "news": "News"
+      },
+      "layouts": {
+        "detailed": {
+          "name": "📋 Detailed",
+          "description": "All monitors with status indicators"
+        },
+        "compact": {
+          "name": "📑 Compact",
+          "description": "Condensed view with inline status"
+        },
+        "overview": {
+          "name": "📊 Overview",
+          "description": "Categories with overall status only"
+        },
+        "embed_list": {
+          "name": "📚 Embed List",
+          "description": "Separate embeds per category"
+        }
       },
       "subscribe": {
         "success": "Successfully subscribed to **:url** in <#:channelId> (:flag :locale).",
@@ -52,9 +76,11 @@
         "modal_url_label": "Status page URL",
         "modal_events_label": "Events (all/status/news)",
         "modal_locale_label": "Language (de/en)",
+        "modal_layout_label": "Layout (detailed/compact/overview/embed_list)",
         "select_channel": "Select channel",
         "select_events": "Select event types",
         "select_locale": "Select language",
+        "select_layout": "Select layout",
         "select_channel_final": "✅ Now select the channel for **:url**"
       },
       "unsubscribe": {
@@ -81,6 +107,7 @@
         "header": "📋 **Your Subscriptions** • :count subs • :channels channels • :pages status pages",
         "channel_label": "Channel",
         "language_label": "Language",
+        "layout_label": "Layout",
         "events_label": "Events",
         "edit_button": "Edit",
         "delete_button": "Delete",
@@ -95,6 +122,19 @@
         "showing_limited": "⚠️ Showing :shown of :total subscriptions (Discord limit)",
         "refreshed": "✅ List refreshed!",
         "error": "An error occurred. Please try again later."
+      },
+      "resume": {
+        "success": "✅ Status page **:url** has been successfully resumed. Pause reason was: :reason",
+        "failed": "❌ Status page **:url** could not be resumed: :message",
+        "not_found": "❌ Status page **:url** was not found or you have no subscriptions for it.",
+        "not_paused": "ℹ️ Status page **:url** is not paused.",
+        "error": "An error occurred. Please try again later.",
+        "reasons": {
+          "TIMEOUT": "Connection timeout",
+          "NOT_LIVCK": "No longer a LIVCK status page",
+          "MANUAL": "Manually paused",
+          "unknown": "Unknown"
+        }
       }
     }
   },

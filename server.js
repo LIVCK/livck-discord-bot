@@ -4,6 +4,7 @@ import bot from './discord/bot.js';
 import { handleStatusPage } from "./handlers/handleStatuspage.js";
 import { handleAlerts } from "./handlers/handleAlerts.js";
 import cache from './database/redis.js';
+import StatuspagePauseManager from './services/statuspagePauseManager.js';
 
 dotenv.config();
 
@@ -16,31 +17,71 @@ const INTERVAL = 15 * 1000;
 const scheduleStatusPageUpdates = async (client) => {
     try {
         const statuspages = await models.Statuspage.findAll({
-            attributes: ['id', 'url'],
-            raw: true
+            attributes: ['id', 'url', 'paused', 'pauseReason']
         });
 
-        for (let i = 0; i < statuspages.length; i += BATCH_SIZE) {
-            const batch = statuspages.slice(i, i + BATCH_SIZE);
-            console.log(`Processing batch ${i / BATCH_SIZE + 1}`);
+        const activePages = statuspages.filter(sp => !sp.paused);
+        const pausedPages = statuspages.filter(sp => sp.paused);
 
-            await Promise.allSettled(batch.map(async (statuspage) => {
+        console.log(`[UpdateLoop] Starting update for ${activePages.length} active statuspages (${pausedPages.length} paused)`);
+
+        for (let i = 0; i < activePages.length; i += BATCH_SIZE) {
+            const batch = activePages.slice(i, i + BATCH_SIZE);
+            console.log(`[UpdateLoop] Processing batch ${i / BATCH_SIZE + 1} (${batch.length} pages)`);
+
+            const results = await Promise.allSettled(batch.map(async (statuspage) => {
                 let cacheKey = `dc-bot:statuspage:${statuspage.id}`;
                 let cacheValue = await cache.get(cacheKey) || false;
                 if (cacheValue) {
-                    return;
+                    console.log(`[UpdateLoop] Skipping ${statuspage.url} (cached)`);
+                    return { skipped: true };
                 }
 
-                await Promise.all([
-                    handleStatusPage(statuspage.id, client),
-                    handleAlerts(statuspage.id, client)
-                ]);
+                console.log(`[UpdateLoop] Updating ${statuspage.url}`);
+                const startTime = Date.now();
 
-                await cache.set(cacheKey, 'true', { EX: LOCK_TTL });
+                try {
+                    await Promise.all([
+                        handleStatusPage(statuspage.id, client),
+                        handleAlerts(statuspage.id, client)
+                    ]);
+
+                    // Reset failure count on success
+                    if (statuspage.failureCount > 0) {
+                        statuspage.failureCount = 0;
+                        statuspage.lastFailure = null;
+                        await statuspage.save();
+                    }
+
+                    await cache.set(cacheKey, 'true', { EX: LOCK_TTL });
+
+                    const duration = Date.now() - startTime;
+                    console.log(`[UpdateLoop] Completed ${statuspage.url} in ${duration}ms`);
+
+                    return { updated: true, duration };
+                } catch (error) {
+                    console.error(`[UpdateLoop] Error updating ${statuspage.url}:`, error.message);
+
+                    // Handle failure and potentially pause
+                    const wasPaused = await StatuspagePauseManager.handleFailure(statuspage, error, client, models);
+
+                    return {
+                        failed: true,
+                        paused: wasPaused,
+                        error: error.message
+                    };
+                }
             }));
+
+            const updated = results.filter(r => r.status === 'fulfilled' && r.value?.updated).length;
+            const skipped = results.filter(r => r.status === 'fulfilled' && r.value?.skipped).length;
+            const failed = results.filter(r => r.status === 'fulfilled' && r.value?.failed).length;
+            const paused = results.filter(r => r.status === 'fulfilled' && r.value?.paused).length;
+
+            console.log(`[UpdateLoop] Batch complete: ${updated} updated, ${skipped} skipped, ${failed} failed, ${paused} newly paused`);
         }
     } catch (error) {
-        console.error(`Error scheduling status page updates`, error);
+        console.error(`[UpdateLoop] Error scheduling status page updates`, error);
     }
 };
 

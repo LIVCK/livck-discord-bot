@@ -4,13 +4,14 @@
   "description": "Discord Bot / Self Hosted",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node scripts/patch-discordjs.js"
   },
   "type": "module",
   "author": "Rene Roscher",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^14.16.3",
+    "discord.js": "^14.22.1",
     "dotenv": "^16.4.7",
     "html-to-text": "^9.0.5",
     "mariadb": "^3.4.0",

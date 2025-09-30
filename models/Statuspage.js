@@ -14,6 +14,26 @@ export default (sequelize) => {
         lastChecked: {
             type: DataTypes.DATE,
         },
+        paused: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
+        pauseReason: {
+            type: DataTypes.ENUM('TIMEOUT', 'NOT_LIVCK'),
+            allowNull: true,
+            defaultValue: null,
+        },
+        failureCount: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
+        lastFailure: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            defaultValue: null,
+        },
     });
 
     Statuspage.associate = (models) => {

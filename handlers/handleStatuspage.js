@@ -14,8 +14,21 @@ export const handleStatusPage = async (statuspageId, client) => {
             return;
         }
 
+        console.log('[handleStatusPage] Processing statuspage:', statuspageRecord.url);
+        console.log('[handleStatusPage] Subscriptions count:', statuspageRecord.Subscriptions?.length || 0);
+
         const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url));
-        await statuspageService.fetchAll();
+
+        try {
+            await statuspageService.fetchAll();
+        } catch (fetchError) {
+            console.error('[handleStatusPage] Error in fetchAll:', fetchError);
+        }
+
+        console.log('[handleStatusPage] Fetched categories:', statuspageService.categories?.length || 0);
+        if (statuspageService.categories?.length === 0) {
+            console.warn('[handleStatusPage] No categories fetched for', statuspageRecord.url);
+        }
 
         await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
             try {
@@ -24,6 +37,7 @@ export const handleStatusPage = async (statuspageId, client) => {
 
                 // Generate embed with subscription's locale
                 const embed = generateEmbed(statuspageService, statuspageRecord, subscription.locale);
+                console.log('[handleStatusPage] Generated embed fields:', embed.data.fields?.length || 0);
 
                 const channel = await client.channels.fetch(subscription.channelId);
 

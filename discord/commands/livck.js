@@ -64,13 +64,28 @@ export default (models) => ({
                     }
                 ],
             },
+            {
+                type: 1,
+                name: 'resume',
+                description: translation.trans('commands.livck.subcommands.resume.description', {}, null, 'en'),
+                description_localizations: translation.localizeExcept('commands.livck.subcommands.resume.description'),
+                options: [
+                    {
+                        type: 3,
+                        name: 'url',
+                        description: translation.trans('commands.livck.options.url.description', {}, null, 'en'),
+                        description_localizations: translation.localizeExcept('commands.livck.options.url.description'),
+                        required: true
+                    }
+                ],
+            },
         ],
     },
     async execute(interaction, client) {
         const subcommand = interaction.options.getSubcommand();
 
         // Check permissions for write operations
-        if (['subscribe', 'unsubscribe', 'edit'].includes(subcommand)) {
+        if (['subscribe', 'unsubscribe', 'edit', 'resume'].includes(subcommand)) {
             if (!interaction.member.permissions.has('ManageGuild')) {
                 const userLocale = interaction.locale?.split('-')[0] || 'de';
                 translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
@@ -89,50 +104,103 @@ export default (models) => ({
                     const userLocale = interaction.locale?.split('-')[0] || 'de';
                     translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
-                    // Create modal with text inputs only (select menus not supported in modals)
-                    const modal = new ModalBuilder()
-                        .setCustomId('subscribe_complete_modal')
-                        .setTitle(translation.trans('commands.livck.subscribe.modal_title'));
+                    // Create modal with raw API payload to include select menus using Type 18 Label components
+                    const modalPayload = {
+                        type: 9, // MODAL response type
+                        data: {
+                            custom_id: 'subscribe_complete_modal',
+                            title: translation.trans('commands.livck.subscribe.modal_title'),
+                            components: [
+                                // URL Text Input with Label
+                                {
+                                    type: 18, // Label component
+                                    label: translation.trans('commands.livck.subscribe.modal_url_label'),
+                                    component: {
+                                        type: 4, // Text Input
+                                        custom_id: 'url',
+                                        style: 1, // Short
+                                        placeholder: 'https://status.example.com',
+                                        required: true
+                                    }
+                                },
+                                // Channel Select with Label
+                                {
+                                    type: 18, // Label component
+                                    label: translation.trans('commands.livck.subscribe.select_channel'),
+                                    component: {
+                                        type: 8, // Channel Select
+                                        custom_id: 'channel',
+                                        placeholder: translation.trans('commands.livck.subscribe.select_channel'),
+                                        channel_types: [0, 5], // GuildText (0), GuildAnnouncement (5)
+                                        required: true
+                                    }
+                                },
+                                // Events String Select with Label
+                                {
+                                    type: 18, // Label component
+                                    label: translation.trans('commands.livck.subscribe.select_events'),
+                                    component: {
+                                        type: 3, // String Select
+                                        custom_id: 'events',
+                                        placeholder: translation.trans('commands.livck.subscribe.select_events'),
+                                        required: true,
+                                        options: [
+                                            {
+                                                label: translation.trans('commands.livck.choices.all'),
+                                                value: 'all',
+                                                default: true
+                                            },
+                                            {
+                                                label: translation.trans('commands.livck.choices.status'),
+                                                value: 'status'
+                                            },
+                                            {
+                                                label: translation.trans('commands.livck.choices.news'),
+                                                value: 'news'
+                                            }
+                                        ]
+                                    }
+                                },
+                                // Locale String Select with Label
+                                {
+                                    type: 18, // Label component
+                                    label: translation.trans('commands.livck.subscribe.select_locale'),
+                                    component: {
+                                        type: 3, // String Select
+                                        custom_id: 'locale',
+                                        placeholder: translation.trans('commands.livck.subscribe.select_locale'),
+                                        required: true,
+                                        options: [
+                                            {
+                                                label: '🇩🇪 Deutsch',
+                                                value: 'de',
+                                                default: userLocale === 'de'
+                                            },
+                                            {
+                                                label: '🇬🇧 English',
+                                                value: 'en',
+                                                default: userLocale === 'en'
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    };
 
-                    // URL input
-                    const urlInput = new TextInputBuilder()
-                        .setCustomId('url')
-                        .setLabel(translation.trans('commands.livck.subscribe.modal_url_label'))
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('https://status.example.com')
-                        .setRequired(true);
-
-                    // Events input (text input)
-                    const eventsInput = new TextInputBuilder()
-                        .setCustomId('events')
-                        .setLabel(translation.trans('commands.livck.subscribe.modal_events_label'))
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('all / status / news')
-                        .setValue('all')
-                        .setRequired(false);
-
-                    // Locale input (text input)
-                    const localeInput = new TextInputBuilder()
-                        .setCustomId('locale')
-                        .setLabel(translation.trans('commands.livck.subscribe.modal_locale_label'))
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('de / en')
-                        .setValue(userLocale)
-                        .setRequired(false);
-
-                    const urlRow = new ActionRowBuilder().addComponents(urlInput);
-                    const eventsRow = new ActionRowBuilder().addComponents(eventsInput);
-                    const localeRow = new ActionRowBuilder().addComponents(localeInput);
-
-                    modal.addComponents(urlRow, eventsRow, localeRow);
-
-                    await interaction.showModal(modal);
+                    // Send raw API response
+                    await interaction.client.rest.post(
+                        `/interactions/${interaction.id}/${interaction.token}/callback`,
+                        { body: modalPayload }
+                    );
                 } catch (error) {
                     console.error('Error showing subscribe modal:', error);
-                    await interaction.reply({
-                        content: translation.trans('commands.livck.subscribe.error'),
-                        ephemeral: true,
-                    });
+                    if (!interaction.replied) {
+                        await interaction.reply({
+                            content: translation.trans('commands.livck.subscribe.error'),
+                            flags: 64 // EPHEMERAL flag
+                        });
+                    }
                 }
                 break;
             }
@@ -392,6 +460,71 @@ export default (models) => ({
                 break;
             }
 
+            case 'resume': {
+                try {
+                    const userLocale = interaction.locale?.split('-')[0] || 'de';
+                    translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
+                    const url = normalizeUrl(interaction.options.getString('url'), true);
+
+                    // Find statuspage with subscriptions for this guild
+                    const statuspage = await models.Statuspage.findOne({
+                        where: { url },
+                        include: [{
+                            model: models.Subscription,
+                            where: { guildId: interaction.guildId },
+                            required: true
+                        }]
+                    });
+
+                    if (!statuspage) {
+                        await interaction.reply({
+                            content: translation.trans('commands.livck.resume.not_found', { url }),
+                            flags: 64
+                        });
+                        return;
+                    }
+
+                    if (!statuspage.paused) {
+                        await interaction.reply({
+                            content: translation.trans('commands.livck.resume.not_paused', { url }),
+                            flags: 64
+                        });
+                        return;
+                    }
+
+                    // Import pause manager
+                    const { default: StatuspagePauseManager } = await import('../../services/statuspagePauseManager.js');
+
+                    const result = await StatuspagePauseManager.resume(statuspage, true);
+
+                    if (result.success) {
+                        await interaction.reply({
+                            content: translation.trans('commands.livck.resume.success', {
+                                url,
+                                reason: translation.trans(`commands.livck.resume.reasons.${statuspage.pauseReason || 'unknown'}`)
+                            }),
+                            flags: 64
+                        });
+                    } else {
+                        await interaction.reply({
+                            content: translation.trans('commands.livck.resume.failed', {
+                                url,
+                                message: result.message
+                            }),
+                            flags: 64
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error resuming statuspage:', error);
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.resume.error'),
+                        flags: 64
+                    });
+                }
+                break;
+            }
+
             default:
                 await interaction.reply({
                     content: 'Unknown subcommand. Use `/livck` to see available subcommands.',
@@ -404,17 +537,6 @@ export default (models) => ({
     async handleComponentInteraction(interaction, client) {
         const userLocale = interaction.locale?.split('-')[0] || 'de';
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
-
-        // Handle final subscribe channel selection
-        if (interaction.customId.startsWith('subscribe_final_')) {
-            const dataBase64 = interaction.customId.replace('subscribe_final_', '');
-            const data = JSON.parse(Buffer.from(dataBase64, 'base64').toString('utf-8'));
-            const channelId = interaction.channels.first().id;
-
-            data.channelId = channelId;
-            await this.completeSubscription(interaction, client, data);
-            return;
-        }
 
         // Handle subscription select menu
         if (interaction.customId === 'subscription_select') {
@@ -822,7 +944,18 @@ export default (models) => ({
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
         try {
-            const { url, channelId, events, locale } = data;
+            let { url, channelId, events, locale } = data;
+
+            // Validate URL is a LIVCK status page
+            let livck = new LIVCK(url);
+            if (!await livck.ensureIsLIVCK()) {
+                const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
+                await interaction[replyMethod]({
+                    content: translation.trans('commands.livck.subscribe.invalid_url'),
+                    flags: 64 // EPHEMERAL flag
+                });
+                return;
+            }
 
             let eventTypes;
             switch (events) {
@@ -851,18 +984,19 @@ export default (models) => ({
             });
 
             if (existingSubscription) {
-                await interaction.update({
+                const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
+                await interaction[replyMethod]({
                     content: translation.trans('commands.livck.subscribe.already_subscribed', {
                         url,
                         channelId: channelId,
                         locale: locale.toUpperCase()
                     }),
-                    components: []
+                    flags: 64 // EPHEMERAL flag
                 });
                 return;
             }
 
-            await models.Subscription.create({
+            const subscription = await models.Subscription.create({
                 guildId: interaction.guildId,
                 channelId: channelId,
                 statuspageId: statuspage.id,
@@ -871,23 +1005,32 @@ export default (models) => ({
                 locale: locale,
             });
 
-            await handleStatusPage(statuspage.id, client);
+            console.log('Subscription created:', subscription.id, 'for statuspage:', statuspage.id);
+
+            try {
+                await handleStatusPage(statuspage.id, client);
+                console.log('handleStatusPage completed for statuspage:', statuspage.id);
+            } catch (handleError) {
+                console.error('Error in handleStatusPage:', handleError);
+            }
 
             const langFlag = locale === 'de' ? '🇩🇪' : '🇬🇧';
-            await interaction.update({
+            const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
+            await interaction[replyMethod]({
                 content: translation.trans('commands.livck.subscribe.success', {
                     url,
                     channelId: channelId,
                     flag: langFlag,
                     locale: locale.toUpperCase()
                 }),
-                components: []
+                flags: 64 // EPHEMERAL flag
             });
         } catch (error) {
             console.error('Error completing subscription:', error);
-            await interaction.update({
+            const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
+            await interaction[replyMethod]({
                 content: translation.trans('commands.livck.subscribe.error'),
-                components: []
+                flags: 64 // EPHEMERAL flag
             });
         }
     },
@@ -898,55 +1041,59 @@ export default (models) => ({
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
         if (interaction.customId === 'subscribe_complete_modal') {
-            let url = interaction.fields.getTextInputValue('url');
-            const eventsInput = (interaction.fields.getTextInputValue('events') || 'all').toLowerCase().trim();
-            const localeInput = (interaction.fields.getTextInputValue('locale') || userLocale).toLowerCase().trim();
-
-            // Parse events
-            let events;
-            if (eventsInput.includes('status')) {
-                events = 'STATUS';
-            } else if (eventsInput.includes('news') || eventsInput.includes('neuigkeiten')) {
-                events = 'NEWS';
-            } else {
-                events = 'ALL';
-            }
-
-            // Parse locale
-            const locale = ['de', 'en'].includes(localeInput) ? localeInput : userLocale;
-
             try {
-                // Normalize and validate URL
-                url = normalizeUrl(url, true);
+                // Extract values from Type 18 Label components
+                const components = interaction.components || [];
 
-                let livck = new LIVCK(url);
-                if (!await livck.ensureIsLIVCK()) {
+                let url = null;
+                let channelId = null;
+                let events = 'ALL';
+                let locale = userLocale;
+
+                // Parse Type 18 components
+                for (const component of components) {
+                    // Type 18 has nested 'component' field
+                    const actualComponent = component.component || component;
+
+                    if (!actualComponent || !actualComponent.customId) continue;
+
+                    if (actualComponent.customId === 'url') {
+                        url = actualComponent.value;
+                    } else if (actualComponent.customId === 'channel') {
+                        channelId = actualComponent.values?.[0];
+                    } else if (actualComponent.customId === 'events') {
+                        const eventValue = actualComponent.values?.[0] || 'all';
+                        events = eventValue === 'status' ? 'STATUS' : eventValue === 'news' ? 'NEWS' : 'ALL';
+                    } else if (actualComponent.customId === 'locale') {
+                        locale = actualComponent.values?.[0] || userLocale;
+                    }
+                }
+
+                // Validate we have all required fields
+                if (!url || !channelId) {
                     await interaction.reply({
-                        content: translation.trans('commands.livck.subscribe.invalid_url'),
-                        ephemeral: true,
+                        content: translation.trans('commands.livck.subscribe.error'),
+                        flags: 64 // EPHEMERAL flag
                     });
                     return;
                 }
 
-                // Show channel select (Channel Select can't be in modal)
-                const channelSelect = new ChannelSelectMenuBuilder()
-                    .setCustomId(`subscribe_final_${Buffer.from(JSON.stringify({url, events, locale})).toString('base64')}`)
-                    .setPlaceholder(translation.trans('commands.livck.subscribe.select_channel'))
-                    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement);
-
-                const channelRow = new ActionRowBuilder().addComponents(channelSelect);
-
-                await interaction.reply({
-                    content: translation.trans('commands.livck.subscribe.select_channel_final', { url }),
-                    components: [channelRow],
-                    ephemeral: true
+                // Complete the subscription
+                await this.completeSubscription(interaction, client, {
+                    url: normalizeUrl(url, true),
+                    channelId,
+                    events,
+                    locale
                 });
+
             } catch (error) {
                 console.error('Error processing subscribe modal:', error);
-                await interaction.reply({
-                    content: translation.trans('commands.livck.subscribe.error'),
-                    ephemeral: true,
-                });
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.subscribe.error'),
+                        flags: 64 // EPHEMERAL flag
+                    });
+                }
             }
         }
     }

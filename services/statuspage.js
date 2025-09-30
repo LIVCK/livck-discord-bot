@@ -7,8 +7,26 @@ export default class Statuspage {
 
     async fetchCategories() {
         try {
+            console.log('[Statuspage] Fetching categories from:', this.livck.baseURL);
             const response = await this.livck.get('categories', {perPage: 100});
-            const categoriesArray = response.data || [];
+            console.log('[Statuspage] Categories response:', response);
+
+            // Handle both object and array responses
+            // The API returns data either in response.data or directly in response
+            let categoriesData = response.data || response;
+            let categoriesArray = [];
+
+            if (Array.isArray(categoriesData)) {
+                categoriesArray = categoriesData;
+            } else if (typeof categoriesData === 'object' && categoriesData !== null) {
+                // Convert object to array (skip empty arrays returned on error)
+                const values = Object.values(categoriesData);
+                if (values.length > 0 && !Array.isArray(values[0])) {
+                    categoriesArray = values;
+                }
+            }
+
+            console.log('[Statuspage] Categories array:', categoriesArray.length);
 
             this.categories = await Promise.all(
                 categoriesArray.map(async (category) => ({

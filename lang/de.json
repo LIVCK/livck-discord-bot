@@ -18,6 +18,9 @@
         },
         "edit": {
           "description": "Bearbeite ein bestehendes Abonnement"
+        },
+        "resume": {
+          "description": "Setze eine pausierte Status-Seite fort"
         }
       },
       "options": {
@@ -95,6 +98,19 @@
         "showing_limited": "⚠️ Zeige :shown von :total Abonnements (Discord Limit)",
         "refreshed": "✅ Liste aktualisiert!",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
+      },
+      "resume": {
+        "success": "✅ Status-Seite **:url** wurde erfolgreich fortgesetzt. Grund für Pause war: :reason",
+        "failed": "❌ Status-Seite **:url** konnte nicht fortgesetzt werden: :message",
+        "not_found": "❌ Status-Seite **:url** wurde nicht gefunden oder du hast keine Abonnements dafür.",
+        "not_paused": "ℹ️ Status-Seite **:url** ist nicht pausiert.",
+        "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
+        "reasons": {
+          "TIMEOUT": "Verbindungs-Timeout",
+          "NOT_LIVCK": "Keine LIVCK-Statusseite mehr",
+          "MANUAL": "Manuell pausiert",
+          "unknown": "Unbekannt"
+        }
       }
     }
   },
