@@ -1,6 +1,8 @@
 import StatuspageService from "../services/statuspage.js";
 import models from "../models/index.js";
 import { generateEmbed } from "../messages/messageHelper.js";
+import { getLayoutRenderer } from "../messages/layoutRenderers.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import LIVCK from "../api/livck.js";
 
 export const handleStatusPage = async (statuspageId, client) => {
@@ -35,9 +37,56 @@ export const handleStatusPage = async (statuspageId, client) => {
                 if (!subscription.eventTypes.STATUS)
                     return;
 
-                // Generate embed with subscription's locale
-                const embed = generateEmbed(statuspageService, statuspageRecord, subscription.locale);
-                console.log('[handleStatusPage] Generated embed fields:', embed.data.fields?.length || 0);
+                // Get the layout renderer for this subscription
+                const layoutKey = subscription.layout || 'DETAILED';
+                const renderer = getLayoutRenderer(layoutKey);
+
+                // Render the layout - returns array of {embed, type} objects
+                const renderResult = renderer(statuspageService, statuspageRecord, subscription.locale);
+                console.log('[handleStatusPage] Rendered layout:', layoutKey, 'embeds:', renderResult.length);
+
+                // Extract embeds from result
+                const embeds = renderResult.map(r => r.embed);
+
+                // Load custom links for this subscription
+                const customLinks = await models.CustomLink.findAll({
+                    where: { subscriptionId: subscription.id },
+                    order: [['position', 'ASC']]
+                });
+
+                // Build button rows (max 5 buttons per row, max 5 rows)
+                const components = [];
+                if (customLinks.length > 0) {
+                    const buttonRows = [];
+                    let currentRow = [];
+
+                    for (const link of customLinks.slice(0, 25)) { // Max 25 buttons total (5 rows x 5 buttons)
+                        // URL buttons must use ButtonStyle.Link
+                        const button = new ButtonBuilder()
+                            .setLabel(link.label)
+                            .setURL(link.url)
+                            .setStyle(ButtonStyle.Link);
+
+                        if (link.emoji) {
+                            button.setEmoji(link.emoji);
+                        }
+
+                        currentRow.push(button);
+
+                        // Create new row after 5 buttons
+                        if (currentRow.length === 5) {
+                            buttonRows.push(new ActionRowBuilder().addComponents(currentRow));
+                            currentRow = [];
+                        }
+                    }
+
+                    // Add remaining buttons
+                    if (currentRow.length > 0) {
+                        buttonRows.push(new ActionRowBuilder().addComponents(currentRow));
+                    }
+
+                    components.push(...buttonRows);
+                }
 
                 const channel = await client.channels.fetch(subscription.channelId);
 
@@ -52,7 +101,7 @@ export const handleStatusPage = async (statuspageId, client) => {
                 if (existingMessage) {
                     try {
                         const message = await channel.messages.fetch(existingMessage.messageId);
-                        await message.edit({ embeds: [embed] });
+                        await message.edit({ embeds, components });
                     } catch (error) {
                         if (error.code === 10008) {
                             await models.Message.destroy({
@@ -61,7 +110,7 @@ export const handleStatusPage = async (statuspageId, client) => {
                         }
                     }
                 } else {
-                    const message = await channel.send({ embeds: [embed] });
+                    const message = await channel.send({ embeds, components });
                     await models.Message.create({
                         subscriptionId: subscription.id,
                         messageId: message.id,

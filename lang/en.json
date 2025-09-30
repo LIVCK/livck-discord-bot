@@ -55,7 +55,7 @@
         },
         "compact": {
           "name": "📑 Compact",
-          "description": "Condensed view with inline status"
+          "description": "Categories with status counters (inline)"
         },
         "overview": {
           "name": "📊 Overview",
@@ -99,7 +99,33 @@
         "done_button": "Done",
         "completed": "✅ Editing completed!",
         "select_channel": "Select channel...",
+        "manage_links_button": "Manage Links",
         "error": "An error occurred. Please try again later."
+      },
+      "custom_links": {
+        "title": "🔗 Custom Links for **:name**",
+        "add_button": "➕ Add Link",
+        "back_button": "⬅️ Back",
+        "modal_title_add": "Add Custom Link",
+        "modal_title_edit": "Edit Custom Link",
+        "modal_label_label": "Button Text (max 80 characters)",
+        "modal_label_url": "URL (must start with https://)",
+        "modal_label_emoji": "Emoji (optional, e.g. 🔗)",
+        "no_links": "No custom links available.",
+        "list_item": "🔗 **:label**",
+        "select_placeholder": "Select link...",
+        "link_details": "🔗 Link Details for **:name**",
+        "position": "Position",
+        "edit_button": "Edit",
+        "delete_button": "Delete",
+        "move_up": "Move Up",
+        "move_down": "Move Down",
+        "added": "✅ Link successfully added!",
+        "updated": "✅ Link successfully updated!",
+        "deleted": "✅ Link successfully deleted!",
+        "error": "❌ An error occurred.",
+        "invalid_url": "❌ Invalid URL.",
+        "max_links": "❌ Maximum of 25 links reached."
       },
       "list": {
         "title": "📋 Your Subscriptions",
@@ -144,7 +170,8 @@
       "no_services": "No services available.",
       "unknown_category": "Unknown Category",
       "error": "Error",
-      "no_categories": "No categories available."
+      "no_categories": "No categories available.",
+      "available": "available"
     },
     "alerts": {
       "view_button": "View",

@@ -23,6 +23,11 @@ export default (sequelize) => {
             allowNull: false,
             defaultValue: { STATUS: true, NEWS: false },
         },
+        layout: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+            defaultValue: 'DETAILED',
+        },
         interval: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -40,6 +45,7 @@ export default (sequelize) => {
     Subscription.associate = (models) => {
         Subscription.belongsTo(models.Statuspage, { foreignKey: 'statuspageId' });
         Subscription.hasMany(models.Message, { foreignKey: 'subscriptionId', onDelete: 'CASCADE' });
+        Subscription.hasMany(models.CustomLink, { foreignKey: 'subscriptionId', onDelete: 'CASCADE' });
     };
 
     return Subscription;

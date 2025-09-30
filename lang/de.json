@@ -36,6 +36,9 @@
         "locale": {
           "description": "Sprache für Status-Updates"
         },
+        "layout": {
+          "description": "Anzeigelayout für Status-Nachrichten"
+        },
         "subscription": {
           "description": "Wähle das zu bearbeitende Abonnement"
         }
@@ -44,6 +47,24 @@
         "all": "Alle",
         "status": "Status",
         "news": "Neuigkeiten"
+      },
+      "layouts": {
+        "detailed": {
+          "name": "📋 Detailliert",
+          "description": "Alle Monitore mit Status-Indikatoren"
+        },
+        "compact": {
+          "name": "📑 Kompakt",
+          "description": "Kategorien mit Status-Zählern (inline)"
+        },
+        "overview": {
+          "name": "📊 Übersicht",
+          "description": "Nur Kategorien mit Gesamt-Status"
+        },
+        "embed_list": {
+          "name": "📚 Embed-Liste",
+          "description": "Separate Embeds pro Kategorie"
+        }
       },
       "subscribe": {
         "success": "Erfolgreich **:url** in <#:channelId> abonniert (:flag :locale).",
@@ -55,9 +76,11 @@
         "modal_url_label": "Status-Seiten URL",
         "modal_events_label": "Events (all/status/news)",
         "modal_locale_label": "Sprache (de/en)",
+        "modal_layout_label": "Layout (detailed/compact/overview/embed_list)",
         "select_channel": "Channel auswählen",
         "select_events": "Event-Typen auswählen",
         "select_locale": "Sprache auswählen",
+        "select_layout": "Layout auswählen",
         "select_channel_final": "✅ Wähle nun den Channel für **:url**"
       },
       "unsubscribe": {
@@ -76,7 +99,33 @@
         "done_button": "Fertig",
         "completed": "✅ Bearbeitung abgeschlossen!",
         "select_channel": "Channel auswählen...",
+        "manage_links_button": "Links verwalten",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
+      },
+      "custom_links": {
+        "title": "🔗 Custom Links für **:name**",
+        "add_button": "➕ Link hinzufügen",
+        "back_button": "⬅️ Zurück",
+        "modal_title_add": "Custom Link hinzufügen",
+        "modal_title_edit": "Custom Link bearbeiten",
+        "modal_label_label": "Button Text (max 80 Zeichen)",
+        "modal_label_url": "URL (muss mit https:// beginnen)",
+        "modal_label_emoji": "Emoji (optional, z.B. 🔗)",
+        "no_links": "Keine Custom Links vorhanden.",
+        "list_item": "🔗 **:label**",
+        "select_placeholder": "Link auswählen...",
+        "link_details": "🔗 Link Details für **:name**",
+        "position": "Position",
+        "edit_button": "Bearbeiten",
+        "delete_button": "Löschen",
+        "move_up": "Nach oben",
+        "move_down": "Nach unten",
+        "added": "✅ Link erfolgreich hinzugefügt!",
+        "updated": "✅ Link erfolgreich aktualisiert!",
+        "deleted": "✅ Link erfolgreich gelöscht!",
+        "error": "❌ Ein Fehler ist aufgetreten.",
+        "invalid_url": "❌ Ungültige URL.",
+        "max_links": "❌ Maximum von 25 Links erreicht."
       },
       "list": {
         "title": "📋 Deine Abonnements",
@@ -84,6 +133,7 @@
         "header": "📋 **Deine Abonnements** • :count Abos • :channels Channels • :pages Status-Seiten",
         "channel_label": "Channel",
         "language_label": "Sprache",
+        "layout_label": "Layout",
         "events_label": "Events",
         "edit_button": "Bearbeiten",
         "delete_button": "Löschen",
@@ -120,7 +170,8 @@
       "no_services": "Keine Dienste vorhanden.",
       "unknown_category": "Unbekannte Kategorie",
       "error": "Fehler",
-      "no_categories": "Keine Kategorien verfügbar."
+      "no_categories": "Keine Kategorien verfügbar.",
+      "available": "verfügbar"
     },
     "alerts": {
       "view_button": "Ansehen",

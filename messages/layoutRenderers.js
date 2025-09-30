@@ -122,7 +122,7 @@ export const renderDetailedLayout = (statuspageService, statuspage, locale = 'de
     const overallStatus = getOverallStatus(categories);
     const embedColor = getEmbedColor(overallStatus);
 
-    const fields = categories.map((category, index) => {
+    const fields = categories.map((category) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
         const monitorList = monitors
             .map((monitor) => {
@@ -131,14 +131,10 @@ export const renderDetailedLayout = (statuspageService, statuspage, locale = 'de
             })
             .join('\n') || translation.trans('messages.status.no_services');
 
-        // Max 2 inline fields per row
-        // Every 2nd field should be inline, but if it's the last odd field, make it full width
-        const shouldBeInline = (index % 2 === 0 && index < categories.length - 1) || (index % 2 === 1);
-
         return {
             name: category.name || translation.trans('messages.status.unknown_category'),
             value: monitorList,
-            inline: shouldBeInline
+            inline: false // Default layout - full width, straight down
         };
     });
 
@@ -186,14 +182,17 @@ export const renderCompactLayout = (statuspageService, statuspage, locale = 'de'
     const fields = categories.map((category, index) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
         const categoryStatus = getCategoryStatus(monitors);
-        const statusEmoji = getCategoryStatusEmoji(categoryStatus);
 
         // Count by status
         const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
         const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
         const totalCount = monitors.length;
 
-        let statusText = `${statusEmoji} ${availableCount}/${totalCount} ${translation.trans('messages.status.available')}`;
+        // Status bar using blocks
+        const statusBar = '█'.repeat(availableCount) + (unavailableCount > 0 ? '▓'.repeat(unavailableCount) : '');
+        const percentage = totalCount > 0 ? Math.round((availableCount / totalCount) * 100) : 100;
+
+        let statusText = `\`${percentage}%\` ${statusBar}\n${availableCount}/${totalCount} operational`;
         if (unavailableCount > 0) {
             statusText += ` • ${unavailableCount} down`;
         }
@@ -245,11 +244,14 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         }];
     }
 
-    let description = '';
-    categories.forEach((category) => {
+    // Calculate overall status for embed color
+    const overallStatus = getOverallStatus(categories);
+    const embedColor = getEmbedColor(overallStatus);
+
+    // Build fields with visual status bars
+    const fields = categories.map((category) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
         const categoryStatus = getCategoryStatus(monitors);
-        const statusEmoji = getCategoryStatusEmoji(categoryStatus);
         const categoryName = category.name || translation.trans('messages.status.unknown_category');
 
         // Count monitors by status
@@ -257,24 +259,36 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
         const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
 
-        let statusText = `${availableCount}/${totalMonitors} ${translation.trans('messages.status.available')}`;
-        if (categoryStatus === 'UNAVAILABLE' && unavailableCount > 0) {
-            statusText += ` (${unavailableCount} down)`;
-        } else if (categoryStatus === 'DEGRADED') {
-            statusText += ` (${unavailableCount} issues)`;
+        // Create visual progress bar
+        const percentage = totalMonitors > 0 ? Math.round((availableCount / totalMonitors) * 100) : 100;
+        const filledBlocks = Math.round((availableCount / totalMonitors) * 10);
+        const emptyBlocks = 10 - filledBlocks;
+
+        let statusBar;
+        if (categoryStatus === 'AVAILABLE') {
+            statusBar = '🟩'.repeat(10);
+        } else if (categoryStatus === 'UNAVAILABLE') {
+            statusBar = '🟥'.repeat(emptyBlocks) + '⬜'.repeat(filledBlocks);
+        } else {
+            statusBar = '🟨'.repeat(emptyBlocks) + '🟩'.repeat(filledBlocks);
         }
 
-        description += `${statusEmoji} **${categoryName}** - ${statusText}\n`;
+        let statusText = `${statusBar}\n**${percentage}%** operational • ${availableCount}/${totalMonitors} services`;
+        if (unavailableCount > 0) {
+            statusText += `\n⚠️ ${unavailableCount} service${unavailableCount > 1 ? 's' : ''} down`;
+        }
+
+        return {
+            name: `${getCategoryStatusEmoji(categoryStatus)} ${categoryName}`,
+            value: statusText,
+            inline: false
+        };
     });
 
-    // Calculate overall status for embed color
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
-
     const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
+        .setTitle(`📊 ${statuspage.name} - Overview`)
         .setColor(embedColor)
-        .setDescription(description || translation.trans('messages.status.no_categories'))
+        .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
         .setFooter({ text: statuspage.name });
@@ -283,7 +297,7 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
 };
 
 /**
- * Embed List Layout - Creates separate embeds for each category
+ * Embed List Layout - Creates separate embeds for each category in 2-column grid
  * Maximum of 10 embeds due to Discord limitations
  *
  * @param {Object} statuspageService - Statuspage service instance
@@ -318,29 +332,41 @@ export const renderEmbedListLayout = (statuspageService, statuspage, locale = 'd
         const statusEmoji = getCategoryStatusEmoji(categoryStatus);
         const embedColor = getEmbedColor(categoryStatus);
 
-        // Build description with monitor list
-        let description = monitors
-            .map((monitor) => {
-                const emoji = getStatusEmoji(monitor.state);
-                return `${emoji} **${monitor.name}**`;
-            })
-            .join('\n') || translation.trans('messages.status.no_services');
+        // Build fields in 2-column grid
+        const fields = monitors.map((monitor, monitorIndex) => {
+            const emoji = getStatusEmoji(monitor.state);
+            const shouldBeInline = (monitorIndex % 2 === 0 && monitorIndex < monitors.length - 1) || (monitorIndex % 2 === 1);
 
-        // Discord embed description limit is 4096 characters
-        // Truncate if necessary
-        if (description.length > 4090) {
-            description = description.substring(0, 4090) + '...';
+            return {
+                name: monitor.name,
+                value: `${emoji} ${monitor.state === 'AVAILABLE' ? 'Operational' : 'Down'}`,
+                inline: shouldBeInline
+            };
+        });
+
+        // If no monitors, show a message
+        if (fields.length === 0) {
+            fields.push({
+                name: '\u200B',
+                value: translation.trans('messages.status.no_services'),
+                inline: false
+            });
         }
+
+        // Count stats for title
+        const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
+        const totalCount = monitors.length;
 
         const embed = new EmbedBuilder()
             .setTitle(`${statusEmoji} ${categoryName}`)
             .setColor(embedColor)
-            .setDescription(description)
-            .setURL(statuspage.url)
-            .setTimestamp(new Date());
+            .setDescription(`**${availableCount}/${totalCount}** services operational`)
+            .setFields(fields)
+            .setURL(statuspage.url);
 
-        // Add main statuspage name as footer on first embed only
+        // Add timestamp and footer on first embed only
         if (index === 0) {
+            embed.setTimestamp(new Date());
             embed.setFooter({ text: statuspage.name });
         }
 

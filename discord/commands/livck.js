@@ -183,6 +183,40 @@ export default (models) => ({
                                             }
                                         ]
                                     }
+                                },
+                                // Layout String Select with Label
+                                {
+                                    type: 18, // Label component
+                                    label: translation.trans('commands.livck.subscribe.select_layout'),
+                                    component: {
+                                        type: 3, // String Select
+                                        custom_id: 'layout',
+                                        placeholder: translation.trans('commands.livck.subscribe.select_layout'),
+                                        required: true,
+                                        options: [
+                                            {
+                                                label: translation.trans('commands.livck.layouts.detailed.name'),
+                                                description: translation.trans('commands.livck.layouts.detailed.description'),
+                                                value: 'DETAILED',
+                                                default: true
+                                            },
+                                            {
+                                                label: translation.trans('commands.livck.layouts.compact.name'),
+                                                description: translation.trans('commands.livck.layouts.compact.description'),
+                                                value: 'COMPACT'
+                                            },
+                                            {
+                                                label: translation.trans('commands.livck.layouts.overview.name'),
+                                                description: translation.trans('commands.livck.layouts.overview.description'),
+                                                value: 'OVERVIEW'
+                                            },
+                                            {
+                                                label: translation.trans('commands.livck.layouts.embed_list.name'),
+                                                description: translation.trans('commands.livck.layouts.embed_list.description'),
+                                                value: 'EMBED_LIST'
+                                            }
+                                        ]
+                                    }
                                 }
                             ]
                         }
@@ -428,10 +462,43 @@ export default (models) => ({
                                 .setDefault(subscription.locale === 'en')
                         );
 
+                    const layoutSelectMenu = new StringSelectMenuBuilder()
+                        .setCustomId(`update_layout_${subscription.id}`)
+                        .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
+                        .addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
+                                .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
+                                .setValue('DETAILED')
+                                .setDefault(subscription.layout === 'DETAILED'),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(translation.trans('commands.livck.layouts.compact.name'))
+                                .setDescription(translation.trans('commands.livck.layouts.compact.description'))
+                                .setValue('COMPACT')
+                                .setDefault(subscription.layout === 'COMPACT'),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(translation.trans('commands.livck.layouts.overview.name'))
+                                .setDescription(translation.trans('commands.livck.layouts.overview.description'))
+                                .setValue('OVERVIEW')
+                                .setDefault(subscription.layout === 'OVERVIEW'),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(translation.trans('commands.livck.layouts.embed_list.name'))
+                                .setDescription(translation.trans('commands.livck.layouts.embed_list.description'))
+                                .setValue('EMBED_LIST')
+                                .setDefault(subscription.layout === 'EMBED_LIST')
+                        );
+
                     const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
                     const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
+                    const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
 
                     // Action buttons
+                    const manageLinksButton = new ButtonBuilder()
+                        .setCustomId(`manage_links_${subscription.id}`)
+                        .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('🔗');
+
                     const deleteButton = new ButtonBuilder()
                         .setCustomId(`delete_sub_${subscription.id}`)
                         .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -444,10 +511,14 @@ export default (models) => ({
                         .setStyle(ButtonStyle.Success)
                         .setEmoji('✅');
 
-                    const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
+                    const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
 
                     await interaction.reply({
-                        components: [eventRow, localeRow, buttonRow],
+                        content: translation.trans('commands.livck.edit.editing', {
+                            name: subscription.Statuspage.name || subscription.Statuspage.url,
+                            channelId: subscription.channelId
+                        }),
+                        components: [eventRow, localeRow, layoutRow, buttonRow],
                         ephemeral: true
                     });
                 } catch (error) {
@@ -718,6 +789,9 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('update_events_', '');
             const newEventType = interaction.values[0];
 
+            // Defer update immediately to prevent timeout
+            await interaction.deferUpdate();
+
             let eventTypes;
             switch (newEventType) {
                 case 'STATUS':
@@ -774,8 +848,35 @@ export default (models) => ({
                         .setDefault(subscription.locale === 'en')
                 );
 
+            const layoutSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_layout_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
+                        .setValue('DETAILED')
+                        .setDefault(subscription.layout === 'DETAILED'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.compact.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.compact.description'))
+                        .setValue('COMPACT')
+                        .setDefault(subscription.layout === 'COMPACT'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.overview.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.overview.description'))
+                        .setValue('OVERVIEW')
+                        .setDefault(subscription.layout === 'OVERVIEW'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.embed_list.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.embed_list.description'))
+                        .setValue('EMBED_LIST')
+                        .setDefault(subscription.layout === 'EMBED_LIST')
+                );
+
             const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
+            const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
 
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
@@ -791,8 +892,13 @@ export default (models) => ({
 
             const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
 
-            await interaction.update({
-                components: [eventRow, localeRow, buttonRow]
+            await interaction.editReply({
+                content: translation.trans('commands.livck.edit.updated', {
+                    field: translation.trans('commands.livck.list.events_label'),
+                    name: subscription.Statuspage.name || subscription.Statuspage.url,
+                    channelId: subscription.channelId
+                }),
+                components: [eventRow, localeRow, layoutRow, buttonRow]
             });
         }
 
@@ -800,6 +906,9 @@ export default (models) => ({
         if (interaction.customId.startsWith('update_locale_')) {
             const subscriptionId = interaction.customId.replace('update_locale_', '');
             const newLocale = interaction.values[0];
+
+            // Defer update immediately to prevent timeout
+            await interaction.deferUpdate();
 
             await models.Subscription.update(
                 { locale: newLocale },
@@ -861,14 +970,674 @@ export default (models) => ({
 
             const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
 
-            await interaction.update({
-                components: [eventRow, localeRow, buttonRow]
+            const layoutSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_layout_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
+                        .setValue('DETAILED')
+                        .setDefault(subscription.layout === 'DETAILED'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.compact.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.compact.description'))
+                        .setValue('COMPACT')
+                        .setDefault(subscription.layout === 'COMPACT'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.overview.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.overview.description'))
+                        .setValue('OVERVIEW')
+                        .setDefault(subscription.layout === 'OVERVIEW'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.embed_list.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.embed_list.description'))
+                        .setValue('EMBED_LIST')
+                        .setDefault(subscription.layout === 'EMBED_LIST')
+                );
+
+            const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.edit.updated', {
+                    field: translation.trans('commands.livck.list.language_label'),
+                    name: subscription.Statuspage.name || subscription.Statuspage.url,
+                    channelId: subscription.channelId
+                }),
+                components: [eventRow, localeRow, layoutRow, buttonRow]
             });
+        }
+
+        // Handle layout update
+        if (interaction.customId.startsWith('update_layout_')) {
+            const subscriptionId = interaction.customId.replace('update_layout_', '');
+            const newLayout = interaction.values[0];
+
+            // Defer update immediately to prevent timeout
+            await interaction.deferUpdate();
+
+            await models.Subscription.update(
+                { layout: newLayout },
+                { where: { id: subscriptionId } }
+            );
+
+            // Reload the edit interface with updated values
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            // Trigger immediate status page refresh with new layout (fire-and-forget)
+            if (subscription && subscription.Statuspage) {
+                handleStatusPage(subscription.Statuspage.id, client).then(() => {
+                    console.log(`[Layout Update] Regenerated status message for subscription ${subscriptionId} with layout ${newLayout}`);
+                }).catch(error => {
+                    console.error(`[Layout Update] Failed to regenerate status message:`, error);
+                });
+            }
+
+            const eventSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_events_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.all'))
+                        .setValue('ALL')
+                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.status'))
+                        .setValue('STATUS')
+                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.news'))
+                        .setValue('NEWS')
+                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
+                );
+
+            const localeSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_locale_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('🇩🇪 Deutsch')
+                        .setValue('de')
+                        .setDefault(subscription.locale === 'de'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('🇬🇧 English')
+                        .setValue('en')
+                        .setDefault(subscription.locale === 'en')
+                );
+
+            const layoutSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_layout_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
+                        .setValue('DETAILED')
+                        .setDefault(subscription.layout === 'DETAILED'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.compact.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.compact.description'))
+                        .setValue('COMPACT')
+                        .setDefault(subscription.layout === 'COMPACT'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.overview.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.overview.description'))
+                        .setValue('OVERVIEW')
+                        .setDefault(subscription.layout === 'OVERVIEW'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.embed_list.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.embed_list.description'))
+                        .setValue('EMBED_LIST')
+                        .setDefault(subscription.layout === 'EMBED_LIST')
+                );
+
+            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
+            const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
+            const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
+
+            const deleteButton = new ButtonBuilder()
+                .setCustomId(`delete_sub_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.list.delete_button'))
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🗑️');
+
+            const doneButton = new ButtonBuilder()
+                .setCustomId('edit_done')
+                .setLabel(translation.trans('commands.livck.edit.done_button'))
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✅');
+
+            const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.edit.updated', {
+                    field: translation.trans('commands.livck.list.layout_label'),
+                    name: subscription.Statuspage.name || subscription.Statuspage.url,
+                    channelId: subscription.channelId
+                }),
+                components: [eventRow, localeRow, layoutRow, buttonRow]
+            });
+        }
+
+        // Handle "Manage Links" button
+        if (interaction.customId.startsWith('manage_links_')) {
+            const subscriptionId = interaction.customId.replace('manage_links_', '');
+
+            // Defer update immediately to prevent timeout
+            await interaction.deferUpdate();
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            if (!subscription) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Load existing links
+            const customLinks = await models.CustomLink.findAll({
+                where: { subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            // Build link list message with emoji preview
+            let linksList = customLinks.length > 0
+                ? customLinks.map((link, index) => {
+                    const emoji = link.emoji || '🔗';
+                    return `${index + 1}. ${emoji} **${link.label}** - ${link.url}`;
+                  }).join('\n')
+                : translation.trans('commands.livck.custom_links.no_links');
+
+            // Build buttons
+            const addButton = new ButtonBuilder()
+                .setCustomId(`add_link_${subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.custom_links.add_button'))
+                .setStyle(ButtonStyle.Success)
+                .setDisabled(customLinks.length >= 25);
+
+            const backButton = new ButtonBuilder()
+                .setCustomId(`back_to_edit_${subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.custom_links.back_button'))
+                .setStyle(ButtonStyle.Secondary);
+
+            const buttonRow = new ActionRowBuilder().addComponents(addButton, backButton);
+            const components = [buttonRow];
+
+            // Add select menu for link management (edit/delete)
+            if (customLinks.length > 0) {
+                const linkSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`select_link_${subscriptionId}`)
+                    .setPlaceholder(translation.trans('commands.livck.custom_links.select_placeholder'))
+                    .addOptions(
+                        customLinks.slice(0, 25).map((link, index) => {
+                            const emoji = link.emoji || '🔗';
+                            return new StringSelectMenuOptionBuilder()
+                                .setLabel(`${index + 1}. ${link.label}`)
+                                .setValue(`link_${link.id}`)
+                                .setEmoji(emoji)
+                                .setDescription(link.url.substring(0, 100));
+                        })
+                    );
+
+                const selectRow = new ActionRowBuilder().addComponents(linkSelectMenu);
+                components.push(selectRow);
+            }
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.custom_links.title', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url
+                }) + '\n\n' + linksList,
+                components
+            });
+        }
+
+        // Handle "Back to Edit" button
+        if (interaction.customId.startsWith('back_to_edit_')) {
+            const subscriptionId = interaction.customId.replace('back_to_edit_', '');
+
+            // Reload edit menu - basically same as /livck edit
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            if (!subscription) {
+                await interaction.reply({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Defer update immediately
+            await interaction.deferUpdate();
+
+            // Build edit menu components
+            const eventSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_events_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.all'))
+                        .setValue('ALL')
+                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.status'))
+                        .setValue('STATUS')
+                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.choices.news'))
+                        .setValue('NEWS')
+                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
+                );
+
+            const localeSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_locale_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('🇩🇪 Deutsch')
+                        .setValue('de')
+                        .setDefault(subscription.locale === 'de'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('🇬🇧 English')
+                        .setValue('en')
+                        .setDefault(subscription.locale === 'en')
+                );
+
+            const layoutSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`update_layout_${subscription.id}`)
+                .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
+                        .setValue('DETAILED')
+                        .setDefault(subscription.layout === 'DETAILED'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.compact.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.compact.description'))
+                        .setValue('COMPACT')
+                        .setDefault(subscription.layout === 'COMPACT'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.overview.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.overview.description'))
+                        .setValue('OVERVIEW')
+                        .setDefault(subscription.layout === 'OVERVIEW'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.layouts.embed_list.name'))
+                        .setDescription(translation.trans('commands.livck.layouts.embed_list.description'))
+                        .setValue('EMBED_LIST')
+                        .setDefault(subscription.layout === 'EMBED_LIST')
+                );
+
+            const manageLinksButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🔗');
+
+            const doneButton = new ButtonBuilder()
+                .setCustomId('edit_done')
+                .setLabel(translation.trans('commands.livck.edit.done_button'))
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✅');
+
+            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
+            const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
+            const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, doneButton);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.edit.editing', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url,
+                    channelId: subscription.channelId
+                }),
+                components: [eventRow, localeRow, layoutRow, buttonRow]
+            });
+        }
+
+        // Handle link selection from select menu
+        if (interaction.customId.startsWith('select_link_')) {
+            const subscriptionId = interaction.customId.replace('select_link_', '');
+            const linkId = interaction.values[0].replace('link_', '');
+
+            await interaction.deferUpdate();
+
+            const link = await models.CustomLink.findByPk(linkId);
+            if (!link) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.custom_links.error'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            // Get link position info
+            const allLinks = await models.CustomLink.findAll({
+                where: { subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            const currentIndex = allLinks.findIndex(l => l.id === link.id);
+            const canMoveUp = currentIndex > 0;
+            const canMoveDown = currentIndex < allLinks.length - 1;
+
+            // Show link details with edit/delete/move options
+            const emoji = link.emoji || '🔗';
+            const linkInfo = `${emoji} **${link.label}**\n${link.url}\n\n${translation.trans('commands.livck.custom_links.position')}: ${currentIndex + 1}/${allLinks.length}`;
+
+            const editButton = new ButtonBuilder()
+                .setCustomId(`edit_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.edit_button'))
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('✏️');
+
+            const deleteButton = new ButtonBuilder()
+                .setCustomId(`delete_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.delete_button'))
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🗑️');
+
+            const moveUpButton = new ButtonBuilder()
+                .setCustomId(`move_link_up_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_up'))
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬆️')
+                .setDisabled(!canMoveUp);
+
+            const moveDownButton = new ButtonBuilder()
+                .setCustomId(`move_link_down_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_down'))
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬇️')
+                .setDisabled(!canMoveDown);
+
+            const backButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.custom_links.back_button'))
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬅️');
+
+            const actionRow1 = new ActionRowBuilder().addComponents(editButton, deleteButton);
+            const actionRow2 = new ActionRowBuilder().addComponents(moveUpButton, moveDownButton);
+            const actionRow3 = new ActionRowBuilder().addComponents(backButton);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.custom_links.link_details', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url
+                }) + '\n\n' + linkInfo,
+                components: [actionRow1, actionRow2, actionRow3]
+            });
+        }
+
+        // Handle "Add Link" button
+        if (interaction.customId.startsWith('add_link_')) {
+            const subscriptionId = interaction.customId.replace('add_link_', '');
+
+            // Show modal with 3 text inputs: label, url, emoji
+            const modalPayload = {
+                type: 9, // MODAL
+                data: {
+                    custom_id: `add_link_submit_${subscriptionId}`,
+                    title: translation.trans('commands.livck.custom_links.modal_title_add'),
+                    components: [
+                        {
+                            type: 1, // Action Row
+                            components: [{
+                                type: 4, // Text Input
+                                custom_id: 'label',
+                                style: 1, // Short
+                                label: translation.trans('commands.livck.custom_links.modal_label_label'),
+                                required: true,
+                                max_length: 80
+                            }]
+                        },
+                        {
+                            type: 1,
+                            components: [{
+                                type: 4,
+                                custom_id: 'url',
+                                style: 1,
+                                label: translation.trans('commands.livck.custom_links.modal_label_url'),
+                                required: true,
+                                placeholder: 'https://example.com'
+                            }]
+                        },
+                        {
+                            type: 1,
+                            components: [{
+                                type: 4,
+                                custom_id: 'emoji',
+                                style: 1,
+                                label: translation.trans('commands.livck.custom_links.modal_label_emoji'),
+                                required: false,
+                                placeholder: '🔗'
+                            }]
+                        }
+                    ]
+                }
+            };
+
+            await interaction.client.rest.post(
+                `/interactions/${interaction.id}/${interaction.token}/callback`,
+                { body: modalPayload }
+            );
+        }
+
+        // Handle "Edit Link" button
+        if (interaction.customId.startsWith('edit_link_')) {
+            const linkId = interaction.customId.replace('edit_link_', '');
+
+            const link = await models.CustomLink.findByPk(linkId);
+            if (!link) {
+                await interaction.reply({
+                    content: translation.trans('commands.livck.custom_links.error'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Show modal with existing values pre-filled
+            const modalPayload = {
+                type: 9, // MODAL
+                data: {
+                    custom_id: `edit_link_submit_${link.id}`,
+                    title: translation.trans('commands.livck.custom_links.modal_title_edit'),
+                    components: [
+                        {
+                            type: 1,
+                            components: [{
+                                type: 4,
+                                custom_id: 'label',
+                                style: 1,
+                                label: translation.trans('commands.livck.custom_links.modal_label_label'),
+                                value: link.label,
+                                required: true,
+                                max_length: 80
+                            }]
+                        },
+                        {
+                            type: 1,
+                            components: [{
+                                type: 4,
+                                custom_id: 'url',
+                                style: 1,
+                                label: translation.trans('commands.livck.custom_links.modal_label_url'),
+                                value: link.url,
+                                required: true
+                            }]
+                        },
+                        {
+                            type: 1,
+                            components: [{
+                                type: 4,
+                                custom_id: 'emoji',
+                                style: 1,
+                                label: translation.trans('commands.livck.custom_links.modal_label_emoji'),
+                                value: link.emoji || '',
+                                required: false,
+                                placeholder: '🔗'
+                            }]
+                        }
+                    ]
+                }
+            };
+
+            await interaction.client.rest.post(
+                `/interactions/${interaction.id}/${interaction.token}/callback`,
+                { body: modalPayload }
+            );
+        }
+
+        // Handle "Delete Link" button
+        if (interaction.customId.startsWith('delete_link_')) {
+            const linkId = interaction.customId.replace('delete_link_', '');
+
+            const link = await models.CustomLink.findByPk(linkId);
+            if (!link) {
+                await interaction.reply({
+                    content: translation.trans('commands.livck.custom_links.error'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const subscriptionId = link.subscriptionId;
+            await models.CustomLink.destroy({ where: { id: linkId } });
+
+            // Defer update immediately to prevent timeout
+            await interaction.deferUpdate();
+
+            // Trigger status page refresh asynchronously
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            if (subscription && subscription.Statuspage) {
+                // Fire and forget
+                handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                    console.error('[Delete Link] Failed to refresh status page:', error);
+                });
+            }
+
+            // Reload manage links view
+            interaction.customId = `manage_links_${subscriptionId}`;
+            await this.handleComponentInteraction(interaction, client);
+        }
+
+        // Handle "Move Link Up" button
+        if (interaction.customId.startsWith('move_link_up_')) {
+            const linkId = interaction.customId.replace('move_link_up_', '');
+
+            await interaction.deferUpdate();
+
+            const link = await models.CustomLink.findByPk(linkId);
+            if (!link) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.custom_links.error'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const allLinks = await models.CustomLink.findAll({
+                where: { subscriptionId: link.subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            const currentIndex = allLinks.findIndex(l => l.id === link.id);
+            if (currentIndex > 0) {
+                // Swap positions with previous link
+                const previousLink = allLinks[currentIndex - 1];
+                const tempPosition = link.position;
+                await link.update({ position: previousLink.position });
+                await previousLink.update({ position: tempPosition });
+
+                // Trigger status page refresh
+                const subscription = await models.Subscription.findOne({
+                    where: { id: link.subscriptionId },
+                    include: [{ model: models.Statuspage }]
+                });
+
+                if (subscription && subscription.Statuspage) {
+                    handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                        console.error('[Move Link] Failed to refresh status page:', error);
+                    });
+                }
+            }
+
+            // Reload link details view
+            interaction.customId = `select_link_${link.subscriptionId}`;
+            interaction.values = [`link_${linkId}`];
+            await this.handleComponentInteraction(interaction, client);
+        }
+
+        // Handle "Move Link Down" button
+        if (interaction.customId.startsWith('move_link_down_')) {
+            const linkId = interaction.customId.replace('move_link_down_', '');
+
+            await interaction.deferUpdate();
+
+            const link = await models.CustomLink.findByPk(linkId);
+            if (!link) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.custom_links.error'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const allLinks = await models.CustomLink.findAll({
+                where: { subscriptionId: link.subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            const currentIndex = allLinks.findIndex(l => l.id === link.id);
+            if (currentIndex < allLinks.length - 1) {
+                // Swap positions with next link
+                const nextLink = allLinks[currentIndex + 1];
+                const tempPosition = link.position;
+                await link.update({ position: nextLink.position });
+                await nextLink.update({ position: tempPosition });
+
+                // Trigger status page refresh
+                const subscription = await models.Subscription.findOne({
+                    where: { id: link.subscriptionId },
+                    include: [{ model: models.Statuspage }]
+                });
+
+                if (subscription && subscription.Statuspage) {
+                    handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                        console.error('[Move Link] Failed to refresh status page:', error);
+                    });
+                }
+            }
+
+            // Reload link details view
+            interaction.customId = `select_link_${link.subscriptionId}`;
+            interaction.values = [`link_${linkId}`];
+            await this.handleComponentInteraction(interaction, client);
         }
 
         // Handle "Done" button
         if (interaction.customId === 'edit_done') {
             await interaction.update({
+                content: translation.trans('commands.livck.edit.completed'),
                 components: []
             });
         }
@@ -944,7 +1713,7 @@ export default (models) => ({
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
         try {
-            let { url, channelId, events, locale } = data;
+            let { url, channelId, events, locale, layout } = data;
 
             // Validate URL is a LIVCK status page
             let livck = new LIVCK(url);
@@ -1000,6 +1769,7 @@ export default (models) => ({
                 guildId: interaction.guildId,
                 channelId: channelId,
                 statuspageId: statuspage.id,
+                layout: layout || 'DETAILED',
                 eventTypes: eventTypes,
                 interval: 60,
                 locale: locale,
@@ -1049,6 +1819,7 @@ export default (models) => ({
                 let channelId = null;
                 let events = 'ALL';
                 let locale = userLocale;
+                let layout = 'DETAILED';
 
                 // Parse Type 18 components
                 for (const component of components) {
@@ -1066,6 +1837,8 @@ export default (models) => ({
                         events = eventValue === 'status' ? 'STATUS' : eventValue === 'news' ? 'NEWS' : 'ALL';
                     } else if (actualComponent.customId === 'locale') {
                         locale = actualComponent.values?.[0] || userLocale;
+                    } else if (actualComponent.customId === 'layout') {
+                        layout = actualComponent.values?.[0] || 'DETAILED';
                     }
                 }
 
@@ -1083,7 +1856,8 @@ export default (models) => ({
                     url: normalizeUrl(url, true),
                     channelId,
                     events,
-                    locale
+                    locale,
+                    layout
                 });
 
             } catch (error) {
@@ -1092,6 +1866,141 @@ export default (models) => ({
                     await interaction.reply({
                         content: translation.trans('commands.livck.subscribe.error'),
                         flags: 64 // EPHEMERAL flag
+                    });
+                }
+            }
+        }
+
+        // Handle "Add Link" modal submit
+        if (interaction.customId.startsWith('add_link_submit_')) {
+            const subscriptionId = interaction.customId.replace('add_link_submit_', '');
+
+            try {
+                // Extract form values
+                const label = interaction.fields.getTextInputValue('label');
+                const url = interaction.fields.getTextInputValue('url');
+                const emoji = interaction.fields.getTextInputValue('emoji') || null;
+
+                // Validate URL
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.invalid_url'),
+                        flags: 64 // EPHEMERAL
+                    });
+                    return;
+                }
+
+                // Check max links
+                const existingCount = await models.CustomLink.count({
+                    where: { subscriptionId }
+                });
+
+                if (existingCount >= 25) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.max_links'),
+                        flags: 64
+                    });
+                    return;
+                }
+
+                // Create link
+                await models.CustomLink.create({
+                    subscriptionId,
+                    label: label.substring(0, 80),
+                    url,
+                    emoji,
+                    position: existingCount
+                });
+
+                // IMPORTANT: Reply first before doing expensive operations
+                await interaction.reply({
+                    content: translation.trans('commands.livck.custom_links.added'),
+                    flags: 64
+                });
+
+                // Trigger status page refresh asynchronously (don't await)
+                const subscription = await models.Subscription.findOne({
+                    where: { id: subscriptionId },
+                    include: [{ model: models.Statuspage }]
+                });
+
+                if (subscription && subscription.Statuspage) {
+                    // Fire and forget - don't await
+                    handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                        console.error('[Add Link] Failed to refresh status page:', error);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error adding custom link:', error);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.error'),
+                        flags: 64
+                    });
+                }
+            }
+        }
+
+        // Handle Edit Link Modal Submit
+        if (interaction.customId.startsWith('edit_link_submit_')) {
+            const linkId = interaction.customId.replace('edit_link_submit_', '');
+
+            try {
+                const link = await models.CustomLink.findByPk(linkId);
+                if (!link) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.error'),
+                        flags: 64
+                    });
+                    return;
+                }
+
+                // Extract form values
+                const label = interaction.fields.getTextInputValue('label');
+                const url = interaction.fields.getTextInputValue('url');
+                const emoji = interaction.fields.getTextInputValue('emoji') || null;
+
+                // Validate URL
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.invalid_url'),
+                        flags: 64
+                    });
+                    return;
+                }
+
+                // Update link
+                await link.update({
+                    label: label.substring(0, 80),
+                    url,
+                    emoji
+                });
+
+                // IMPORTANT: Reply first
+                await interaction.reply({
+                    content: translation.trans('commands.livck.custom_links.updated'),
+                    flags: 64
+                });
+
+                // Trigger status page refresh asynchronously
+                const subscription = await models.Subscription.findOne({
+                    where: { id: link.subscriptionId },
+                    include: [{ model: models.Statuspage }]
+                });
+
+                if (subscription && subscription.Statuspage) {
+                    handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                        console.error('[Edit Link] Failed to refresh status page:', error);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error editing custom link:', error);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.error'),
+                        flags: 64
                     });
                 }
             }
