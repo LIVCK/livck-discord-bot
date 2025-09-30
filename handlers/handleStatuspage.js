@@ -17,12 +17,13 @@ export const handleStatusPage = async (statuspageId, client) => {
         const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url));
         await statuspageService.fetchAll();
 
-        const embed = generateEmbed(statuspageService, statuspageRecord);
-
         await Promise.all(statuspageRecord.Subscriptions.map(async (subscription) => {
             try {
                 if (!subscription.eventTypes.STATUS)
                     return;
+
+                // Generate embed with subscription's locale
+                const embed = generateEmbed(statuspageService, statuspageRecord, subscription.locale);
 
                 const channel = await client.channels.fetch(subscription.channelId);
 
