@@ -5,6 +5,7 @@ export default (models) => ({
         name: 'livck-ping',
         description: translation.trans('commands.ping.description', {}, null, 'en'),
         description_localizations: translation.localizeExcept('commands.ping.description'),
+        dm_permission: true, // Can be used in DMs
     },
     async execute(interaction, client) {
         // Detect user's locale

@@ -50,10 +50,12 @@
         "statuspage_not_found": "Die Statusseite **:url** wurde nicht gefunden.",
         "modal_title": "Status-Seite abonnieren",
         "modal_url_label": "Status-Seiten URL",
-        "configure": "📝 Konfiguriere Abonnement für **:url**\nWähle Channel, Events und Sprache:",
+        "modal_events_label": "Events (all/status/news)",
+        "modal_locale_label": "Sprache (de/en)",
         "select_channel": "Channel auswählen",
         "select_events": "Event-Typen auswählen",
-        "select_locale": "Sprache auswählen"
+        "select_locale": "Sprache auswählen",
+        "select_channel_final": "✅ Wähle nun den Channel für **:url**"
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
