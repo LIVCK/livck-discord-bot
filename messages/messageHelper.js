@@ -1,6 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 import { truncate } from "../util/String.js";
 import { htmlToText } from "html-to-text";
+import translation from "../util/Translation.js";
 
 export const getStatusEmoji = (status) => {
     switch (status) {
@@ -13,20 +14,14 @@ export const getStatusEmoji = (status) => {
     }
 };
 
-// export const getStatus = (status) => {
-//     switch (status) {
-//         case 'AVAILABLE':
-//             return 'Verfügbar';
-//         case 'UNAVAILABLE':
-//             return 'Nicht verfügbar';
-//         default:
-//             return '-/-';
-//     }
-// };
+export const generateStatusFields = (categories, locale = 'de') => {
+    translation.setLocale(locale);
 
-export const generateStatusFields = (categories) => {
     if (!categories || !Array.isArray(categories)) {
-        return [{ name: 'Fehler', value: 'Keine Kategorien verfügbar.' }];
+        return [{
+            name: translation.trans('messages.status.error'),
+            value: translation.trans('messages.status.no_categories')
+        }];
     }
 
     return categories.map((category) => {
@@ -36,20 +31,23 @@ export const generateStatusFields = (categories) => {
                 const emoji = getStatusEmoji(monitor.state);
                 return `${emoji} **${monitor.name}**`;
             })
-            .join('\n') || 'Keine Dienste vorhanden.';
+            .join('\n') || translation.trans('messages.status.no_services');
 
         return {
-            name: `${category.name || 'Unbekannte Kategorie'}`,
+            name: category.name || translation.trans('messages.status.unknown_category'),
             value: monitorList
         };
     });
 };
 
-export const generateEmbed = (statuspageService, statuspage) => {
-    const fields = generateStatusFields(statuspageService.categories);
+export const generateEmbed = (statuspageService, statuspage, locale = 'de') => {
+    translation.setLocale(locale);
+
+    const fields = generateStatusFields(statuspageService.categories, locale);
+    const title = translation.trans('messages.status.title', { name: statuspage.name });
 
     return new EmbedBuilder()
-        .setTitle(`Dienste von ${statuspage.name}`)
+        .setTitle(title)
         .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())

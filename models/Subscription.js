@@ -10,6 +10,14 @@ export default (sequelize) => {
             type: DataTypes.STRING,
             allowNull: false,
         },
+        locale: {
+            type: DataTypes.STRING(5),
+            allowNull: false,
+            defaultValue: 'de',
+            validate: {
+                isIn: [['de', 'en']]
+            }
+        },
         eventTypes: {
             type: DataTypes.JSON,
             allowNull: false,
