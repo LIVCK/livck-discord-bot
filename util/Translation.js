@@ -8,8 +8,8 @@ const __dirname = path.dirname(__filename);
 class Translation {
     constructor() {
         this.translations = {};
-        this.currentLocale = 'de';
-        this.fallbackLocale = 'de';
+        this.currentLocale = 'en'; // Default to English
+        this.fallbackLocale = 'en'; // Fallback to English if key not found
         this.loadTranslations();
     }
 

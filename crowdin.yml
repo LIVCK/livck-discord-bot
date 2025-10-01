@@ -6,26 +6,32 @@ files:
     translation: /lang/%two_letters_code%.json
     languages_mapping:
       two_letters_code:
-        de: de
-        fr: fr
-        es: es
-        it: it
-        pt: pt
-        nl: nl
-        pl: pl
-        ru: ru
-        tr: tr
-    # Nur Dateien herunterladen, die zu mindestens 80% übersetzt sind
+        de: de      # German - bereits vorhanden
+        fr: fr      # French
+        es: es      # Spanish
+        pt: pt      # Portuguese
+        nl: nl      # Dutch
+        it: it      # Italian
+        pl: pl      # Polish
+        tr: tr      # Turkish
+        ru: ru      # Russian
+        ja: ja      # Japanese
+        ko: ko      # Korean
+        zh-CN: zh   # Chinese (Simplified)
+    # Nur vollständig übersetzte Strings herunterladen
     export_only_approved: false
     skip_untranslated_strings: true
     # Übersetzungen in Git-freundlichem Format (sortiert, eingerückt)
     export_languages:
-      - de
-      - fr
-      - es
-      - it
-      - pt
-      - nl
-      - pl
-      - ru
-      - tr
+      - de      # German
+      - fr      # French
+      - es      # Spanish
+      - pt      # Portuguese
+      - nl      # Dutch
+      - it      # Italian
+      - pl      # Polish
+      - tr      # Turkish
+      - ru      # Russian
+      - ja      # Japanese
+      - ko      # Korean
+      - zh      # Chinese
