@@ -4,8 +4,14 @@
   "description": "Discord Bot / Self Hosted",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node scripts/patch-discordjs.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "postinstall": "node scripts/patch-discordjs.js",
+    "i18n:upload": "crowdin upload sources",
+    "i18n:upload-all": "crowdin upload sources && crowdin upload translations",
+    "i18n:download": "crowdin download",
+    "i18n:status": "crowdin status"
   },
   "type": "module",
   "author": "Rene Roscher",
@@ -20,5 +26,9 @@
     "sequelize": "^6.37.5",
     "sequelize-cli": "^6.6.2",
     "umzug": "^3.8.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0"
   }
 }

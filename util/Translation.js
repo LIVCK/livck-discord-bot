@@ -32,7 +32,10 @@ class Translation {
             try {
                 const content = fs.readFileSync(path.join(langDir, file), 'utf-8');
                 this.translations[locale] = JSON.parse(content);
-                console.log(`[Translation] Loaded locale: ${locale}`);
+                // Only log in non-test environments
+                if (process.env.NODE_ENV !== 'test') {
+                    console.log(`[Translation] Loaded locale: ${locale}`);
+                }
             } catch (error) {
                 console.error(`[Translation] Error loading ${file}:`, error.message);
             }

@@ -1,3 +1,31 @@
+project_id: "834654"
+api_token_env: CROWDIN_PERSONAL_TOKEN
+
 files:
-  - source: translations.json
-    translation: /lang/%osx_locale%.json
+  - source: /lang/en.json
+    translation: /lang/%two_letters_code%.json
+    languages_mapping:
+      two_letters_code:
+        de: de
+        fr: fr
+        es: es
+        it: it
+        pt: pt
+        nl: nl
+        pl: pl
+        ru: ru
+        tr: tr
+    # Nur Dateien herunterladen, die zu mindestens 80% übersetzt sind
+    export_only_approved: false
+    skip_untranslated_strings: true
+    # Übersetzungen in Git-freundlichem Format (sortiert, eingerückt)
+    export_languages:
+      - de
+      - fr
+      - es
+      - it
+      - pt
+      - nl
+      - pl
+      - ru
+      - tr

@@ -79,7 +79,7 @@ Choose how your status page appears in Discord with 4 different layouts:
 Display your statuspage in your community's language:
 - 🇩🇪 German (Deutsch)
 - 🇬🇧 English
-- 🌍 **More languages coming soon** via [Crowdin](https://crowdin.com) - we're building a community-driven translation platform for this open-source project!
+- 🌍 **More languages coming soon** via [Crowdin](https://crowdin.com) - we're using a community-driven approach for translations
 
 Switch languages anytime - all messages update instantly!
 

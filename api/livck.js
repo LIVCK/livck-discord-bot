@@ -55,7 +55,15 @@ export default class LIVCK {
     }
 
     async ensureIsLIVCK() {
-        const response = await fetch(this.baseURL).catch((error) => console.error('Error [ensureIsLIVCK]:', error));
+        const response = await fetch(this.baseURL).catch((error) => {
+            console.error('Error [ensureIsLIVCK]:', error);
+            return null;
+        });
+
+        if (!response) {
+            return false;
+        }
+
         return response.headers.has('lvk-version');
     }
 
