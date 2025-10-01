@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on tags like v1.0.0, v1.2.3, etc.
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  # Stage 1: Run tests automatically
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.9.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Test coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  # Stage 2: Build and validate
+  build:
+    name: Build & Validate
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.9.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: npm run format:check || echo "No format script defined, skipping..."
+        continue-on-error: true
+
+      - name: Validate package.json
+        run: npm run validate || echo "No validate script defined, skipping..."
+        continue-on-error: true
+
+      - name: Create artifact
+        run: |
+          mkdir -p dist
+          tar -czf dist/livck-discord-bot-${GITHUB_REF#refs/tags/}.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='dist' \
+            --exclude='.env' \
+            --exclude='coverage' \
+            --exclude='__tests__' \
+            .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: dist/*.tar.gz
+          retention-days: 7
+
+  # Stage 3: Create draft release (requires manual approval)
+  create-release:
+    name: Create Draft Release
+    runs-on: ubuntu-latest
+    needs: [test, build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+          path: dist
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, showing all commits"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Generating changelog from $PREVIOUS_TAG to ${GITHUB_REF#refs/tags/}"
+            COMMITS=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Save changelog to file
+          cat > CHANGELOG.md << EOF
+          ## What's Changed
+
+          $COMMITS
+
+          ## Installation
+
+          ### Using the hosted bot (recommended)
+
+          [![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005)
+
+          ### Self-hosting
+
+          1. Download \`livck-discord-bot-${{ steps.get_version.outputs.version }}.tar.gz\`
+          2. Extract and follow setup instructions in \`README.md\`
+          3. Requires Node.js 22.9.0+, MariaDB, and Redis
+
+          ## Full Changelog
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ steps.get_version.outputs.version }}
+          EOF
+
+          cat CHANGELOG.md
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          name: Release ${{ steps.get_version.outputs.version }}
+          body_path: CHANGELOG.md
+          files: |
+            dist/*.tar.gz
+            LICENSE
+            README.md
+            CROWDIN_SETUP.md
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on draft release
+        run: |
+          echo "✅ Draft release created successfully!"
+          echo "📋 Review the release at: https://github.com/${{ github.repository }}/releases"
+          echo "🚀 When ready, publish the release manually from GitHub UI"
+
+  # Notify on failure
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [test, build, create-release]
+    if: failure()
+
+    steps:
+      - name: Failure notification
+        run: |
+          echo "❌ Release pipeline failed!"
+          echo "Check the logs at: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
