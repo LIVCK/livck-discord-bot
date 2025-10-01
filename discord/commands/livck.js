@@ -1710,6 +1710,34 @@ export default (models) => ({
                 }
             }
 
+            // Defer the reply to give us more time for validation
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.deferReply({ flags: 64 }); // EPHEMERAL
+            }
+
+            // IMPORTANT: Validate URL BEFORE creating anything
+            const livck = new LIVCK(url);
+            let isValid = false;
+
+            try {
+                isValid = await livck.ensureIsLIVCK();
+            } catch (error) {
+                console.error('[Subscribe] Error validating LIVCK URL:', error);
+                isValid = false;
+            }
+
+            if (!isValid) {
+                console.error('[Subscribe] Invalid LIVCK URL (not a LIVCK statuspage):', url);
+                const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+                await interaction[replyMethod]({
+                    content: translation.trans('commands.livck.subscribe.invalid_livck_url', {
+                        url
+                    }),
+                    flags: 64 // EPHEMERAL flag
+                });
+                return;
+            }
+
             // Create statuspage if it doesn't exist
             if (!statuspage) {
                 statuspage = await models.Statuspage.create({ url, name: domainFromUrl(url) });
@@ -1728,39 +1756,22 @@ export default (models) => ({
 
             console.log('Subscription created:', subscription.id, 'for statuspage:', statuspage.id);
 
-            // IMPORTANT: Reply IMMEDIATELY before doing expensive operations
+            // Reply with success
             const langFlag = locale === 'de' ? '🇩🇪' : '🇬🇧';
-            const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
-            await interaction[replyMethod]({
+            await interaction.editReply({
                 content: translation.trans('commands.livck.subscribe.success', {
                     url,
                     channelId: channelId,
                     flag: langFlag,
                     locale: locale.toUpperCase()
-                }),
-                flags: 64 // EPHEMERAL flag
+                })
             });
 
-            // Now do expensive operations asynchronously (fire-and-forget)
-            // Validate URL and fetch status page in background
-            const livck = new LIVCK(url);
-            livck.ensureIsLIVCK().then(async (isValid) => {
-                if (!isValid) {
-                    console.error('[Subscribe] Invalid LIVCK URL:', url);
-                    // Delete the subscription if invalid
-                    await models.Subscription.destroy({ where: { id: subscription.id } });
-                    return;
-                }
-
-                // Fetch and render status page
-                try {
-                    await handleStatusPage(statuspage.id, client);
-                    console.log('[Subscribe] handleStatusPage completed for statuspage:', statuspage.id);
-                } catch (handleError) {
-                    console.error('[Subscribe] Error in handleStatusPage:', handleError);
-                }
+            // Now fetch and render status page asynchronously (fire-and-forget)
+            handleStatusPage(statuspage.id, client).then(() => {
+                console.log('[Subscribe] handleStatusPage completed for statuspage:', statuspage.id);
             }).catch(error => {
-                console.error('[Subscribe] Error validating LIVCK URL:', error);
+                console.error('[Subscribe] Error in handleStatusPage:', error);
             });
 
         } catch (error) {

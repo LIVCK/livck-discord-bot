@@ -75,6 +75,7 @@
         "error": "An error occurred. Please try again later.",
         "already_subscribed": "You are already subscribed to **:url** in <#:channelId> (:locale).",
         "invalid_url": "The URL provided does not appear to be a valid LIVCK status page.",
+        "invalid_livck_url": "❌ **:url** is not a valid LIVCK statuspage.\n\nThis bot only works with LIVCK statuspages. Please make sure the URL is correct and the statuspage is powered by LIVCK.",
         "statuspage_not_found": "The status page **:url** was not found.",
         "modal_title": "Subscribe to status page",
         "modal_url_label": "Status page URL",

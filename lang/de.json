@@ -75,6 +75,7 @@
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut.",
         "already_subscribed": "Du hast **:url** bereits in <#:channelId> abonniert (:locale).",
         "invalid_url": "Die angegebene URL scheint keine gültige LIVCK-Statusseite zu sein.",
+        "invalid_livck_url": "❌ **:url** ist keine gültige LIVCK-Statusseite.\n\nDieser Bot funktioniert nur mit LIVCK-Statuspages. Stelle sicher, dass die URL korrekt ist und die Statusseite mit LIVCK betrieben wird.",
         "statuspage_not_found": "Die Statusseite **:url** wurde nicht gefunden.",
         "modal_title": "Status-Seite abonnieren",
         "modal_url_label": "Status-Seiten URL",
