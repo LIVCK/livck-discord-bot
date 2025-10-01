@@ -130,7 +130,7 @@ export default (models) => ({
                                     component: {
                                         type: 8, // Channel Select
                                         custom_id: 'channel',
-                                        placeholder: translation.trans('commands.livck.subscribe.select_channel'),
+                                        placeholder: `💡 ${translation.trans('commands.livck.subscribe.select_channel_hint')}`,
                                         channel_types: [0, 5], // GuildText (0), GuildAnnouncement (5)
                                         required: true
                                     }

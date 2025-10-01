@@ -83,6 +83,7 @@
         "modal_locale_label": "Sprache (de/en)",
         "modal_layout_label": "Layout (detailed/compact/overview/tree/minimal)",
         "select_channel": "Channel auswählen",
+        "select_channel_hint": "Nutze den aktuellen Channel oder wähle einen anderen",
         "select_events": "Event-Typen auswählen",
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
