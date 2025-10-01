@@ -1,3 +1,5 @@
+![LIVCK Discord Bot Banner](resources/banner.png)
+
 # LIVCK Discord Bot
 
 > **Beam your LIVCK statuspage directly into Discord**
@@ -6,8 +8,8 @@ Seamlessly integrate your [LIVCK](https://livck.com) statuspage into your Discor
 
 **Works exclusively with LIVCK statuspages** - the self-hosted statuspage and communication platform.
 
-[![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005) 
-[![LIVCK Website](https://img.shields.io/badge/LIVCK-Website-blue?style=for-the-badge)](https://livck.com) 
+[![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005)
+[![LIVCK Website](https://img.shields.io/badge/LIVCK-Website-blue?style=for-the-badge)](https://livck.com)
 [![Licence](https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge)](./LICENSE)
 [![Crowdin](https://img.shields.io/badge/Crowdin-2E3340.svg?style=for-the-badge&logo=Crowdin&logoColor=white)](https://crowdin.com/project/livck-discord-bot)
 
