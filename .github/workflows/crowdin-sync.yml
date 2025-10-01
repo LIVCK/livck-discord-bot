@@ -1,0 +1,121 @@
+name: Crowdin Sync
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+
+  workflow_dispatch:
+
+  push:
+    branches: [main]
+    paths:
+      - 'lang/en.json'  # Source language
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-crowdin:
+    name: Sync Translations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.9.0'
+
+      - name: Install Crowdin CLI
+        run: npm install -g @crowdin/cli
+
+      - name: Upload sources to Crowdin
+        run: crowdin upload sources --no-progress
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Download translations from Crowdin
+        run: crowdin download --no-progress --skip-untranslated-strings
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Check for translation changes
+        id: check_changes
+        run: |
+          git diff --quiet lang/ || echo "has_changes=true" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(i18n): sync translations from Crowdin'
+          branch: crowdin-translations
+          delete-branch: true
+          title: '🌍 Update translations from Crowdin'
+          body: |
+            ## 🌍 Automatic Translation Update
+
+            This PR contains the latest translations from [Crowdin](https://crowdin.com/project/livck-discord-bot).
+
+            ### Changes
+            - ✅ Downloaded latest translations
+            - ✅ Only includes strings that are fully translated
+            - ✅ Source file (en.json) uploaded to Crowdin
+
+            ### Review Checklist
+            - [ ] Check that new language files are properly formatted
+            - [ ] Verify translation keys match source
+            - [ ] Test bot with new translations (if possible)
+
+            ---
+
+            🤖 This PR was automatically created by the Crowdin Sync workflow.
+
+            **Translation Progress:** https://crowdin.com/project/livck-discord-bot
+          labels: |
+            translations
+            automated
+          reviewers: |
+            ${{ github.repository_owner }}
+
+      - name: Summary
+        run: |
+          if [ -d "lang" ]; then
+            echo "📊 Translation Files:"
+            ls -lh lang/*.json || echo "No JSON files found"
+            echo ""
+            echo "🌍 Available Languages:"
+            for file in lang/*.json; do
+              if [ -f "$file" ]; then
+                lang=$(basename "$file" .json)
+                lines=$(wc -l < "$file")
+                echo "  - $lang: $lines lines"
+              fi
+            done
+          fi
+
+  upload-german:
+    name: Upload German Translations
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.modified, 'lang/de.json')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Crowdin CLI
+        run: npm install -g @crowdin/cli
+
+      - name: Upload German translations
+        run: crowdin upload translations --language de --no-progress
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Summary
+        run: echo "✅ German translations uploaded to Crowdin"
