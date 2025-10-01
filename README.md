@@ -52,6 +52,17 @@ This Discord bot extends LIVCK by bringing your entire statuspage directly into 
 
 ---
 
+## 🚀 Quick Start
+
+1. **[Invite the bot](https://discord.com/oauth2/authorize?client_id=1315761064520188005)** to your Discord server
+2. Run `/livck subscribe` in the channel where you want your statuspage
+3. Enter your LIVCK statuspage URL (e.g., `status.livck.com`)
+4. Choose what to display (statuspage, incidents, or both)
+5. Select your preferred language and layout
+6. Done! Your complete statuspage is now live in Discord and updates automatically
+
+---
+
 ## ✨ Features
 
 ### 📊 **Complete Statuspage Integration**
@@ -104,17 +115,6 @@ Add custom buttons to your status messages for quick access:
 - Different channels for different status pages
 - Choose specific event types per channel
 - Easy management through Discord commands
-
----
-
-## 🚀 Quick Start
-
-1. **[Invite the bot](https://discord.com/oauth2/authorize?client_id=1315761064520188005)** to your Discord server
-2. Run `/livck subscribe` in the channel where you want your statuspage
-3. Enter your LIVCK statuspage URL (e.g., `status.livck.com`)
-4. Choose what to display (statuspage, incidents, or both)
-5. Select your preferred language and layout
-6. Done! Your complete statuspage is now live in Discord and updates automatically
 
 ---
 
@@ -268,7 +268,7 @@ While we provide a hosted version, you're free to self-host the bot.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/livck-discord-bot.git
+   git clone https://github.com/LIVCK/livck-discord-bot.git
    cd livck-discord-bot
    ```
 
