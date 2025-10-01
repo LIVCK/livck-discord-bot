@@ -435,24 +435,6 @@ export default (models) => ({
                     }
 
                     // Show edit options with select menus
-                    const eventSelectMenu = new StringSelectMenuBuilder()
-                        .setCustomId(`update_events_${subscription.id}`)
-                        .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                        .addOptions(
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel(translation.trans('commands.livck.choices.all'))
-                                .setValue('ALL')
-                                .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel(translation.trans('commands.livck.choices.status'))
-                                .setValue('STATUS')
-                                .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel(translation.trans('commands.livck.choices.news'))
-                                .setValue('NEWS')
-                                .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                        );
-
                     const localeSelectMenu = new StringSelectMenuBuilder()
                         .setCustomId(`update_locale_${subscription.id}`)
                         .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
@@ -498,7 +480,6 @@ export default (models) => ({
                                 .setDefault(subscription.layout === 'MINIMAL')
                         );
 
-                    const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
                     const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
                     const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
 
@@ -525,7 +506,7 @@ export default (models) => ({
                             name: subscription.Statuspage.name || subscription.Statuspage.url,
                             channelId: subscription.channelId
                         }),
-                        components: [eventRow, localeRow, layoutRow, buttonRow],
+                        components: [localeRow, layoutRow, buttonRow],
                         ephemeral: true
                     });
                 } catch (error) {
@@ -701,6 +682,8 @@ export default (models) => ({
 
         // Handle delete button from list
         if (interaction.customId.startsWith('delete_sub_')) {
+            await interaction.deferUpdate();
+
             const subscriptionId = interaction.customId.replace('delete_sub_', '');
 
             const subscription = await models.Subscription.findOne({
@@ -709,16 +692,17 @@ export default (models) => ({
             });
 
             if (!subscription) {
-                await interaction.reply({
+                await interaction.editReply({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    embeds: [],
+                    components: []
                 });
                 return;
             }
 
             await models.Subscription.destroy({ where: { id: subscriptionId } });
 
-            await interaction.update({
+            await interaction.editReply({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
                 embeds: [],
                 components: []
@@ -789,126 +773,6 @@ export default (models) => ({
             });
         }
 
-        // Handle event type update
-        if (interaction.customId.startsWith('update_events_')) {
-            const subscriptionId = interaction.customId.replace('update_events_', '');
-            const newEventType = interaction.values[0];
-
-            // Defer update immediately to prevent timeout
-            await interaction.deferUpdate();
-
-            let eventTypes;
-            switch (newEventType) {
-                case 'STATUS':
-                    eventTypes = { STATUS: true, NEWS: false };
-                    break;
-                case 'NEWS':
-                    eventTypes = { STATUS: false, NEWS: true };
-                    break;
-                default:
-                    eventTypes = { STATUS: true, NEWS: true };
-            }
-
-            await models.Subscription.update(
-                { eventTypes },
-                { where: { id: subscriptionId } }
-            );
-
-            // Reload the edit interface with updated values
-            const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
-                include: [{ model: models.Statuspage }]
-            });
-
-            // Rebuild select menus with new values
-            const eventSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`update_events_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.all'))
-                        .setValue('ALL')
-                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.status'))
-                        .setValue('STATUS')
-                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.news'))
-                        .setValue('NEWS')
-                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                );
-
-            const localeSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`update_locale_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
-
-            const layoutSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`update_layout_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.subscribe.select_layout'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.layouts.detailed.name'))
-                        .setDescription(translation.trans('commands.livck.layouts.detailed.description'))
-                        .setValue('DETAILED')
-                        .setDefault(subscription.layout === 'DETAILED'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.layouts.compact.name'))
-                        .setDescription(translation.trans('commands.livck.layouts.compact.description'))
-                        .setValue('COMPACT')
-                        .setDefault(subscription.layout === 'COMPACT'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.layouts.overview.name'))
-                        .setDescription(translation.trans('commands.livck.layouts.overview.description'))
-                        .setValue('OVERVIEW')
-                        .setDefault(subscription.layout === 'OVERVIEW'),
-                    // new StringSelectMenuOptionBuilder()
-                    //     .setLabel(translation.trans('commands.livck.layouts.tree.name'))
-                    //     .setDescription(translation.trans('commands.livck.layouts.tree.description'))
-                    //     .setValue('TREE')
-                    //     .setDefault(subscription.layout === 'TREE'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.layouts.minimal.name'))
-                        .setDescription(translation.trans('commands.livck.layouts.minimal.description'))
-                        .setValue('MINIMAL')
-                        .setDefault(subscription.layout === 'MINIMAL')
-                );
-
-            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
-            const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
-            const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
-
-            const deleteButton = new ButtonBuilder()
-                .setCustomId(`delete_sub_${subscription.id}`)
-                .setLabel(translation.trans('commands.livck.list.delete_button'))
-                .setStyle(ButtonStyle.Danger)
-
-            const doneButton = new ButtonBuilder()
-                .setCustomId('edit_done')
-                .setLabel(translation.trans('commands.livck.edit.done_button'))
-                .setStyle(ButtonStyle.Success)
-
-            const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
-
-            await interaction.editReply({
-                content: translation.trans('commands.livck.edit.updated', {
-                    field: translation.trans('commands.livck.list.events_label'),
-                    name: subscription.Statuspage.name || subscription.Statuspage.url,
-                    channelId: subscription.channelId
-                }),
-                components: [eventRow, localeRow, layoutRow, buttonRow]
-            });
-        }
 
         // Handle locale update
         if (interaction.customId.startsWith('update_locale_')) {
@@ -936,24 +800,6 @@ export default (models) => ({
                 });
             }
 
-            const eventSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`update_events_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.all'))
-                        .setValue('ALL')
-                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.status'))
-                        .setValue('STATUS')
-                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.news'))
-                        .setValue('NEWS')
-                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                );
-
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
@@ -968,20 +814,7 @@ export default (models) => ({
                         .setDefault(subscription.locale === 'en')
                 );
 
-            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
-
-            const deleteButton = new ButtonBuilder()
-                .setCustomId(`delete_sub_${subscription.id}`)
-                .setLabel(translation.trans('commands.livck.list.delete_button'))
-                .setStyle(ButtonStyle.Danger)
-
-            const doneButton = new ButtonBuilder()
-                .setCustomId('edit_done')
-                .setLabel(translation.trans('commands.livck.edit.done_button'))
-                .setStyle(ButtonStyle.Success)
-
-            const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
 
             const layoutSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_layout_${subscription.id}`)
@@ -1016,13 +849,30 @@ export default (models) => ({
 
             const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
 
+            const manageLinksButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
+                .setStyle(ButtonStyle.Primary)
+
+            const deleteButton = new ButtonBuilder()
+                .setCustomId(`delete_sub_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.list.delete_button'))
+                .setStyle(ButtonStyle.Danger)
+
+            const doneButton = new ButtonBuilder()
+                .setCustomId('edit_done')
+                .setLabel(translation.trans('commands.livck.edit.done_button'))
+                .setStyle(ButtonStyle.Success)
+
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
+
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
                     field: translation.trans('commands.livck.list.language_label'),
                     name: subscription.Statuspage.name || subscription.Statuspage.url,
                     channelId: subscription.channelId
                 }),
-                components: [eventRow, localeRow, layoutRow, buttonRow]
+                components: [localeRow, layoutRow, buttonRow]
             });
         }
 
@@ -1054,24 +904,6 @@ export default (models) => ({
                 });
             }
 
-            const eventSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`update_events_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.all'))
-                        .setValue('ALL')
-                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.status'))
-                        .setValue('STATUS')
-                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.news'))
-                        .setValue('NEWS')
-                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                );
-
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
@@ -1117,9 +949,13 @@ export default (models) => ({
                         .setDefault(subscription.layout === 'MINIMAL')
                 );
 
-            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
             const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
+
+            const manageLinksButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
+                .setStyle(ButtonStyle.Primary)
 
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
@@ -1131,7 +967,7 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
                 .setStyle(ButtonStyle.Success)
 
-            const buttonRow = new ActionRowBuilder().addComponents(deleteButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
@@ -1139,7 +975,7 @@ export default (models) => ({
                     name: subscription.Statuspage.name || subscription.Statuspage.url,
                     channelId: subscription.channelId
                 }),
-                components: [eventRow, localeRow, layoutRow, buttonRow]
+                components: [localeRow, layoutRow, buttonRow]
             });
         }
 
@@ -1173,7 +1009,7 @@ export default (models) => ({
             let linksList = customLinks.length > 0
                 ? customLinks.map((link, index) => {
                     const emoji = link.emoji || '🔗';
-                    return `${index + 1}. ${emoji} **${link.label}** - ${link.url}`;
+                    return `${index + 1}. ${emoji} **${link.label}** - \`${link.url}\``;
                   }).join('\n')
                 : translation.trans('commands.livck.custom_links.no_links');
 
@@ -1360,7 +1196,8 @@ export default (models) => ({
 
             // Show link details with edit/delete/move options
             const emoji = link.emoji || '🔗';
-            const linkInfo = `${emoji} **${link.label}**\n${link.url}\n\n${translation.trans('commands.livck.custom_links.position')}: ${currentIndex + 1}/${allLinks.length}`;
+            // Wrap URL in backticks to prevent preview
+            const linkInfo = `${emoji} **${link.label}**\n\`${link.url}\`\n\n${translation.trans('commands.livck.custom_links.position')}: ${currentIndex + 1}/${allLinks.length}`;
 
             const editButton = new ButtonBuilder()
                 .setCustomId(`edit_link_${link.id}`)
@@ -1598,10 +1435,61 @@ export default (models) => ({
                 }
             }
 
-            // Reload link details view
-            interaction.customId = `select_link_${link.subscriptionId}`;
-            interaction.values = [`link_${linkId}`];
-            await this.handleComponentInteraction(interaction, client);
+            // Reload link details view with updated positions
+            const updatedAllLinks = await models.CustomLink.findAll({
+                where: { subscriptionId: link.subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: link.subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            const updatedIndex = updatedAllLinks.findIndex(l => l.id === link.id);
+            const canMoveUp = updatedIndex > 0;
+            const canMoveDown = updatedIndex < updatedAllLinks.length - 1;
+
+            const emoji = link.emoji || '🔗';
+            const linkInfo = `${emoji} **${link.label}**\n\`${link.url}\`\n\n${translation.trans('commands.livck.custom_links.position')}: ${updatedIndex + 1}/${updatedAllLinks.length}`;
+
+            const editButton = new ButtonBuilder()
+                .setCustomId(`edit_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.edit_button'))
+                .setStyle(ButtonStyle.Primary)
+
+            const deleteButton = new ButtonBuilder()
+                .setCustomId(`delete_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.delete_button'))
+                .setStyle(ButtonStyle.Danger)
+
+            const moveUpButton = new ButtonBuilder()
+                .setCustomId(`move_link_up_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_up'))
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(!canMoveUp);
+
+            const moveDownButton = new ButtonBuilder()
+                .setCustomId(`move_link_down_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_down'))
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(!canMoveDown);
+
+            const backButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${link.subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.custom_links.back_button'))
+                .setStyle(ButtonStyle.Secondary)
+
+            const actionRow1 = new ActionRowBuilder().addComponents(editButton, deleteButton);
+            const actionRow2 = new ActionRowBuilder().addComponents(moveUpButton, moveDownButton);
+            const actionRow3 = new ActionRowBuilder().addComponents(backButton);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.custom_links.link_details', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url
+                }) + '\n\n' + linkInfo,
+                components: [actionRow1, actionRow2, actionRow3]
+            });
         }
 
         // Handle "Move Link Down" button
@@ -1645,10 +1533,61 @@ export default (models) => ({
                 }
             }
 
-            // Reload link details view
-            interaction.customId = `select_link_${link.subscriptionId}`;
-            interaction.values = [`link_${linkId}`];
-            await this.handleComponentInteraction(interaction, client);
+            // Reload link details view with updated positions
+            const updatedAllLinks = await models.CustomLink.findAll({
+                where: { subscriptionId: link.subscriptionId },
+                order: [['position', 'ASC']]
+            });
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: link.subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            const updatedIndex = updatedAllLinks.findIndex(l => l.id === link.id);
+            const canMoveUp = updatedIndex > 0;
+            const canMoveDown = updatedIndex < updatedAllLinks.length - 1;
+
+            const emoji = link.emoji || '🔗';
+            const linkInfo = `${emoji} **${link.label}**\n\`${link.url}\`\n\n${translation.trans('commands.livck.custom_links.position')}: ${updatedIndex + 1}/${updatedAllLinks.length}`;
+
+            const editButton = new ButtonBuilder()
+                .setCustomId(`edit_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.edit_button'))
+                .setStyle(ButtonStyle.Primary)
+
+            const deleteButton = new ButtonBuilder()
+                .setCustomId(`delete_link_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.delete_button'))
+                .setStyle(ButtonStyle.Danger)
+
+            const moveUpButton = new ButtonBuilder()
+                .setCustomId(`move_link_up_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_up'))
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(!canMoveUp);
+
+            const moveDownButton = new ButtonBuilder()
+                .setCustomId(`move_link_down_${link.id}`)
+                .setLabel(translation.trans('commands.livck.custom_links.move_down'))
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(!canMoveDown);
+
+            const backButton = new ButtonBuilder()
+                .setCustomId(`manage_links_${link.subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.custom_links.back_button'))
+                .setStyle(ButtonStyle.Secondary)
+
+            const actionRow1 = new ActionRowBuilder().addComponents(editButton, deleteButton);
+            const actionRow2 = new ActionRowBuilder().addComponents(moveUpButton, moveDownButton);
+            const actionRow3 = new ActionRowBuilder().addComponents(backButton);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.custom_links.link_details', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url
+                }) + '\n\n' + linkInfo,
+                components: [actionRow1, actionRow2, actionRow3]
+            });
         }
 
         // Handle "Done" button
@@ -1954,14 +1893,15 @@ export default (models) => ({
                 });
 
                 if (subscription && subscription.Statuspage) {
+                    console.log('[Add Link] Triggering status page refresh for', subscription.Statuspage.url);
                     // Fire and forget - don't await
                     handleStatusPage(subscription.Statuspage.id, client).catch(error => {
-                        console.error('[Add Link] Failed to refresh status page:', error);
+                        console.error('[Add Link] Failed to refresh status page:', error.message);
                     });
                 }
 
             } catch (error) {
-                console.error('Error adding custom link:', error);
+                console.error('[Add Link] Error adding custom link:', error.message);
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),

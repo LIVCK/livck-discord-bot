@@ -22,7 +22,7 @@ These emojis are used for status indicators in the layout views.
    \:red_dot:
    \:orange_dot:
    ```
-2. Discord will show the IDs in format `<:name:1422681631268798657>`
+2. Discord will show the IDs in format `<:name:784804115247136818>`
 3. Copy the IDs (numbers only)
 
 ### 3. Set Environment Variables

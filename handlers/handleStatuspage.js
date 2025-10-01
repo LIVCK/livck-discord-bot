@@ -24,7 +24,12 @@ export const handleStatusPage = async (statuspageId, client) => {
         try {
             await statuspageService.fetchAll();
         } catch (fetchError) {
-            console.error('[handleStatusPage] Error in fetchAll:', fetchError);
+            // Only log non-timeout errors with full stack trace
+            if (fetchError.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || fetchError.message?.includes('timeout')) {
+                console.warn(`[handleStatusPage] Timeout fetching ${statuspageRecord.url}`);
+            } else {
+                console.error('[handleStatusPage] Error in fetchAll:', fetchError.message);
+            }
         }
 
         console.log('[handleStatusPage] Fetched categories:', statuspageService.categories?.length || 0);
@@ -54,6 +59,8 @@ export const handleStatusPage = async (statuspageId, client) => {
                     order: [['position', 'ASC']]
                 });
 
+                console.log(`[handleStatusPage] Found ${customLinks.length} custom links for subscription ${subscription.id}`);
+
                 // Build button rows (max 5 buttons per row, max 5 rows)
                 const components = [];
                 if (customLinks.length > 0) {
@@ -61,6 +68,8 @@ export const handleStatusPage = async (statuspageId, client) => {
                     let currentRow = [];
 
                     for (const link of customLinks.slice(0, 25)) { // Max 25 buttons total (5 rows x 5 buttons)
+                        console.log(`[handleStatusPage] Adding button: ${link.label} (${link.url})`);
+
                         // URL buttons must use ButtonStyle.Link
                         const button = new ButtonBuilder()
                             .setLabel(link.label)
@@ -68,7 +77,11 @@ export const handleStatusPage = async (statuspageId, client) => {
                             .setStyle(ButtonStyle.Link);
 
                         if (link.emoji) {
-                            button.setEmoji(link.emoji);
+                            // Only set emoji if it's valid (custom emoji <:name:id> or Unicode, not Discord shortcode :name:)
+                            // Discord shortcodes like :zap: are not valid for button emojis
+                            if (link.emoji.startsWith('<') || !link.emoji.startsWith(':')) {
+                                button.setEmoji(link.emoji);
+                            }
                         }
 
                         currentRow.push(button);
@@ -84,6 +97,8 @@ export const handleStatusPage = async (statuspageId, client) => {
                     if (currentRow.length > 0) {
                         buttonRows.push(new ActionRowBuilder().addComponents(currentRow));
                     }
+
+                    console.log(`[handleStatusPage] Created ${buttonRows.length} button rows with ${buttonRows.reduce((sum, row) => sum + row.components.length, 0)} total buttons`);
 
                     components.push(...buttonRows);
                 }
@@ -101,8 +116,11 @@ export const handleStatusPage = async (statuspageId, client) => {
                 if (existingMessage) {
                     try {
                         const message = await channel.messages.fetch(existingMessage.messageId);
+                        console.log(`[handleStatusPage] Updating message ${existingMessage.messageId} with ${components.length} component rows`);
                         await message.edit({ embeds, components });
+                        console.log(`[handleStatusPage] Successfully updated message`);
                     } catch (error) {
+                        console.error(`[handleStatusPage] Error updating message:`, error.message);
                         if (error.code === 10008) {
                             await models.Message.destroy({
                                 where: { subscriptionId: subscription.id, category: 'STATUS' },
@@ -110,7 +128,9 @@ export const handleStatusPage = async (statuspageId, client) => {
                         }
                     }
                 } else {
+                    console.log(`[handleStatusPage] Creating new message with ${components.length} component rows`);
                     const message = await channel.send({ embeds, components });
+                    console.log(`[handleStatusPage] Created message ${message.id}`);
                     await models.Message.create({
                         subscriptionId: subscription.id,
                         messageId: message.id,
@@ -130,6 +150,7 @@ export const handleStatusPage = async (statuspageId, client) => {
             }
         }));
     } catch (error) {
-        console.error(`Error processing status updates for statuspage ${statuspageId}: ${error.message}`, error);
+        // Only log error message without stack trace for cleaner logs
+        console.error(`[handleStatusPage] Error for statuspage ${statuspageId}: ${error.message}`);
     }
 };

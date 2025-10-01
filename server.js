@@ -87,10 +87,14 @@ const scheduleStatusPageUpdates = async (client) => {
 
 const startUpdateLoop = async (client) => {
     try {
+        console.log(`[UpdateLoop] Loop iteration starting at ${new Date().toISOString()}`);
         await scheduleStatusPageUpdates(client);
+        console.log(`[UpdateLoop] Loop iteration completed at ${new Date().toISOString()}`);
     } catch (error) {
-        console.error("Error in update loop", error);
+        console.error("[UpdateLoop] Critical error in update loop:", error.message);
+        console.error("[UpdateLoop] Stack:", error.stack);
     } finally {
+        console.log(`[UpdateLoop] Scheduling next iteration in ${INTERVAL}ms`);
         setTimeout(() => startUpdateLoop(client), INTERVAL);
     }
 };

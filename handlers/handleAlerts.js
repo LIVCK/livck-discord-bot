@@ -211,6 +211,7 @@ export const handleAlerts = async (statuspageId, client) => {
             }));
         }));
     } catch (error) {
-        console.error(`Error processing alerts for statuspage ${statuspageId}: ${error.message}`, error);
+        // Only log error message without stack trace for cleaner logs
+        console.error(`[handleAlerts] Error for statuspage ${statuspageId}: ${error.message}`);
     }
 };
