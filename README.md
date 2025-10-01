@@ -6,8 +6,10 @@ Seamlessly integrate your [LIVCK](https://livck.com) statuspage into your Discor
 
 **Works exclusively with LIVCK statuspages** - the self-hosted statuspage and communication platform.
 
-[![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005)
-[![LIVCK Website](https://img.shields.io/badge/LIVCK-Website-blue?style=for-the-badge)](https://livck.com)
+[![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005) 
+[![LIVCK Website](https://img.shields.io/badge/LIVCK-Website-blue?style=for-the-badge)](https://livck.com) 
+[![Licence](https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge)](./LICENSE)
+[![Crowdin](https://img.shields.io/badge/Crowdin-2E3340.svg?style=for-the-badge&logo=Crowdin&logoColor=white)](https://crowdin.com/project/livck-discord-bot)
 
 ---
 
@@ -77,9 +79,13 @@ Choose how your status page appears in Discord with 4 different layouts:
 
 ### 🌐 **Multi-Language Support**
 Display your statuspage in your community's language:
-- 🇩🇪 German (Deutsch)
 - 🇬🇧 English
-- 🌍 **More languages coming soon** via [Crowdin](https://crowdin.com) - we're using a community-driven approach for translations
+- 🇩🇪 German (Deutsch)
+- 🌍 **11+ languages** - Community-driven translations via [Crowdin](https://crowdin.com/project/livck-discord-bot)
+
+**Want to help translate?** Join our [Crowdin project](https://crowdin.com/project/livck-discord-bot) and contribute translations in your language!
+
+Available/Coming soon: French, Spanish, Portuguese, Dutch, Italian, Polish, Turkish, Russian, Japanese, Korean, Chinese
 
 Switch languages anytime - all messages update instantly!
 
@@ -314,7 +320,7 @@ If your statuspage is behind Cloudflare or similar protection:
 
 ---
 
-## 💡 Support
+## 💡 Support & Contributing
 
 ### Need Help?
 
@@ -323,13 +329,30 @@ If your statuspage is behind Cloudflare or similar protection:
 - **Documentation**: [LIVCK Documentation](https://help.livck.com)
 - **LIVCK Website**: [livck.com](https://livck.com)
 
-### Found a Bug?
+### Want to Contribute?
 
+We welcome contributions! Here's how you can help:
+
+#### 🌍 Translations
+Help translate the bot into your language:
+- Visit our [Crowdin project](https://crowdin.com/project/livck-discord-bot)
+- Choose your language or request a new one
+- Start translating - no coding required!
+
+[![Crowdin](https://badges.crowdin.net/livck-discord-bot/localized.svg)](https://crowdin.com/project/livck-discord-bot)
+
+#### 🐛 Bug Reports
 Please report bugs via GitHub Issues with:
 - Steps to reproduce
 - Expected vs actual behavior
 - Screenshots if applicable
 - Your statuspage URL (if public)
+
+#### 💻 Code Contributions
+- Fork the repository
+- Create a feature branch
+- Submit a pull request
+- All contributions are welcome!
 
 ---
 
