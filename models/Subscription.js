@@ -46,6 +46,7 @@ export default (sequelize) => {
         Subscription.belongsTo(models.Statuspage, { foreignKey: 'statuspageId' });
         Subscription.hasMany(models.Message, { foreignKey: 'subscriptionId', onDelete: 'CASCADE' });
         Subscription.hasMany(models.CustomLink, { foreignKey: 'subscriptionId', onDelete: 'CASCADE' });
+        Subscription.hasMany(models.RoleMention, { foreignKey: 'subscriptionId', onDelete: 'CASCADE' });
     };
 
     return Subscription;
