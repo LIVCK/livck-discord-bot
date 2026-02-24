@@ -4,6 +4,7 @@ import { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, Colors } fr
 import LIVCK from "../api/livck.js";
 import { htmlToText } from "html-to-text";
 import { truncate } from "../util/String.js";
+import { buildRoleMentions } from "../util/roleMentions.js";
 
 // Convert HTML to Discord Markdown
 const convertHtmlToMarkdown = (html) => {
@@ -147,7 +148,15 @@ export const handleAlerts = async (statuspageId, client) => {
                 }
 
                 if (!mainMessage) {
-                    mainMessage = await channel.send({ embeds: [embed], components: [row] });
+                    // Role mentions only for NEW messages (not edits - Discord doesn't re-ping on edit)
+                    const { content, roleIds, allowedMentions } = await buildRoleMentions(subscription.id, 'NEWS');
+
+                    mainMessage = await channel.send({
+                        content: content || undefined,
+                        embeds: [embed],
+                        components: [row],
+                        ...(roleIds.length > 0 ? { allowedMentions } : {})
+                    });
                     await models.Message.create({
                         subscriptionId: subscription.id,
                         messageId: mainMessage.id,

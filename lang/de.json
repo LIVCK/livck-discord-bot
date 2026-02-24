@@ -106,7 +106,24 @@
         "completed": "Bearbeitung abgeschlossen!",
         "select_channel": "Channel auswählen...",
         "manage_links_button": "Links verwalten",
+        "manage_roles_button": "Rollen verwalten",
         "error": "Ein Fehler ist aufgetreten. Bitte versuche es später erneut."
+      },
+      "role_mentions": {
+        "title": "Rollen-Erwähnungen für **:name**",
+        "no_roles": "Keine Rollen-Erwähnungen konfiguriert.",
+        "select_role": "Rollen zum Erwähnen auswählen...",
+        "select_event_type": "Event-Typ für neue Rollen",
+        "remove_role": "Rollen zum Entfernen auswählen...",
+        "back_button": "Zurück",
+        "added": "Rollen-Erwähnungen aktualisiert!",
+        "removed": "Rollen-Erwähnungen entfernt!",
+        "event_type_set": "Event-Typ auf **:type** für neue Rollen gesetzt.",
+        "max_roles": "Maximum von 25 Rollen-Erwähnungen erreicht.",
+        "current_roles": "Aktuelle Rollen-Erwähnungen:",
+        "event_type_all": "Alle Events",
+        "event_type_status": "Nur Status",
+        "event_type_news": "Nur News"
       },
       "custom_links": {
         "title": "Custom Links für **:name**",

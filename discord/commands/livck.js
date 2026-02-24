@@ -1,4 +1,6 @@
-import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder as ChannelSelect } from "discord.js";
+import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder as ChannelSelect, RoleSelectMenuBuilder } from "discord.js";
+import { Op } from "sequelize";
+import cache from "../../database/redis.js";
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
 import LIVCK from "../../api/livck.js";
@@ -489,6 +491,11 @@ export default (models) => ({
                         .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
                         .setStyle(ButtonStyle.Primary)
 
+                    const manageRolesButton = new ButtonBuilder()
+                        .setCustomId(`manage_roles_${subscription.id}`)
+                        .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
+                        .setStyle(ButtonStyle.Primary)
+
                     const deleteButton = new ButtonBuilder()
                         .setCustomId(`delete_sub_${subscription.id}`)
                         .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -499,7 +506,7 @@ export default (models) => ({
                         .setLabel(translation.trans('commands.livck.edit.done_button'))
                         .setStyle(ButtonStyle.Success)
 
-                    const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
+                    const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
 
                     await interaction.reply({
                         content: translation.trans('commands.livck.edit.editing', {
@@ -854,6 +861,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const manageRolesButton = new ButtonBuilder()
+                .setCustomId(`manage_roles_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
+                .setStyle(ButtonStyle.Primary)
+
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
                 .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -864,7 +876,7 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
                 .setStyle(ButtonStyle.Success)
 
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
@@ -957,6 +969,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const manageRolesButton = new ButtonBuilder()
+                .setCustomId(`manage_roles_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
+                .setStyle(ButtonStyle.Primary)
+
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
                 .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -967,7 +984,7 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
                 .setStyle(ButtonStyle.Success)
 
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, deleteButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
@@ -1144,6 +1161,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_links_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const manageRolesButton = new ButtonBuilder()
+                .setCustomId(`manage_roles_${subscription.id}`)
+                .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
+                .setStyle(ButtonStyle.Primary)
+
             const doneButton = new ButtonBuilder()
                 .setCustomId('edit_done')
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
@@ -1152,7 +1174,7 @@ export default (models) => ({
             const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
             const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.editing', {
@@ -1588,6 +1610,191 @@ export default (models) => ({
                 }) + '\n\n' + linkInfo,
                 components: [actionRow1, actionRow2, actionRow3]
             });
+        }
+
+        // Handle "Manage Roles" button
+        if (interaction.customId.startsWith('manage_roles_')) {
+            const subscriptionId = interaction.customId.replace('manage_roles_', '');
+
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferUpdate();
+            }
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId },
+                include: [{ model: models.Statuspage }]
+            });
+
+            if (!subscription) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Load existing role mentions
+            const existingRoles = await models.RoleMention.findAll({
+                where: { subscriptionId }
+            });
+
+            // Build role list display
+            const eventTypeLabels = {
+                'ALL': translation.trans('commands.livck.role_mentions.event_type_all'),
+                'STATUS': translation.trans('commands.livck.role_mentions.event_type_status'),
+                'NEWS': translation.trans('commands.livck.role_mentions.event_type_news')
+            };
+
+            let rolesList = existingRoles.length > 0
+                ? existingRoles.map((rm, index) => {
+                    const roleName = interaction.guild.roles.cache.get(rm.roleId)?.name || rm.roleId;
+                    return `${index + 1}. <@&${rm.roleId}> (${eventTypeLabels[rm.eventType] || rm.eventType})`;
+                  }).join('\n')
+                : translation.trans('commands.livck.role_mentions.no_roles');
+
+            // Row 1: RoleSelectMenu to add roles
+            const roleSelect = new RoleSelectMenuBuilder()
+                .setCustomId(`add_role_${subscriptionId}`)
+                .setPlaceholder(translation.trans('commands.livck.role_mentions.select_role'))
+                .setMinValues(1)
+                .setMaxValues(10);
+
+            const roleSelectRow = new ActionRowBuilder().addComponents(roleSelect);
+
+            // Row 2: Event type select for new roles (reflect current Redis selection)
+            const eventTypeKey = `role_event_type:${interaction.user.id}:${subscriptionId}`;
+            const currentEventType = await cache.get(eventTypeKey) || 'ALL';
+
+            const eventTypeSelect = new StringSelectMenuBuilder()
+                .setCustomId(`role_event_type_${subscriptionId}`)
+                .setPlaceholder(translation.trans('commands.livck.role_mentions.select_event_type'))
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.role_mentions.event_type_all'))
+                        .setValue('ALL')
+                        .setDefault(currentEventType === 'ALL'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.role_mentions.event_type_status'))
+                        .setValue('STATUS')
+                        .setDefault(currentEventType === 'STATUS'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(translation.trans('commands.livck.role_mentions.event_type_news'))
+                        .setValue('NEWS')
+                        .setDefault(currentEventType === 'NEWS')
+                );
+
+            const eventTypeRow = new ActionRowBuilder().addComponents(eventTypeSelect);
+
+            const components = [roleSelectRow, eventTypeRow];
+
+            // Row 3 (only if roles exist): Remove select
+            if (existingRoles.length > 0) {
+                const displayRoles = existingRoles.slice(0, 25);
+                const removeSelect = new StringSelectMenuBuilder()
+                    .setCustomId(`remove_role_${subscriptionId}`)
+                    .setPlaceholder(translation.trans('commands.livck.role_mentions.remove_role'))
+                    .setMinValues(1)
+                    .setMaxValues(displayRoles.length)
+                    .addOptions(
+                        displayRoles.map(rm => {
+                            const roleName = interaction.guild.roles.cache.get(rm.roleId)?.name || rm.roleId;
+                            const suffix = ` (${eventTypeLabels[rm.eventType] || rm.eventType})`;
+                            const maxNameLen = 100 - 1 - suffix.length; // 1 for '@'
+                            const truncatedName = roleName.length > maxNameLen ? roleName.substring(0, maxNameLen - 1) + '…' : roleName;
+                            return new StringSelectMenuOptionBuilder()
+                                .setLabel(`@${truncatedName}${suffix}`)
+                                .setValue(String(rm.id));
+                        })
+                    );
+
+                const removeRow = new ActionRowBuilder().addComponents(removeSelect);
+                components.push(removeRow);
+            }
+
+            // Row 4: Back button
+            const backButton = new ButtonBuilder()
+                .setCustomId(`back_to_edit_${subscriptionId}`)
+                .setLabel(translation.trans('commands.livck.role_mentions.back_button'))
+                .setStyle(ButtonStyle.Secondary);
+
+            const backRow = new ActionRowBuilder().addComponents(backButton);
+            components.push(backRow);
+
+            await interaction.editReply({
+                content: translation.trans('commands.livck.role_mentions.title', {
+                    name: subscription.Statuspage.name || subscription.Statuspage.url
+                }) + '\n\n' + rolesList,
+                components
+            });
+        }
+
+        // Handle role addition (RoleSelectMenu submit)
+        if (interaction.customId.startsWith('add_role_')) {
+            const subscriptionId = interaction.customId.replace('add_role_', '');
+            const selectedRoleIds = interaction.values;
+
+            await interaction.deferUpdate();
+
+            // Get event type from Redis (default: 'ALL')
+            const eventTypeKey = `role_event_type:${interaction.user.id}:${subscriptionId}`;
+            const eventType = await cache.get(eventTypeKey) || 'ALL';
+
+            // Check max 25 roles per subscription
+            const currentCount = await models.RoleMention.count({ where: { subscriptionId } });
+            if (currentCount + selectedRoleIds.length > 25) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.role_mentions.max_roles'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // For each role: findOrCreate (unique constraint prevents duplicates)
+            for (const roleId of selectedRoleIds) {
+                await models.RoleMention.findOrCreate({
+                    where: { subscriptionId, roleId, eventType },
+                    defaults: { subscriptionId, roleId, eventType }
+                });
+            }
+
+            // Refresh the manage roles view
+            interaction.customId = `manage_roles_${subscriptionId}`;
+            await this.handleComponentInteraction(interaction, client);
+        }
+
+        // Handle event type selection for new roles
+        if (interaction.customId.startsWith('role_event_type_')) {
+            const subscriptionId = interaction.customId.replace('role_event_type_', '');
+            const eventType = interaction.values[0];
+
+            await interaction.deferUpdate();
+
+            // Store selected event type in Redis with 5 min TTL
+            const eventTypeKey = `role_event_type:${interaction.user.id}:${subscriptionId}`;
+            await cache.set(eventTypeKey, eventType, { EX: 300 });
+
+            // Refresh the manage roles view
+            interaction.customId = `manage_roles_${subscriptionId}`;
+            await this.handleComponentInteraction(interaction, client);
+        }
+
+        // Handle role removal
+        if (interaction.customId.startsWith('remove_role_')) {
+            const subscriptionId = interaction.customId.replace('remove_role_', '');
+            const roleMentionIds = interaction.values.map(Number);
+
+            await interaction.deferUpdate();
+
+            await models.RoleMention.destroy({
+                where: {
+                    id: { [Op.in]: roleMentionIds },
+                    subscriptionId
+                }
+            });
+
+            // Refresh the manage roles view
+            interaction.customId = `manage_roles_${subscriptionId}`;
+            await this.handleComponentInteraction(interaction, client);
         }
 
         // Handle "Done" button

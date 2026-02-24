@@ -95,7 +95,7 @@ const initializeBot = async (commandsFolder, models) => {
         }
 
         // Handle select menus and buttons
-        if (interaction.isStringSelectMenu() || interaction.isButton()) {
+        if (interaction.isStringSelectMenu() || interaction.isButton() || interaction.isRoleSelectMenu()) {
             // Find the command that owns this interaction
             const livckCommand = client.commands.get('livck');
 

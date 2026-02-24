@@ -106,7 +106,24 @@
         "completed": "Editing completed!",
         "select_channel": "Select channel...",
         "manage_links_button": "Manage Links",
+        "manage_roles_button": "Manage Roles",
         "error": "An error occurred. Please try again later."
+      },
+      "role_mentions": {
+        "title": "Role Mentions for **:name**",
+        "no_roles": "No role mentions configured.",
+        "select_role": "Select roles to mention...",
+        "select_event_type": "Event type for new roles",
+        "remove_role": "Select roles to remove...",
+        "back_button": "Back",
+        "added": "Role mentions updated!",
+        "removed": "Role mentions removed!",
+        "event_type_set": "Event type set to **:type** for new roles.",
+        "max_roles": "Maximum of 25 role mentions reached.",
+        "current_roles": "Current role mentions:",
+        "event_type_all": "All Events",
+        "event_type_status": "Status Only",
+        "event_type_news": "News Only"
       },
       "custom_links": {
         "title": "Custom Links for **:name**",
