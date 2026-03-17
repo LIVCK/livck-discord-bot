@@ -28,6 +28,11 @@ export default (sequelize) => {
             allowNull: false,
             defaultValue: 'DETAILED',
         },
+        apiToken: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: null,
+        },
         interval: {
             type: DataTypes.INTEGER,
             allowNull: false,
