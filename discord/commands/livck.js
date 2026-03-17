@@ -496,6 +496,11 @@ export default (models) => ({
                         .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
                         .setStyle(ButtonStyle.Primary)
 
+                    const apiTokenButton = new ButtonBuilder()
+                        .setCustomId(`edit_api_token_${subscription.id}`)
+                        .setLabel('🔑 LIVCK API Token')
+                        .setStyle(ButtonStyle.Secondary)
+
                     const deleteButton = new ButtonBuilder()
                         .setCustomId(`delete_sub_${subscription.id}`)
                         .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -506,7 +511,7 @@ export default (models) => ({
                         .setLabel(translation.trans('commands.livck.edit.done_button'))
                         .setStyle(ButtonStyle.Success)
 
-                    const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
+                    const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, apiTokenButton, deleteButton, doneButton);
 
                     await interaction.reply({
                         content: translation.trans('commands.livck.edit.editing', {
@@ -866,6 +871,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const apiTokenButton = new ButtonBuilder()
+                .setCustomId(`edit_api_token_${subscription.id}`)
+                .setLabel('🔑 LIVCK API Token')
+                .setStyle(ButtonStyle.Secondary)
+
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
                 .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -876,7 +886,7 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
                 .setStyle(ButtonStyle.Success)
 
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, apiTokenButton, deleteButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
@@ -974,6 +984,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const apiTokenButton = new ButtonBuilder()
+                .setCustomId(`edit_api_token_${subscription.id}`)
+                .setLabel('🔑 LIVCK API Token')
+                .setStyle(ButtonStyle.Secondary)
+
             const deleteButton = new ButtonBuilder()
                 .setCustomId(`delete_sub_${subscription.id}`)
                 .setLabel(translation.trans('commands.livck.list.delete_button'))
@@ -984,7 +999,7 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
                 .setStyle(ButtonStyle.Success)
 
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, deleteButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, apiTokenButton, deleteButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.updated', {
@@ -1166,6 +1181,11 @@ export default (models) => ({
                 .setLabel(translation.trans('commands.livck.edit.manage_roles_button'))
                 .setStyle(ButtonStyle.Primary)
 
+            const apiTokenButton = new ButtonBuilder()
+                .setCustomId(`edit_api_token_${subscription.id}`)
+                .setLabel('🔑 LIVCK API Token')
+                .setStyle(ButtonStyle.Secondary)
+
             const doneButton = new ButtonBuilder()
                 .setCustomId('edit_done')
                 .setLabel(translation.trans('commands.livck.edit.done_button'))
@@ -1174,7 +1194,7 @@ export default (models) => ({
             const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
             const layoutRow = new ActionRowBuilder().addComponents(layoutSelectMenu);
-            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, doneButton);
+            const buttonRow = new ActionRowBuilder().addComponents(manageLinksButton, manageRolesButton, apiTokenButton, doneButton);
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.edit.editing', {
@@ -1797,6 +1817,55 @@ export default (models) => ({
             await this.handleComponentInteraction(interaction, client);
         }
 
+        // Handle "Edit API Token" button
+        if (interaction.customId.startsWith('edit_api_token_')) {
+            const subscriptionId = interaction.customId.replace('edit_api_token_', '');
+
+            const subscription = await models.Subscription.findOne({
+                where: { id: subscriptionId }
+            });
+
+            if (!subscription) {
+                await interaction.reply({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Show modal with text input for API token
+            const maskedToken = subscription.apiToken
+                ? `****${subscription.apiToken.slice(-4)}`
+                : '';
+
+            const modalPayload = {
+                type: 9, // MODAL
+                data: {
+                    custom_id: `edit_api_token_submit_${subscriptionId}`,
+                    title: 'LIVCK API Token',
+                    components: [
+                        {
+                            type: 1, // Action Row
+                            components: [{
+                                type: 4, // Text Input
+                                custom_id: 'api_token',
+                                style: 1, // Short
+                                label: 'LIVCK API Token (leave empty to remove)',
+                                value: maskedToken,
+                                required: false,
+                                placeholder: 'Enter your LIVCK API token'
+                            }]
+                        }
+                    ]
+                }
+            };
+
+            await interaction.client.rest.post(
+                `/interactions/${interaction.id}/${interaction.token}/callback`,
+                { body: modalPayload }
+            );
+        }
+
         // Handle "Done" button
         if (interaction.customId === 'edit_done') {
             await interaction.update({
@@ -1876,7 +1945,7 @@ export default (models) => ({
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
         try {
-            let { url, channelId, events, locale, layout } = data;
+            let { url, channelId, events, locale, layout, apiToken } = data;
 
             let eventTypes;
             switch (events) {
@@ -1923,7 +1992,7 @@ export default (models) => ({
             }
 
             // IMPORTANT: Validate URL BEFORE creating anything
-            const livck = new LIVCK(url);
+            const livck = new LIVCK(url, 'v3', apiToken || null);
             let isValid = false;
 
             try {
@@ -1959,6 +2028,7 @@ export default (models) => ({
                 eventTypes: eventTypes,
                 interval: 60,
                 locale: locale,
+                apiToken: apiToken || null,
             });
 
             console.log('Subscription created:', subscription.id, 'for statuspage:', statuspage.id);
@@ -2187,6 +2257,62 @@ export default (models) => ({
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
+                        flags: 64
+                    });
+                }
+            }
+        }
+
+        // Handle Edit API Token Modal Submit
+        if (interaction.customId.startsWith('edit_api_token_submit_')) {
+            const subscriptionId = interaction.customId.replace('edit_api_token_submit_', '');
+
+            try {
+                const subscription = await models.Subscription.findOne({
+                    where: { id: subscriptionId },
+                    include: [{ model: models.Statuspage }]
+                });
+
+                if (!subscription) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.list.subscription_not_found'),
+                        flags: 64
+                    });
+                    return;
+                }
+
+                let newToken = interaction.fields.getTextInputValue('api_token') || null;
+
+                // If the user didn't change the masked token, keep the existing one
+                if (newToken && newToken.startsWith('****') && subscription.apiToken) {
+                    newToken = subscription.apiToken;
+                }
+
+                // Empty string means remove token
+                if (newToken === '') {
+                    newToken = null;
+                }
+
+                await subscription.update({ apiToken: newToken });
+
+                const statusText = newToken ? 'API Token updated.' : 'API Token removed.';
+                await interaction.reply({
+                    content: `✅ ${statusText}`,
+                    flags: 64
+                });
+
+                // Fire-and-forget: re-fetch statuspage with new token
+                if (subscription.Statuspage) {
+                    handleStatusPage(subscription.Statuspage.id, client).catch(error => {
+                        console.error('[API Token Update] Failed to refresh status page:', error);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error updating API token:', error);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: 'Error updating API token.',
                         flags: 64
                     });
                 }
