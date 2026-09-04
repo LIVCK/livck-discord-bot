@@ -97,6 +97,7 @@ const toAlert = (alert) => makeAlert({
     // Sub-alerts are the timeline. They arrive oldest-first here, which is the DTO's order.
     updates: (alert.alerts || []).map((update) => makeUpdate({
         id: update.id,
+        title: update.title ?? null,
         state: update.state ?? null,
         body: update.message,
         createdAt: update.created_at,

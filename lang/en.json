@@ -87,7 +87,8 @@
         "select_events": "Select event types",
         "select_locale": "Select language",
         "select_layout": "Select layout",
-        "select_channel_final": "Now select the channel for **:url**"
+        "select_channel_final": "Now select the channel for **:url**",
+        "protected_page": "The status page **:url** is password- or access-protected. The bot can only read public pages."
       },
       "unsubscribe": {
         "success": "Subscription for **:url** successfully removed.",
@@ -222,7 +223,10 @@
       "more_categories_field": {
         "name": "More",
         "value": ":count more categories — see the status page."
-      }
+      },
+      "hidden_all": "no services operational|:count service operational|:count services operational",
+      "hidden_more": "|+:count more operational|+:count more operational",
+      "ungrouped": "Other services"
     },
     "alerts": {
       "view_button": "View",

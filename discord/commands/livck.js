@@ -3,7 +3,10 @@ import { Op } from "sequelize";
 import cache from "../../database/redis.js";
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
-import LIVCK from "../../api/livck.js";
+import LIVCKCloud from "../../api/livckCloud.js";
+import { detectSource } from "../../api/detect.js";
+import { SOURCE } from "../../dto/statuspage.js";
+import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
 
 export default (models) => ({
@@ -1997,32 +2000,45 @@ export default (models) => ({
                 await interaction.deferReply({ flags: 64 }); // EPHEMERAL
             }
 
-            // IMPORTANT: Validate URL BEFORE creating anything
-            const livck = new LIVCK(url, 'v3', apiToken || null);
-            let isValid = false;
+            // IMPORTANT: Validate URL BEFORE creating anything.
+            // One request decides both questions at once: is this LIVCK, and which product?
+            // The answer is stored on the row so the update loop never probes again.
+            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+            const source = await detectSource(url, { token: apiToken || null });
 
-            try {
-                isValid = await livck.ensureIsLIVCK();
-            } catch (error) {
-                console.error('[Subscribe] Error validating LIVCK URL:', error);
-                isValid = false;
-            }
-
-            if (!isValid) {
-                console.error('[Subscribe] Invalid LIVCK URL (not a LIVCK statuspage):', url);
-                const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+            if (!source) {
+                logger.info(`[Subscribe] ${url} is not a LIVCK statuspage`);
                 await interaction[replyMethod]({
-                    content: translation.trans('commands.livck.subscribe.invalid_livck_url', {
-                        url
-                    }),
+                    content: translation.trans('commands.livck.subscribe.invalid_livck_url', { url }),
                     flags: 64 // EPHEMERAL flag
                 });
                 return;
             }
 
+            // A protected Cloud page answers 404 on every unauthenticated surface — the same
+            // as a page that does not exist. Saying so plainly beats a subscription that
+            // silently never posts anything.
+            if (source === SOURCE.CLOUD) {
+                try {
+                    await new LIVCKCloud(url).fetchStatus();
+                } catch (error) {
+                    logger.info(`[Subscribe] ${url} is a protected Cloud page: ${error.message}`);
+                    await interaction[replyMethod]({
+                        content: translation.trans('commands.livck.subscribe.protected_page', { url }),
+                        flags: 64 // EPHEMERAL flag
+                    });
+                    return;
+                }
+            }
+
             // Create statuspage if it doesn't exist
             if (!statuspage) {
-                statuspage = await models.Statuspage.create({ url, name: domainFromUrl(url) });
+                statuspage = await models.Statuspage.create({
+                    url,
+                    name: domainFromUrl(url),
+                    kind: source,
+                    detectedAt: new Date(),
+                });
             }
 
             // Create subscription

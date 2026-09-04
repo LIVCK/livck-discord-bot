@@ -96,13 +96,18 @@ export const resolveText = (value, locale, defaultLocale = 'en', fallback = '') 
  * @param {string|Object|null} [input.description]
  * @param {string} input.status - one of STATUS
  * @param {number|null} [input.uptime] - percentage 0-100, when the source provides one
+ * @param {Array<string|Object>} [input.path] - names of the groups between this service and
+ *   its top-level group, outermost first. Empty for a self-hosted page and for anything
+ *   directly under a top-level group; non-empty only where a Cloud tree nests deeper, which
+ *   is where the renderer needs a sub-heading or breadcrumb.
  */
-export const makeService = ({ id, name, description = null, status, uptime = null }) => Object.freeze({
+export const makeService = ({ id, name, description = null, status, uptime = null, path = [] }) => Object.freeze({
     id,
     name,
     description,
     status,
     uptime,
+    path: Object.freeze([...path]),
 });
 
 /**
@@ -129,9 +134,15 @@ export const makeGroup = ({
     services = [],
     childrenTotal = null,
     childrenHidden = null,
+    labelKey = null,
 }) => Object.freeze({
     id,
     name,
+    // Translation key for a group the bot invented rather than read from the source (the
+    // bucket holding components that sit at the root without a group). It cannot carry a
+    // resolved string: one snapshot is rendered once per subscription, and those
+    // subscriptions are in different languages.
+    labelKey,
     description,
     status,
     depth,
@@ -146,12 +157,15 @@ export const makeGroup = ({
  *
  * @param {object} input
  * @param {string} input.id - stable across cycles; becomes Message.serviceId
+ * @param {string|Object|null} [input.title] - self-hosted sub-alerts carry their own headline;
+ *   a Cloud update has none and inherits the alert's title.
  * @param {string|null} [input.state]
  * @param {string|Object} input.body
  * @param {string} input.createdAt - ISO 8601
  */
-export const makeUpdate = ({ id, state = null, body, createdAt }) => Object.freeze({
+export const makeUpdate = ({ id, title = null, state = null, body, createdAt }) => Object.freeze({
     id,
+    title,
     state,
     body,
     createdAt,

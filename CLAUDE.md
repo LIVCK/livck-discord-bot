@@ -16,10 +16,39 @@ LIVCK Discord Bot is a self-hosted Discord bot that monitors LIVCK status pages 
 
 ### Core Flow
 1. **server.js**: Main entry point that initializes the bot and runs the update loop (15-second interval)
-2. **Update Loop**: Processes all status pages in batches of 100, checks Redis cache to prevent duplicate processing
-3. **Handlers**: `handleStatusPage` and `handleAlerts` fetch data and update Discord messages
-4. **Services**: `statuspage.js` wraps the LIVCK API client to fetch categories, monitors, and alerts
-5. **API Client**: `api/livck.js` handles HTTP requests to LIVCK status page APIs
+2. **Update Loop**: Processes status pages that are due (see backoff below) in batches of 100, checks Redis cache to prevent duplicate processing
+3. **Handlers**: `handleStatusPage` and `handleAlerts` render and update Discord messages
+4. **Providers**: `providers/index.js` detects which product a page runs and returns one snapshot
+5. **DTO**: `dto/statuspage.js` — the single shape everything downstream reads
+
+### Two backends, one model
+
+A status page is either a **self-hosted** LIVCK instance or a **LIVCK Cloud** page. The bot
+detects which from response headers (`lvk-version` vs. `server: LIVCK Cloud`) on first contact
+and stores it on `Statuspage.kind`.
+
+Both are normalized into `dto/statuspage.js` by an adapter (`providers/selfHosted.js`,
+`providers/cloud.js`), so no renderer or handler knows the difference. The DTO uses the
+Cloud's richer status vocabulary as its canon; self-hosted maps up into it.
+
+Translatable fields (`name`, `title`, `body`) stay UNRESOLVED in the DTO. The Cloud ships
+every language in one payload, so one fetch serves subscriptions in different languages —
+resolution happens in the renderer via `resolveText()`.
+
+`providers/index.js` memoizes a snapshot per (page, token, locale) for a few seconds, so
+`handleStatusPage` and `handleAlerts` — which run concurrently for the same page — share one
+fetch instead of two.
+
+### Not hammering things
+
+- **Discord** allows 50 requests/second per bot. Status messages are therefore only edited
+  when their content actually changed (`Message.contentHash`), with a heartbeat refresh every
+  `STATUS_REFRESH_MINUTES`.
+- **Unreachable pages** climb a backoff ladder (30s → 6h) rather than being retried every
+  cycle. Subscribers are told once, and the page resumes by itself. See
+  `services/statuspagePauseManager.js`.
+- **Embed limits** are enforced in `util/discordLimits.js`; Discord rejects an over-limit
+  message whole, so an unguarded layout means the page posts nothing.
 
 ### Database Architecture
 - **Sequelize ORM** with MariaDB
@@ -63,6 +92,9 @@ Required variables (see `.env.example`):
 
 ## Important Constraints
 
-- **Private LIVCK pages not supported** (no API token support yet)
+- **Private self-hosted pages** work via a per-subscription API token
+- **Protected Cloud pages** (password / email whitelist) are NOT supported: every
+  unauthenticated surface answers 404, and the alternative would mean storing a customer's
+  status page password. `/livck subscribe` says so explicitly instead of failing silently.
 - **Cloudflare Bot Shield/Tunnels not compatible** (some proxies with bot protection won't work)
 - **Multi-language support** (English, German, + 11 community languages via Crowdin)

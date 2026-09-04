@@ -60,6 +60,17 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
 const { HttpError } = await import('../../util/errors.js');
+const { clearSnapshotCache } = await import('../../providers/index.js');
+
+/**
+ * Simulate the gap between two update cycles.
+ *
+ * The provider memoizes a snapshot for a few seconds so handleStatusPage and handleAlerts —
+ * which run concurrently for the same page — share one fetch. Real cycles are 15s apart and
+ * outlive that window; a test calling the handler twice in a millisecond does not, so the
+ * memo has to be retired explicitly.
+ */
+const nextCycle = () => clearSnapshotCache();
 
 const discord = { sends: 0, edits: 0, fetches: 0, lastPayload: null, channelError: null };
 
@@ -107,11 +118,18 @@ beforeEach(() => {
         id: 7,
         url: 'https://status.example.com',
         name: 'Example',
+        // Pre-detected, so the provider registry does not probe the network here. The
+        // detection path itself is covered in __tests__/api/detect.test.js.
+        kind: 'SELF_HOSTED',
+        externalId: null,
+        save: async () => {},
         Subscriptions: [subscription()],
     };
     db.messages = [];
     db.customLinks = [];
     db.destroyed = [];
+
+    clearSnapshotCache();
 
     discord.sends = 0;
     discord.edits = 0;
@@ -149,6 +167,7 @@ describe('subsequent cycles', () => {
         await handleStatusPage(7, client);
         const afterFirst = { sends: discord.sends, edits: discord.edits };
 
+        nextCycle();
         await handleStatusPage(7, client);
 
         expect(discord.sends).toBe(afterFirst.sends);
@@ -160,6 +179,7 @@ describe('subsequent cycles', () => {
         await handleStatusPage(7, client);
 
         api.responses['category/cat-1/monitors'] = { data: [{ id: 'm1', name: 'API', state: 'UNAVAILABLE' }] };
+        nextCycle();
         await handleStatusPage(7, client);
 
         expect(discord.edits).toBe(1);
@@ -172,10 +192,12 @@ describe('subsequent cycles', () => {
         await handleStatusPage(7, client);
 
         api.responses['category/cat-1/monitors'] = { data: [{ id: 'm1', name: 'API', state: 'UNAVAILABLE' }] };
+        nextCycle();
         await handleStatusPage(7, client);
         expect(discord.edits).toBe(1);
 
         for (let cycle = 0; cycle < 10; cycle += 1) {
+            nextCycle();
             await handleStatusPage(7, client);
         }
 
@@ -188,6 +210,7 @@ describe('subsequent cycles', () => {
         const first = db.messages[0].contentHash;
 
         api.responses['category/cat-1/monitors'] = { data: [{ id: 'm1', name: 'API', state: 'UNAVAILABLE' }] };
+        nextCycle();
         await handleStatusPage(7, client);
 
         expect(db.messages[0].contentHash).not.toBe(first);
@@ -200,6 +223,7 @@ describe('subsequent cycles', () => {
         await handleStatusPage(7, client);
 
         api.responses['category/cat-1/monitors'] = { data: [{ id: 'm1', name: 'API', state: 'UNAVAILABLE' }] };
+        nextCycle();
         await handleStatusPage(7, client);
 
         expect(discord.fetches).toBe(0);
@@ -340,6 +364,7 @@ describe('custom link buttons', () => {
         await handleStatusPage(7, client);
 
         db.customLinks = [link({ label: 'Neue Website' })];
+        nextCycle();
         await handleStatusPage(7, client);
 
         expect(discord.edits).toBe(1);

@@ -1,0 +1,214 @@
+/**
+ * Rendering of the things only a Cloud page has: a component tree deeper than one level,
+ * groups that hide their healthy children, and locale maps instead of plain strings.
+ *
+ * The golden test next door proves none of this changed the self-hosted output.
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+import { toSnapshot } from '../../providers/cloud.js';
+import { STATUS } from '../../dto/statuspage.js';
+import { DISCORD_LIMITS, embedLength } from '../../util/discordLimits.js';
+import {
+    renderCompactLayout,
+    renderDetailedLayout,
+    renderMinimalLayout,
+    renderOverviewLayout,
+    renderTreeLayout,
+} from '../../messages/layoutRenderers.js';
+
+const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
+const load = (name) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
+
+const EMERALD = { url: 'https://status.emeraldhost.de', name: 'EmeraldHost' };
+
+const group = (id, name, children, extra = {}) => ({
+    id, name, description: null, status: STATUS.OPERATIONAL,
+    is_visible: true, is_group: true, children, ...extra,
+});
+const leaf = (id, name, status = STATUS.OPERATIONAL) => ({
+    id, name, description: null, status, is_visible: true, is_group: false, children: [],
+});
+
+const snapshotOf = (components, extra = {}) => toSnapshot({
+    meta: { default_locale: 'de', supported_locales: ['de', 'en'], name: { de: 'Test' } },
+    components,
+    active_incidents: [],
+    notices: [],
+    maintenances: { active: [], scheduled: [] },
+    ...extra,
+}, EMERALD);
+
+const fieldsOf = (result) => result[0].embed.toJSON().fields ?? [];
+const descriptionOf = (result) => result[0].embed.toJSON().description ?? '';
+
+describe('hidden healthy children', () => {
+    const emerald = () => toSnapshot(load('emeraldhost.full.json'), EMERALD);
+
+    test('a fully hidden group says how many services it stands for', () => {
+        // Without this the group renders as "no services available" — four times over on this
+        // page — which reads as broken rather than healthy.
+        const fields = fieldsOf(renderDetailedLayout(emerald(), 'de'));
+        const gameserver = fields.find((f) => f.name === 'Gameserver');
+
+        expect(gameserver.value).toContain('66');
+        expect(gameserver.value).not.toContain('Keine Dienste');
+    });
+
+    test('the count is pluralised', () => {
+        const fields = fieldsOf(renderDetailedLayout(emerald(), 'de'));
+        const teamspeak = fields.find((f) => f.name === 'TeamSpeak Server');
+
+        expect(teamspeak.value).toContain('1 Dienst ');
+        expect(teamspeak.value).not.toContain('1 Dienste');
+    });
+
+    test('the compact counter uses the real total, not the visible one', () => {
+        const fields = fieldsOf(renderCompactLayout(emerald(), 'de'));
+        const gameserver = fields.find((f) => f.name === 'Gameserver');
+
+        expect(gameserver.value).toContain('66/66');
+        expect(gameserver.value).not.toContain('0/0');
+    });
+
+    test('the overview total counts hidden services too', () => {
+        const description = descriptionOf(renderOverviewLayout(emerald(), 'de'));
+        // 2 + 66 + 2 + 17 + 1 + 1 = 89
+        expect(description).toContain('89');
+    });
+
+    test('a partially affected group lists the affected and summarises the rest', () => {
+        const snapshot = snapshotOf([group('g', { de: 'Nodes' }, [leaf('n1', { de: 'node-01' }, STATUS.MAJOR_OUTAGE)], {
+            hide_operational_children: true, children_total: 50, children_hidden: 49,
+        })]);
+
+        const [field] = fieldsOf(renderDetailedLayout(snapshot, 'de'));
+        expect(field.value).toContain('node-01');
+        expect(field.value).toContain('49');
+    });
+});
+
+describe('nesting deeper than one level', () => {
+    const deep = () => snapshotOf([group('eu', { de: 'EU Central' }, [
+        group('ffm', { de: 'Frankfurt' }, [
+            group('dc14', { de: 'DC14' }, [
+                leaf('vm1', { de: 'VM-Host-01' }),
+                leaf('vm2', { de: 'VM-Host-02' }, STATUS.MAJOR_OUTAGE),
+            ]),
+        ]),
+        leaf('direct', { de: 'Direkt am Wurzelknoten' }),
+    ])]);
+
+    test('a five-level tree still becomes one Discord field', () => {
+        // Discord has two structural levels. Making each nested group its own field would
+        // spend the 25-field budget on headings.
+        expect(fieldsOf(renderDetailedLayout(deep(), 'de'))).toHaveLength(1);
+    });
+
+    test('the path survives as a heading inside the field', () => {
+        const [field] = fieldsOf(renderDetailedLayout(deep(), 'de'));
+        expect(field.value).toContain('Frankfurt / DC14');
+        expect(field.value).toContain('VM-Host-01');
+    });
+
+    test('a service directly under the top-level group needs no heading', () => {
+        const [field] = fieldsOf(renderDetailedLayout(deep(), 'de'));
+        const line = field.value.split('\n').find((l) => l.includes('Direkt am Wurzelknoten'));
+        expect(line.startsWith('┗━')).toBe(false);
+    });
+
+    test('a deep tree still respects every Discord limit', () => {
+        const wide = Array.from({ length: 30 }, (_, g) => group(`g${g}`, { de: `Region ${g}` }, [
+            group(`s${g}`, { de: `Standort ${g}` }, Array.from({ length: 40 }, (_, i) => leaf(`l${g}-${i}`, { de: `Node ${g}-${i} ${'x'.repeat(30)}` }))),
+        ]));
+
+        const [{ embed }] = renderDetailedLayout(snapshotOf(wide), 'de');
+        const json = embed.toJSON();
+
+        expect(json.fields.length).toBeLessThanOrEqual(DISCORD_LIMITS.EMBED_FIELDS);
+        expect(embedLength(json)).toBeLessThanOrEqual(DISCORD_LIMITS.MESSAGE_EMBED_TOTAL);
+        for (const field of json.fields) {
+            expect(field.value.length).toBeLessThanOrEqual(DISCORD_LIMITS.EMBED_FIELD_VALUE);
+            expect(field.value.length).toBeGreaterThan(0);
+        }
+    });
+});
+
+describe('localisation from a single snapshot', () => {
+    const emerald = () => toSnapshot(load('emeraldhost.full.json'), EMERALD);
+
+    test('one snapshot renders correctly in both languages', () => {
+        // This is why the DTO keeps locale maps unresolved: one fetch, many subscriptions.
+        const snapshot = emerald();
+
+        expect(fieldsOf(renderDetailedLayout(snapshot, 'de'))[0].name).toBe('Allgemein');
+        expect(fieldsOf(renderDetailedLayout(snapshot, 'en'))[0].name).toBe('General');
+    });
+
+    test('the synthetic group is translated, not baked in at fetch time', () => {
+        const snapshot = emerald();
+
+        const de = fieldsOf(renderDetailedLayout(snapshot, 'de')).at(-1).name;
+        const en = fieldsOf(renderDetailedLayout(snapshot, 'en')).at(-1).name;
+
+        expect(de).toBe('Weitere Dienste');
+        expect(en).toBe('Other services');
+    });
+
+    test('a name missing the requested locale falls back to the page default', () => {
+        const snapshot = snapshotOf([group('g', { de: 'Nur Deutsch' }, [leaf('s', { de: 'Dienst' })])]);
+        expect(fieldsOf(renderDetailedLayout(snapshot, 'en'))[0].name).toBe('Nur Deutsch');
+    });
+});
+
+describe('the richer status vocabulary', () => {
+    const withStatus = (status) => snapshotOf([
+        { id: 'c', name: { de: 'Ding' }, description: null, status, is_visible: true, is_group: false, children: [] },
+    ]);
+
+    test.each([
+        [STATUS.OPERATIONAL, 0x2ecc71],
+        [STATUS.MAJOR_OUTAGE, 0xe74c3c],
+        [STATUS.DEGRADED, 0xf39c12],
+        [STATUS.PARTIAL_OUTAGE, 0xf39c12],
+    ])('%s colours the embed 0x%s', (status, expected) => {
+        const [{ embed }] = renderDetailedLayout(withStatus(status), 'de');
+        expect(embed.toJSON().color).toBe(expected);
+    });
+
+    test('a maintenance window colours the page blue rather than red', () => {
+        const snapshot = snapshotOf([leaf('c', { de: 'Ding' })], {
+            maintenances: {
+                active: [{ id: 'm', title: { de: 'W' }, status: 'in_progress', scheduled_start: 'x', scheduled_end: null, updates: [], affected_components: [] }],
+                scheduled: [],
+            },
+        });
+
+        expect(snapshot.overall).toBe(STATUS.MAINTENANCE);
+        expect(renderDetailedLayout(snapshot, 'de')[0].embed.toJSON().color).toBe(0x3498db);
+    });
+});
+
+describe('every layout survives a Cloud page', () => {
+    const layouts = [
+        ['DETAILED', renderDetailedLayout],
+        ['COMPACT', renderCompactLayout],
+        ['OVERVIEW', renderOverviewLayout],
+        ['TREE', renderTreeLayout],
+        ['MINIMAL', renderMinimalLayout],
+    ];
+
+    test.each(layouts)('%s renders the recorded page without throwing', (_name, renderer) => {
+        const snapshot = toSnapshot(load('emeraldhost.full.json'), EMERALD);
+        expect(() => renderer(snapshot, 'de')).not.toThrow();
+        expect(() => renderer(snapshot, 'en')).not.toThrow();
+    });
+
+    test.each(layouts)('%s handles an empty Cloud page', (_name, renderer) => {
+        const snapshot = snapshotOf([]);
+        expect(() => renderer(snapshot, 'de')).not.toThrow();
+    });
+});

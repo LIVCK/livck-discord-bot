@@ -87,7 +87,8 @@
         "select_events": "Event-Typen auswählen",
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
-        "select_channel_final": "Wähle nun den Channel für **:url**"
+        "select_channel_final": "Wähle nun den Channel für **:url**",
+        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen."
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
@@ -222,7 +223,10 @@
       "more_categories_field": {
         "name": "Weitere",
         "value": "Noch :count Kategorien — auf der Statusseite ansehen."
-      }
+      },
+      "hidden_all": "keine Dienste betriebsbereit|:count Dienst betriebsbereit|:count Dienste betriebsbereit",
+      "hidden_more": "|+:count weiterer betriebsbereit|+:count weitere betriebsbereit",
+      "ungrouped": "Weitere Dienste"
     },
     "alerts": {
       "view_button": "Ansehen",

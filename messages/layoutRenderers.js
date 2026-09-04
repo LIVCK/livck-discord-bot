@@ -143,9 +143,80 @@ export const getEmbedColor = (status) => {
 const nameOf = (value, snapshot, locale, fallbackKey = 'messages.status.unknown_category') =>
     resolveText(value, locale, snapshot.defaultLocale) || translation.trans(fallbackKey);
 
+/**
+ * A group's display name.
+ *
+ * A group the bot invented (the bucket for components with no group of their own) carries a
+ * translation key instead of a name, because one snapshot is rendered once per subscription
+ * and those subscriptions are in different languages — a string resolved in the adapter would
+ * show German in an English channel.
+ */
+const groupName = (group, snapshot, locale) =>
+    (group.labelKey ? translation.trans(group.labelKey) : nameOf(group.name, snapshot, locale));
+
 /** Services in a group that are fully up / fully down. */
 const countUp = (services) => services.filter((s) => s.status === STATUS.OPERATIONAL).length;
 const countDown = (services) => services.filter((s) => s.status === STATUS.MAJOR_OUTAGE).length;
+
+/**
+ * Service counts for a group, accounting for children the source hid.
+ *
+ * A Cloud group with `hide_operational_children` ships only its AFFECTED children and reports
+ * how many healthy ones it left out — status.emeraldhost.de has one with 66 of 66 hidden.
+ * Counting only what arrived would render that group as "0/0". The hidden ones are hidden
+ * BECAUSE they are operational, so they count as up.
+ *
+ * `childrenTotal` is null for a self-hosted page, where this reduces to the plain counts.
+ */
+const groupCounts = (group) => {
+    const visibleUp = countUp(group.services);
+    const down = countDown(group.services);
+
+    if (group.childrenTotal === null || group.childrenTotal === undefined) {
+        return { up: visibleUp, down, total: group.services.length, hidden: 0 };
+    }
+
+    const hidden = group.childrenHidden ?? 0;
+    return { up: visibleUp + hidden, down, total: group.childrenTotal, hidden };
+};
+
+/**
+ * The service lines for a group's field value.
+ *
+ * Three things happen here that only ever apply to a Cloud page:
+ *  - a nested sub-group becomes a bold heading, so five levels of tree survive as two levels
+ *    of Discord structure (see providers/cloud.js);
+ *  - beyond one level of nesting the ancestors become a breadcrumb instead of indentation,
+ *    which stops being readable inside a 1024-character field;
+ *  - hidden healthy children are summarised rather than omitted.
+ */
+const groupBody = (group, snapshot, locale) => {
+    const { hidden, total } = groupCounts(group);
+    const lines = [];
+    let lastPath = null;
+
+    for (const service of group.services) {
+        const path = service.path ?? [];
+        const key = path.map((p) => resolveText(p, locale, snapshot.defaultLocale)).join(' / ');
+
+        if (key !== lastPath) {
+            if (key !== '') lines.push(`**${key}**`);
+            lastPath = key;
+        }
+
+        const emoji = getStatusEmoji(service.status);
+        const prefix = key === '' ? '' : '┗━ ';
+        lines.push(`${prefix}${emoji} **${nameOf(service.name, snapshot, locale)}**`);
+    }
+
+    if (hidden > 0) {
+        lines.push(group.services.length === 0
+            ? `${getStatusDot(STATUS.OPERATIONAL)} ${translation.trans('messages.status.hidden_all', {}, total)}`
+            : `${getStatusDot(STATUS.OPERATIONAL)} ${translation.trans('messages.status.hidden_more', {}, hidden)}`);
+    }
+
+    return serviceLines(lines) || translation.trans('messages.status.no_services');
+};
 
 /** The embed every layout falls back to when a page lists nothing. */
 const emptyEmbed = (snapshot, locale) => [{
@@ -185,13 +256,8 @@ export const renderDetailedLayout = (snapshot, locale = 'de') => {
     const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall));
 
     const fields = groups.map((group) => ({
-        name: nameOf(group.name, snapshot, locale),
-        value: serviceLines(
-            group.services.map((service) => {
-                const emoji = getStatusEmoji(service.status);
-                return `${emoji} **${nameOf(service.name, snapshot, locale)}**`;
-            })
-        ) || translation.trans('messages.status.no_services'),
+        name: groupName(group, snapshot, locale),
+        value: groupBody(group, snapshot, locale),
         inline: false // Default layout - full width, straight down
     }));
 
@@ -212,9 +278,7 @@ export const renderCompactLayout = (snapshot, locale = 'de') => {
     const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall));
 
     const fields = groups.map((group) => {
-        const services = group.services;
-        const up = countUp(services);
-        const down = countDown(services);
+        const { up, down, total } = groupCounts(group);
 
         const statusDot = getStatusDot(group.status);
         let statusLabel;
@@ -226,7 +290,7 @@ export const renderCompactLayout = (snapshot, locale = 'de') => {
             statusLabel = translation.trans('messages.status.degraded');
         }
 
-        let statusText = `┃ **${up}/${services.length}** ${translation.trans('messages.status.services')}`;
+        let statusText = `┃ **${up}/${total}** ${translation.trans('messages.status.services')}`;
         if (down > 0) {
             statusText += `\n┗━ ${statusDot} **${down}** ${translation.trans('messages.status.down')}`;
         } else {
@@ -234,7 +298,7 @@ export const renderCompactLayout = (snapshot, locale = 'de') => {
         }
 
         return {
-            name: nameOf(group.name, snapshot, locale),
+            name: groupName(group, snapshot, locale),
             value: statusText || translation.trans('messages.status.no_services'),
             inline: true
         };
@@ -254,9 +318,12 @@ export const renderOverviewLayout = (snapshot, locale = 'de') => {
     const groups = snapshot.groups || [];
     if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    const services = groups.flatMap((group) => group.services);
-    const totalAvailable = countUp(services);
-    const totalUnavailable = services.length - totalAvailable;
+    const totals = groups.reduce((acc, group) => {
+        const { up, total } = groupCounts(group);
+        return { up: acc.up + up, total: acc.total + total };
+    }, { up: 0, total: 0 });
+    const totalAvailable = totals.up;
+    const totalUnavailable = totals.total - totalAvailable;
 
     const overallStatusDot = getStatusDot(snapshot.overall);
     let statusSummary;
@@ -272,23 +339,22 @@ export const renderOverviewLayout = (snapshot, locale = 'de') => {
     if (totalUnavailable > 0) {
         description += `\n\`\`\`diff\n- ${totalUnavailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.down')}\n+ ${totalAvailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
     } else {
-        description += `\n\`\`\`diff\n+ ${totalAvailable}/${services.length} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
+        description += `\n\`\`\`diff\n+ ${totalAvailable}/${totals.total} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
     }
 
     const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall))
         .setDescription(clampDescription(description));
 
     const fields = groups.map((group) => {
-        const up = countUp(group.services);
-        const down = countDown(group.services);
+        const { up, down, total } = groupCounts(group);
 
-        let statusText = `${getStatusDot(group.status)} ${up}/${group.services.length}`;
+        let statusText = `${getStatusDot(group.status)} ${up}/${total}`;
         if (down > 0) {
             statusText += ` • **${down}** ${translation.trans('messages.status.down')}`;
         }
 
         return {
-            name: nameOf(group.name, snapshot, locale),
+            name: groupName(group, snapshot, locale),
             value: statusText,
             inline: true
         };
@@ -314,7 +380,7 @@ export const renderTreeLayout = (snapshot, locale = 'de') => {
     let description = '';
 
     groups.forEach((group, index) => {
-        description += `**${getStatusDot(group.status)} ${nameOf(group.name, snapshot, locale)}**\n`;
+        description += `**${getStatusDot(group.status)} ${groupName(group, snapshot, locale)}**\n`;
 
         group.services.forEach((service) => {
             const dot = getStatusDot(service.status === STATUS.OPERATIONAL ? STATUS.OPERATIONAL : STATUS.MAJOR_OUTAGE);
@@ -344,7 +410,7 @@ export const renderMinimalLayout = (snapshot, locale = 'de') => {
     let description = '';
 
     groups.forEach((group, index) => {
-        description += `**${nameOf(group.name, snapshot, locale)}**\n`;
+        description += `**${groupName(group, snapshot, locale)}**\n`;
 
         group.services.forEach((service) => {
             const dot = getStatusDot(service.status === STATUS.OPERATIONAL ? STATUS.OPERATIONAL : STATUS.MAJOR_OUTAGE);

@@ -1,7 +1,7 @@
 import models from '../models/index.js'
 import { getLayoutRenderer } from '../messages/layoutRenderers.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
-import { fetchSnapshot } from '../providers/selfHosted.js'
+import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, UNKNOWN_CHANNEL, MISSING_ACCESS } from '../util/messageSync.js'
@@ -102,9 +102,10 @@ export const handleStatusPage = async (statuspageId, client) => {
         let snapshot
 
         try {
-            // Alerts are handled by handleAlerts, which fetches them itself — asking for them
-            // here as well doubled the requests to every self-hosted page, every cycle.
-            snapshot = await fetchSnapshot(statuspageRecord, { token, locale, withAlerts: false })
+            // The provider memoizes per (page, token, locale) for a few seconds, so this and
+            // handleAlerts — which run concurrently for the same page — share ONE fetch
+            // instead of asking the same status page twice every cycle.
+            snapshot = await fetchSnapshot(statuspageRecord, { token, locale })
             fetched += 1
         } catch (error) {
             // Render nothing for this group. Publishing an empty result would replace a

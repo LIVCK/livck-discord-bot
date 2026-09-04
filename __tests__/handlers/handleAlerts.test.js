@@ -56,6 +56,10 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 
 const { handleAlerts } = await import('../../handlers/handleAlerts.js');
 const { HttpError } = await import('../../util/errors.js');
+const { clearSnapshotCache } = await import('../../providers/index.js');
+
+/** Simulate the gap between two update cycles — see handleStatuspage.test.js. */
+const nextCycle = () => clearSnapshotCache();
 
 const discord = { sent: [], edits: 0, fetches: 0 };
 
@@ -106,11 +110,18 @@ beforeEach(() => {
         id: 7,
         url: 'https://status.example.com',
         name: 'Example',
+        // Pre-detected, so the provider registry does not probe the network here. The
+        // detection path itself is covered in __tests__/api/detect.test.js.
+        kind: 'SELF_HOSTED',
+        externalId: null,
+        save: async () => {},
         Subscriptions: [subscription()],
     };
     db.messages = [];
     db.destroyed = [];
     db.roleMentions = [];
+
+    clearSnapshotCache();
 
     discord.sent = [];
     discord.edits = 0;
@@ -128,6 +139,7 @@ describe('posting alerts', () => {
     test('does not repost an unchanged alert on the next cycle', async () => {
         const client = makeClient();
         await handleAlerts(7, client);
+        nextCycle();
         await handleAlerts(7, client);
 
         expect(discord.sent).toHaveLength(1);
@@ -139,6 +151,7 @@ describe('posting alerts', () => {
         await handleAlerts(7, client);
 
         api.responses.alerts = { data: [alert({ message: '<p>Behoben.</p>' })] };
+        nextCycle();
         await handleAlerts(7, client);
 
         expect(discord.edits).toBe(1);
@@ -214,6 +227,7 @@ describe('updates thread under their parent', () => {
         const client = makeClient();
         await handleAlerts(7, client);           // parent only
         api.responses.alerts = { data: [withUpdate()] };
+        nextCycle();
         await handleAlerts(7, client);           // update arrives
 
         const reply = discord.sent.at(-1).reply;
@@ -240,6 +254,7 @@ describe('role mentions', () => {
         await handleAlerts(7, client);
 
         api.responses.alerts = { data: [alert({ message: '<p>Behoben.</p>' })] };
+        nextCycle();
         await handleAlerts(7, client);
 
         expect(discord.edits).toBe(1);

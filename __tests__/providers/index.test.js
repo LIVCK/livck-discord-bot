@@ -1,0 +1,195 @@
+/**
+ * The provider registry: picking an adapter, remembering what a page is, and making sure the
+ * two handlers do not each pay for the same fetch.
+ */
+
+import { jest } from '@jest/globals';
+
+const detect = { result: null, calls: 0 };
+const cloud = { calls: 0, pageId: 'cloud-page-id' };
+const selfHosted = { calls: 0 };
+
+jest.unstable_mockModule('../../api/detect.js', () => ({
+    detectSource: async () => { detect.calls += 1; return detect.result; },
+    classifyHeaders: () => null,
+    default: {},
+}));
+
+jest.unstable_mockModule('../../providers/cloud.js', () => ({
+    fetchSnapshot: async () => {
+        cloud.calls += 1;
+        return { snapshot: { source: 'CLOUD', groups: [], alerts: [] }, pageId: cloud.pageId };
+    },
+    toSnapshot: () => ({}),
+    flattenTree: () => [],
+    splitUpdates: () => ({ body: null, updates: [] }),
+    normalizeStatus: (s) => s,
+    default: {},
+}));
+
+jest.unstable_mockModule('../../providers/selfHosted.js', () => ({
+    fetchSnapshot: async () => {
+        selfHosted.calls += 1;
+        return { source: 'SELF_HOSTED', groups: [], alerts: [] };
+    },
+    toSnapshot: () => ({}),
+    groupStatus: () => 'operational',
+    overallStatus: () => 'operational',
+    mapServiceState: (s) => s,
+    default: {},
+}));
+
+const { fetchSnapshot, resolveSource, clearSnapshotCache, NotLivckError } =
+    await import('../../providers/index.js');
+const { SOURCE } = await import('../../dto/statuspage.js');
+
+const makePage = (overrides = {}) => {
+    const page = {
+        id: 1,
+        url: 'https://status.example.com',
+        name: 'Example',
+        kind: null,
+        externalId: null,
+        saves: 0,
+        save: async () => { page.saves += 1; },
+        ...overrides,
+    };
+    return page;
+};
+
+beforeEach(() => {
+    detect.result = null;
+    detect.calls = 0;
+    cloud.calls = 0;
+    cloud.pageId = 'cloud-page-id';
+    selfHosted.calls = 0;
+    clearSnapshotCache();
+});
+
+describe('resolveSource', () => {
+    test('probes an unknown page and stores the answer', async () => {
+        detect.result = SOURCE.CLOUD;
+        const page = makePage();
+
+        await expect(resolveSource(page)).resolves.toBe(SOURCE.CLOUD);
+        expect(page.kind).toBe(SOURCE.CLOUD);
+        expect(page.saves).toBe(1);
+    });
+
+    test('a page that already knows its kind is not probed again', async () => {
+        // Detection costs a request; paying it every cycle for every page would be the same
+        // mistake the redundant alert fetch was.
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await expect(resolveSource(page)).resolves.toBe(SOURCE.SELF_HOSTED);
+        expect(detect.calls).toBe(0);
+    });
+
+    test('an undetectable page is not remembered as anything', async () => {
+        // A page that is merely unreachable right now must stay probeable next cycle.
+        detect.result = null;
+        const page = makePage();
+
+        await expect(resolveSource(page)).resolves.toBeNull();
+        expect(page.kind).toBeNull();
+        expect(page.saves).toBe(0);
+    });
+});
+
+describe('adapter selection', () => {
+    test('a Cloud page goes to the Cloud adapter', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await expect(fetchSnapshot(page)).resolves.toMatchObject({ source: 'CLOUD' });
+        expect(cloud.calls).toBe(1);
+        expect(selfHosted.calls).toBe(0);
+    });
+
+    test('a self-hosted page goes to the self-hosted adapter', async () => {
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await expect(fetchSnapshot(page)).resolves.toMatchObject({ source: 'SELF_HOSTED' });
+        expect(selfHosted.calls).toBe(1);
+        expect(cloud.calls).toBe(0);
+    });
+
+    test('a page that is neither raises an error the backoff understands', async () => {
+        detect.result = null;
+
+        await expect(fetchSnapshot(makePage())).rejects.toBeInstanceOf(NotLivckError);
+    });
+
+    test('the Cloud page id is remembered so the id lookup happens once', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await fetchSnapshot(page);
+
+        expect(page.externalId).toBe('cloud-page-id');
+        expect(page.saves).toBe(1);
+    });
+
+    test('an unchanged page id is not written again every cycle', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD, externalId: 'cloud-page-id' });
+
+        await fetchSnapshot(page);
+
+        expect(page.saves).toBe(0);
+    });
+});
+
+describe('one fetch per cycle', () => {
+    test('concurrent callers share a single fetch', async () => {
+        // handleStatusPage and handleAlerts run in the same Promise.all for the same page.
+        // Without this, enabling the Cloud would double every page's request count.
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await Promise.all([fetchSnapshot(page), fetchSnapshot(page)]);
+
+        expect(cloud.calls).toBe(1);
+    });
+
+    test('different locales are fetched separately', async () => {
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await Promise.all([
+            fetchSnapshot(page, { locale: 'de' }),
+            fetchSnapshot(page, { locale: 'en' }),
+        ]);
+
+        expect(selfHosted.calls).toBe(2);
+    });
+
+    test('different API tokens are fetched separately', async () => {
+        // The token decides WHAT the page returns; sharing across tokens would leak a private
+        // page's contents into a subscription that has no token.
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await Promise.all([
+            fetchSnapshot(page, { token: null }),
+            fetchSnapshot(page, { token: 'secret' }),
+        ]);
+
+        expect(selfHosted.calls).toBe(2);
+    });
+
+    test('a failed fetch is not cached', async () => {
+        // The next cycle must retry; when it retries is the backoff's decision, not a cache's.
+        detect.result = null;
+        const page = makePage();
+
+        await expect(fetchSnapshot(page)).rejects.toThrow();
+        await expect(fetchSnapshot(page)).rejects.toThrow();
+
+        expect(detect.calls).toBe(2);
+    });
+
+    test('a new cycle fetches again', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await fetchSnapshot(page);
+        clearSnapshotCache();
+        await fetchSnapshot(page);
+
+        expect(cloud.calls).toBe(2);
+    });
+});
