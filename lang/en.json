@@ -182,7 +182,15 @@
           "TIMEOUT": "Connection timeout",
           "NOT_LIVCK": "No longer a LIVCK status page",
           "MANUAL": "Manually paused",
-          "unknown": "Unknown"
+          "unknown": "Unknown",
+          "DNS": "Domain does not resolve",
+          "REFUSED": "Connection refused",
+          "TLS": "TLS / certificate error",
+          "HTTP_4XX": "Status page client error",
+          "HTTP_5XX": "Status page server error",
+          "RATE_LIMITED": "Too many requests",
+          "NETWORK": "Network error",
+          "UNKNOWN": "Unknown error"
         }
       }
     }
@@ -208,11 +216,39 @@
       "overview_footer": "Overview • Last updated",
       "compact_footer": "Compact View",
       "detailed_footer": "Detailed",
-      "tree_footer": "Tree View"
+      "tree_footer": "Tree View",
+      "more_services": ":count more …",
+      "more_categories": ":count more categories",
+      "more_categories_field": {
+        "name": "More",
+        "value": ":count more categories — see the status page."
+      }
     },
     "alerts": {
       "view_button": "View",
       "update_button": "View Update"
+    },
+    "pause": {
+      "title": "Updates paused",
+      "description": "Updates for **:name** were paused automatically after :count consecutive failed fetches.",
+      "reason_label": "Reason",
+      "resume_hint": "Updates resume on their own once the page is reachable again. Use `/livck resume url::url` to retry right away.",
+      "reason": {
+        "TIMEOUT": "Connection timed out",
+        "DNS": "Domain does not resolve",
+        "REFUSED": "Connection refused",
+        "TLS": "TLS / certificate error",
+        "HTTP_4XX": "The status page returns a client error",
+        "HTTP_5XX": "The status page returns a server error",
+        "RATE_LIMITED": "Too many requests (rate limited)",
+        "NOT_LIVCK": "No longer a LIVCK status page",
+        "NETWORK": "Network error",
+        "UNKNOWN": "Unknown error"
+      }
+    },
+    "resume": {
+      "title": "Updates resumed",
+      "description": "Status page **:name** is reachable again. Updates continue."
     }
   },
   "errors": {

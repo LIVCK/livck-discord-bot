@@ -1,4 +1,5 @@
 import translation from '../../util/Translation.js';
+import { FAILURE_KINDS } from '../../util/errors.js';
 
 describe('Translation System', () => {
   let originalConsoleWarn;
@@ -246,6 +247,29 @@ describe('Translation System', () => {
         expect(description).toBeDefined();
         expect(name).not.toBe(`commands.livck.layouts.${layout}.name`);
         expect(description).not.toBe(`commands.livck.layouts.${layout}.description`);
+      });
+    });
+  });
+
+  describe('Failure vocabulary', () => {
+    // Every failure kind reaches a user twice: in the pause notification and in the
+    // `/livck resume` confirmation. A kind added to util/errors.js without translations
+    // would print its raw identifier ("HTTP_5XX") into a customer's Discord channel.
+    const kinds = Object.values(FAILURE_KINDS);
+
+    test.each(kinds)('%s has a pause reason in both languages', (kind) => {
+      ['de', 'en'].forEach(locale => {
+        translation.setLocale(locale);
+        const key = `messages.pause.reason.${kind}`;
+        expect(translation.trans(key)).not.toBe(key);
+      });
+    });
+
+    test.each(kinds)('%s has a resume reason in both languages', (kind) => {
+      ['de', 'en'].forEach(locale => {
+        translation.setLocale(locale);
+        const key = `commands.livck.resume.reasons.${kind}`;
+        expect(translation.trans(key)).not.toBe(key);
       });
     });
   });

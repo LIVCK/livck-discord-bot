@@ -1,6 +1,98 @@
 import { EmbedBuilder } from "discord.js";
 import translation from "../util/Translation.js";
 import { getStatusDot } from "../config/emojis.js";
+import {
+    DISCORD_LIMITS,
+    capFields,
+    embedLength,
+    enforceMessageBudget,
+    joinWithinLimit,
+    padInlineRows,
+} from "../util/discordLimits.js";
+
+/**
+ * Overflow helpers.
+ *
+ * Every one of these is a no-op while the content fits — Discord's limits are only reached
+ * by unusually large status pages, and the ordinary output must stay byte-identical (see
+ * __tests__/messages/layoutRenderers.golden.test.js).
+ */
+
+/** "+N more" line inside a field value or description. */
+const moreServicesLine = (count) => translation.trans('messages.status.more_services', { count });
+
+/** Final field standing in for the categories that did not fit. */
+const moreCategoriesField = (count) => ({
+    name: translation.trans('messages.status.more_categories_field.name'),
+    value: translation.trans('messages.status.more_categories_field.value', { count }),
+    inline: false,
+});
+
+/** Join service lines into one field value, dropping the tail that does not fit. */
+const serviceLines = (lines) => joinWithinLimit(lines, {
+    max: DISCORD_LIMITS.EMBED_FIELD_VALUE,
+    more: moreServicesLine,
+});
+
+/**
+ * Clamp a built description to Discord's limit.
+ *
+ * The layouts build their description by concatenation and must keep producing exactly that
+ * string while it fits; only an over-long one is rebuilt line by line.
+ */
+const clampDescription = (description) => {
+    if (description.length <= DISCORD_LIMITS.EMBED_DESCRIPTION) return description;
+    return joinWithinLimit(description.split('\n'), {
+        max: DISCORD_LIMITS.EMBED_DESCRIPTION,
+        more: moreServicesLine,
+    });
+};
+
+/**
+ * Cap the field list, bring the embed under the per-message budget, and report the total
+ * number of categories that did not make it.
+ *
+ * Two stages can drop fields — the 25-field cap and the 6000-character budget — so neither
+ * of them writes the overflow marker: each would only know about its own losses and the
+ * reader would be told "+6 more" when 54 are missing. The count is summed here and written
+ * once, and the marker itself is added only if it still fits (dropping one more field to
+ * make room if needed).
+ *
+ * Padding runs last, so the zero-width filler is never mistaken for a dropped category.
+ */
+const finalizeEmbed = (embed, fields, { inline = false } = {}) => {
+    const capped = capFields(fields);
+    let hidden = fields.length - capped.length;
+
+    embed.setFields(capped);
+    enforceMessageBudget([embed]);
+    hidden += capped.length - (embed.toJSON().fields || []).length;
+
+    if (hidden > 0) {
+        let current = embed.toJSON().fields || [];
+        let marker = moreCategoriesField(hidden);
+
+        // Cost of the marker measured arithmetically rather than by building a probe embed:
+        // EmbedBuilder validates on construction, and this runs on already-clamped input.
+        const fits = () => embedLength(embed.toJSON()) + marker.name.length + marker.value.length
+            <= DISCORD_LIMITS.MESSAGE_EMBED_TOTAL
+            && current.length + 1 <= DISCORD_LIMITS.EMBED_FIELDS;
+
+        while (current.length > 0 && !fits()) {
+            // No room for the marker: give up one more category and say so.
+            current = current.slice(0, -1);
+            embed.setFields(current);
+            hidden += 1;
+            marker = moreCategoriesField(hidden);
+        }
+
+        if (fits()) embed.setFields([...current, marker]);
+    }
+
+    if (inline) embed.setFields(padInlineRows(embed.toJSON().fields || []));
+
+    return embed;
+};
 
 /**
  * Get status emoji for a monitor
@@ -135,12 +227,12 @@ export const renderDetailedLayout = (statuspageService, statuspage, locale = 'de
 
     const fields = categories.map((category) => {
         const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const monitorList = monitors
-            .map((monitor) => {
+        const monitorList = serviceLines(
+            monitors.map((monitor) => {
                 const emoji = getStatusEmoji(monitor.state);
                 return `${emoji} **${monitor.name}**`;
             })
-            .join('\n') || translation.trans('messages.status.no_services');
+        ) || translation.trans('messages.status.no_services');
 
         return {
             name: category.name || translation.trans('messages.status.unknown_category'),
@@ -152,10 +244,11 @@ export const renderDetailedLayout = (statuspageService, statuspage, locale = 'de
     const embed = new EmbedBuilder()
         .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
         .setColor(embedColor)
-        .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
         .setFooter({ text: statuspage.name });
+
+    finalizeEmbed(embed, fields);
 
     return [{ embed, type: 'single' }];
 };
@@ -224,26 +317,14 @@ export const renderCompactLayout = (statuspageService, statuspage, locale = 'de'
         };
     });
 
-    // Fill incomplete rows with empty fields (3 per row)
-    const remainder = fields.length % 3;
-    if (remainder !== 0) {
-        const emptyFieldsNeeded = 3 - remainder;
-        for (let i = 0; i < emptyFieldsNeeded; i++) {
-            fields.push({
-                name: '\u200B', // Zero-width space
-                value: '\u200B',
-                inline: true
-            });
-        }
-    }
-
     const embed = new EmbedBuilder()
         .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
         .setColor(embedColor)
-        .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
         .setFooter({ text: statuspage.name });
+
+    finalizeEmbed(embed, fields, { inline: true });
 
     return [{ embed, type: 'single' }];
 };
@@ -338,27 +419,15 @@ export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de
         };
     });
 
-    // Fill incomplete rows with empty fields (3 per row)
-    const remainder = fields.length % 3;
-    if (remainder !== 0) {
-        const emptyFieldsNeeded = 3 - remainder;
-        for (let i = 0; i < emptyFieldsNeeded; i++) {
-            fields.push({
-                name: '\u200B', // Zero-width space
-                value: '\u200B',
-                inline: true
-            });
-        }
-    }
-
     const embed = new EmbedBuilder()
         .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
+        .setDescription(clampDescription(description))
         .setColor(embedColor)
-        .setFields(fields)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
         .setFooter({ text: statuspage.name });
+
+    finalizeEmbed(embed, fields, { inline: true });
 
     return [{ embed, type: 'single' }];
 };
@@ -419,7 +488,7 @@ export const renderTreeLayout = (statuspageService, statuspage, locale = 'de') =
 
     const embed = new EmbedBuilder()
         .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
+        .setDescription(clampDescription(description))
         .setColor(embedColor)
         .setURL(statuspage.url)
         .setTimestamp(new Date())
@@ -482,7 +551,7 @@ export const renderMinimalLayout = (statuspageService, statuspage, locale = 'de'
 
     const embed = new EmbedBuilder()
         .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
+        .setDescription(clampDescription(description))
         .setColor(embedColor)
         .setURL(statuspage.url)
         .setTimestamp(new Date())

@@ -182,7 +182,15 @@
           "TIMEOUT": "Verbindungs-Timeout",
           "NOT_LIVCK": "Keine LIVCK-Statusseite mehr",
           "MANUAL": "Manuell pausiert",
-          "unknown": "Unbekannt"
+          "unknown": "Unbekannt",
+          "DNS": "Domain nicht auflösbar",
+          "REFUSED": "Verbindung abgelehnt",
+          "TLS": "TLS-/Zertifikatsfehler",
+          "HTTP_4XX": "Client-Fehler der Statusseite",
+          "HTTP_5XX": "Server-Fehler der Statusseite",
+          "RATE_LIMITED": "Zu viele Anfragen",
+          "NETWORK": "Netzwerkfehler",
+          "UNKNOWN": "Unbekannter Fehler"
         }
       }
     }
@@ -208,11 +216,39 @@
       "overview_footer": "Übersicht • Zuletzt aktualisiert",
       "compact_footer": "Kompaktansicht",
       "detailed_footer": "Detailliert",
-      "tree_footer": "Baumansicht"
+      "tree_footer": "Baumansicht",
+      "more_services": ":count weitere …",
+      "more_categories": ":count weitere Kategorien",
+      "more_categories_field": {
+        "name": "Weitere",
+        "value": "Noch :count Kategorien — auf der Statusseite ansehen."
+      }
     },
     "alerts": {
       "view_button": "Ansehen",
       "update_button": "Zum Update"
+    },
+    "pause": {
+      "title": "Updates pausiert",
+      "description": "Die Updates für **:name** wurden automatisch pausiert, nachdem :count Abrufe in Folge fehlgeschlagen sind.",
+      "reason_label": "Grund",
+      "resume_hint": "Sobald die Seite wieder erreichbar ist, laufen die Updates von selbst weiter. Mit `/livck resume url::url` kannst du es sofort erneut versuchen.",
+      "reason": {
+        "TIMEOUT": "Zeitüberschreitung bei der Verbindung",
+        "DNS": "Domain nicht auflösbar",
+        "REFUSED": "Verbindung abgelehnt",
+        "TLS": "TLS-/Zertifikatsfehler",
+        "HTTP_4XX": "Die Statusseite antwortet mit einem Client-Fehler",
+        "HTTP_5XX": "Die Statusseite antwortet mit einem Server-Fehler",
+        "RATE_LIMITED": "Zu viele Anfragen (Rate Limit)",
+        "NOT_LIVCK": "Keine LIVCK-Statusseite mehr",
+        "NETWORK": "Netzwerkfehler",
+        "UNKNOWN": "Unbekannter Fehler"
+      }
+    },
+    "resume": {
+      "title": "Updates fortgesetzt",
+      "description": "Die Statusseite **:name** ist wieder erreichbar. Die Updates laufen weiter."
     }
   },
   "errors": {

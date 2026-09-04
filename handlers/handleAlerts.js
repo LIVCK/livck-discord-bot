@@ -5,6 +5,12 @@ import LIVCK from '../api/livck.js'
 import { truncate } from '../util/String.js'
 import { buildRoleMentions } from '../util/roleMentions.js'
 import translation from '../util/Translation.js'
+import logger from '../util/logger.js'
+import { groupSubscriptions } from '../util/subscriptionGroups.js'
+import { syncMessage, UNKNOWN_CHANNEL, MISSING_ACCESS } from '../util/messageSync.js'
+
+/** Alerts older than this are no longer tracked. */
+const ALERT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
 // Convert HTML to Discord Markdown
 const convertHtmlToMarkdown = (html) => {
@@ -68,191 +74,160 @@ const convertHtmlToMarkdown = (html) => {
     return text.trim()
 }
 
-export const handleAlerts = async (statuspageId, client) => {
-    try {
-        const statuspageRecord = await models.Statuspage.findOne({
-            where: { id: statuspageId },
-            include: [models.Subscription],
+/** INCIDENT is red, a scheduled item amber, anything else informational. */
+const alertColor = (alert) => {
+    if (alert.type === 'INCIDENT') return Colors.Red
+    if (alert.scheduled_for) return Colors.Yellow
+    return Colors.Blurple
+}
+
+const buildAlertEmbed = (item, link, color, footer) => new EmbedBuilder()
+    .setColor(color)
+    .setTitle(item.title)
+    .setDescription(truncate(convertHtmlToMarkdown(item.message), 500))
+    .setURL(link)
+    .setTimestamp(new Date(item.created_at))
+    .setFooter({ text: footer })
+
+const linkRow = (link, label) => new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setLabel(label).setStyle(ButtonStyle.Link).setURL(link)
+)
+
+/**
+ * Deliver one alert (and its follow-up updates) to one subscription.
+ *
+ * The parent alert becomes a message; every follow-up is posted as a reply to it, so a
+ * timeline reads as a thread. Replies are addressed by message ID via `reply.messageReference`
+ * — the parent is never fetched.
+ */
+const deliverAlert = async (subscription, newsItem, statuspageRecord, client) => {
+    if (!subscription.eventTypes.NEWS) return
+
+    // Do not backfill a channel with alerts that predate its subscription.
+    if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) return
+
+    const channel = await client.channels.fetch(subscription.channelId)
+    if (!channel) return
+
+    const color = alertColor(newsItem)
+    const footer = statuspageRecord.name
+    const embed = buildAlertEmbed(newsItem, newsItem.link, color, footer)
+    const row = linkRow(newsItem.link, translation.trans('messages.alerts.view_button'))
+
+    const parentRecord = await models.Message.findOne({
+        where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
+    })
+
+    // Role pings fire only for a NEW message: Discord does not re-notify on edit, so
+    // attaching them to an update would be noise without a ping.
+    const mentions = parentRecord
+        ? { content: '', roleIds: [], allowedMentions: {} }
+        : await buildRoleMentions(subscription.id, 'NEWS')
+
+    const parentResult = await syncMessage({
+        channel,
+        record: parentRecord,
+        payload: {
+            content: mentions.content || undefined,
+            embeds: [embed],
+            components: [row],
+            ...(mentions.roleIds.length > 0 ? { allowedMentions: mentions.allowedMentions } : {}),
+        },
+        models,
+        create: { subscriptionId: subscription.id, category: 'NEWS', serviceId: newsItem.id },
+    })
+
+    // The parent was deleted in Discord; it is recreated next cycle, and replies would have
+    // nothing to hang under until then.
+    if (parentResult === 'recreate') return
+
+    const parentId = parentRecord
+        ? parentRecord.messageId
+        : (await models.Message.findOne({
+            where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
+        }))?.messageId
+
+    if (!parentId) return
+
+    const updateLabel = translation.trans('messages.alerts.update_button')
+
+    for (const update of newsItem.alerts || []) {
+        const record = await models.Message.findOne({
+            where: { subscriptionId: subscription.id, serviceId: update.id, category: 'ALERT' },
         })
 
-        if (!statuspageRecord) {
-            return
-        }
+        await syncMessage({
+            channel,
+            record,
+            payload: {
+                embeds: [buildAlertEmbed(update, newsItem.link, color, footer)],
+                components: [linkRow(newsItem.link, updateLabel)],
+            },
+            models,
+            create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id },
+            send: (payload) => channel.send({
+                ...payload,
+                reply: { messageReference: parentId, failIfNotExists: false },
+            }),
+        })
+    }
+}
 
-        // Group subscriptions by apiToken + locale (null = public access)
-        const tokenLocaleGroups = new Map()
-        for (const subscription of statuspageRecord.Subscriptions) {
-            const token = subscription.apiToken || null
-            const locale = subscription.locale || 'de'
-            const groupKey = `${token || ''}::${locale}`
-            if (!tokenLocaleGroups.has(groupKey)) {
-                tokenLocaleGroups.set(groupKey, { token, locale, subscriptions: [] })
-            }
-            tokenLocaleGroups.get(groupKey).subscriptions.push(subscription)
-        }
+export const handleAlerts = async (statuspageId, client) => {
+    const statuspageRecord = await models.Statuspage.findOne({
+        where: { id: statuspageId },
+        include: [models.Subscription],
+    })
 
-        // Process each token+locale group with its own LIVCK client
-        for (const [, { token, locale, subscriptions: groupSubscriptions }] of tokenLocaleGroups) {
-            const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url, 'v3', token, locale))
+    if (!statuspageRecord) return
+
+    const groups = groupSubscriptions(statuspageRecord.Subscriptions)
+    if (groups.length === 0) return
+
+    let fetched = 0
+    let firstError = null
+
+    for (const { token, locale, subscriptions } of groups) {
+        const statuspageService = new StatuspageService(
+            new LIVCK(statuspageRecord.url, 'v3', token, locale)
+        )
+
+        try {
             await statuspageService.fetchAlerts()
+            fetched += 1
+        } catch (error) {
+            firstError = firstError || error
+            continue
+        }
 
-            const alerts = statuspageService.alerts
+        const now = Date.now()
+        const recentAlerts = (statuspageService.alerts || []).filter(
+            (alert) => now - new Date(alert.created_at).getTime() <= ALERT_WINDOW_MS
+        )
 
-            const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000
-            const now = Date.now()
+        if (recentAlerts.length === 0) continue
 
-            const recentAlerts = alerts.filter(newsItem => {
-                const alertAge = now - new Date(newsItem.created_at).getTime()
-                return alertAge <= THREE_DAYS_MS
-            })
+        translation.setLocale(locale)
 
-            translation.setLocale(locale)
-
-            await Promise.all(recentAlerts.map(async (newsItem) => {
-                let color = Colors.Blurple
-                if (newsItem.type === 'INCIDENT') {
-                    color = Colors.Red
-                } else if (newsItem.scheduled_for) {
-                    color = Colors.Yellow
-                }
-
-                const embed = new EmbedBuilder()
-                    .setColor(color)
-                    .setTitle(newsItem.title)
-                    .setDescription(truncate(convertHtmlToMarkdown(newsItem.message), 500))
-                    .setURL(newsItem.link)
-                    .setTimestamp(new Date(newsItem.created_at))
-                    .setFooter({ text: statuspageRecord.name })
-
-                const button = new ButtonBuilder()
-                    .setLabel(translation.trans('messages.alerts.view_button'))
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(newsItem.link)
-
-                const row = new ActionRowBuilder().addComponents(button)
-
-                await Promise.all(groupSubscriptions.map(async (subscription) => {
-                    try {
-                        if (!subscription.eventTypes.NEWS) return
-
-                        if (new Date(subscription.createdAt).getTime() > new Date(newsItem.created_at).getTime()) {
-                            return
-                        }
-
-                        const channel = await client.channels.fetch(subscription.channelId)
-
-                        if (!channel) {
-                            return
-                        }
-
-                        let mainMessage = await models.Message.findOne({
-                            where: { subscriptionId: subscription.id, serviceId: newsItem.id, category: 'NEWS' },
-                        })
-
-                        if (mainMessage) {
-                            try {
-                                mainMessage = await channel.messages.fetch(mainMessage.messageId)
-                                await mainMessage.edit({ embeds: [embed], components: [row] })
-                            } catch (error) {
-                                if (error.code === 10008) {
-                                    await models.Message.destroy({
-                                        where: {
-                                            subscriptionId: subscription.id,
-                                            serviceId: newsItem.id,
-                                            category: 'NEWS',
-                                        },
-                                    })
-                                    mainMessage = null
-                                }
-                            }
-                        }
-
-                        if (!mainMessage) {
-                            // Role mentions only for NEW messages (not edits - Discord doesn't re-ping on edit)
-                            const {
-                                content,
-                                roleIds,
-                                allowedMentions,
-                            } = await buildRoleMentions(subscription.id, 'NEWS')
-
-                            mainMessage = await channel.send({
-                                content: content || undefined,
-                                embeds: [embed],
-                                components: [row],
-                                ...(roleIds.length > 0 ? { allowedMentions } : {}),
-                            })
-                            await models.Message.create({
-                                subscriptionId: subscription.id,
-                                messageId: mainMessage.id,
-                                category: 'NEWS',
-                                serviceId: newsItem.id,
-                            })
-                        }
-
-                        for (const subAlert of newsItem.alerts) {
-                            const existingSubAlertMessage = await models.Message.findOne({
-                                where: { subscriptionId: subscription.id, serviceId: subAlert.id, category: 'ALERT' },
-                            })
-
-                            const subAlertEmbed = new EmbedBuilder()
-                                .setColor(color)
-                                .setTitle(subAlert.title)
-                                .setDescription(truncate(convertHtmlToMarkdown(subAlert.message), 500))
-                                .setURL(newsItem.link)
-                                .setTimestamp(new Date(subAlert.created_at))
-                                .setFooter({ text: statuspageRecord.name })
-
-                            const button = new ButtonBuilder()
-                                .setLabel(translation.trans('messages.alerts.update_button'))
-                                .setStyle(ButtonStyle.Link)
-                                .setURL(newsItem.link)
-
-                            const row = new ActionRowBuilder().addComponents(button)
-
-                            if (existingSubAlertMessage) {
-                                try {
-                                    const message = await channel.messages.fetch(existingSubAlertMessage.messageId)
-                                    await message.edit({ embeds: [subAlertEmbed], components: [row] })
-                                } catch (error) {
-                                    if (error.code === 10008) {
-                                        await models.Message.destroy({
-                                            where: {
-                                                subscriptionId: subscription.id,
-                                                serviceId: subAlert.id,
-                                                category: 'ALERT',
-                                            },
-                                        })
-                                    }
-                                }
-                            } else {
-                                const subAlertMessage = await mainMessage.reply({
-                                    embeds: [subAlertEmbed],
-                                    components: [row],
-                                })
-                                await models.Message.create({
-                                    subscriptionId: subscription.id,
-                                    messageId: subAlertMessage.id,
-                                    category: 'ALERT',
-                                    serviceId: subAlert.id,
-                                })
-                            }
-                        }
-                    } catch (error) {
-                        if (error.code === 10003) {
-                            console.warn(`[Discord] Unknown channel ${subscription.channelId}, deleting subscription ${subscription.id}`)
-                            await models.Subscription.destroy({ where: { id: subscription.id } })
-                        } else if (error.code === 50001) {
-                            console.warn(`[Discord] Missing access to channel ${subscription.channelId}, deleting subscription ${subscription.id}`)
-                            await models.Subscription.destroy({ where: { id: subscription.id } })
-                        } else {
-                            throw error
-                        }
+        for (const newsItem of recentAlerts) {
+            for (const subscription of subscriptions) {
+                try {
+                    await deliverAlert(subscription, newsItem, statuspageRecord, client)
+                } catch (error) {
+                    if (error.code === UNKNOWN_CHANNEL || error.code === MISSING_ACCESS) {
+                        logger.info(
+                            `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
+                        )
+                        await models.Subscription.destroy({ where: { id: subscription.id } })
+                        continue
                     }
-                }))
-            }))
-        } // end for tokenGroups
-    } catch (error) {
-        // Only log error message without stack trace for cleaner logs
-        console.error(`[handleAlerts] Error for statuspage ${statuspageId}: ${error.message}`)
+                    throw error
+                }
+            }
+        }
+    }
+
+    if (fetched === 0 && firstError) {
+        throw firstError
     }
 }

@@ -1,0 +1,566 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Layout golden output COMPACT renders unchanged (de) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Cloud - Platform",
+          "value": "┃ **3/3** Dienste
+┗━ 🟢 Betriebsbereit",
+        },
+        {
+          "inline": true,
+          "name": "Cloud - Edge",
+          "value": "┃ **1/2** Dienste
+┗━ 🔴 **1** ausgefallen",
+        },
+        {
+          "inline": true,
+          "name": "Zahlungsdienste",
+          "value": "┃ **0/1** Dienste
+┗━ 🟠 Eingeschränkt",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output COMPACT renders unchanged (en) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Cloud - Platform",
+          "value": "┃ **3/3** services
+┗━ 🟢 Operational",
+        },
+        {
+          "inline": true,
+          "name": "Cloud - Edge",
+          "value": "┃ **1/2** services
+┗━ 🔴 **1** down",
+        },
+        {
+          "inline": true,
+          "name": "Zahlungsdienste",
+          "value": "┃ **0/1** services
+┗━ 🟠 Degraded",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Services from status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output DETAILED renders unchanged (de) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Cloud - Platform",
+          "value": "<a:status_up:1344187859921535047> **Homepage**
+<a:status_up:1344187859921535047> **Documentation**
+<a:status_up:1344187859921535047> **Application Load-Balancer**",
+        },
+        {
+          "inline": false,
+          "name": "Cloud - Edge",
+          "value": "<a:status_down:1344187930499088394> **Edge Frankfurt**
+<a:status_up:1344187859921535047> **Edge Nürnberg**",
+        },
+        {
+          "inline": false,
+          "name": "Zahlungsdienste",
+          "value": "❔ **Stripe**",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output DETAILED renders unchanged (en) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Cloud - Platform",
+          "value": "<a:status_up:1344187859921535047> **Homepage**
+<a:status_up:1344187859921535047> **Documentation**
+<a:status_up:1344187859921535047> **Application Load-Balancer**",
+        },
+        {
+          "inline": false,
+          "name": "Cloud - Edge",
+          "value": "<a:status_down:1344187930499088394> **Edge Frankfurt**
+<a:status_up:1344187859921535047> **Edge Nürnberg**",
+        },
+        {
+          "inline": false,
+          "name": "Zahlungsdienste",
+          "value": "❔ **Stripe**",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Services from status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output MINIMAL renders unchanged (de) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "**Cloud - Platform**
+🟢 Homepage
+🟢 Documentation
+🟢 Application Load-Balancer
+
+**Cloud - Edge**
+🔴 Edge Frankfurt
+🟢 Edge Nürnberg
+
+**Zahlungsdienste**
+🔴 Stripe
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output MINIMAL renders unchanged (en) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "**Cloud - Platform**
+🟢 Homepage
+🟢 Documentation
+🟢 Application Load-Balancer
+
+**Cloud - Edge**
+🔴 Edge Frankfurt
+🟢 Edge Nürnberg
+
+**Zahlungsdienste**
+🔴 Stripe
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Services from status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output OVERVIEW renders unchanged (de) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "🟠 Teilweise Beeinträchtigungen
+\`\`\`diff
+- 2 Dienste ausgefallen
++ 4 Dienste Betriebsbereit
+\`\`\`",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Cloud - Platform",
+          "value": "🟢 3/3",
+        },
+        {
+          "inline": true,
+          "name": "Cloud - Edge",
+          "value": "🔴 1/2 • **1** ausgefallen",
+        },
+        {
+          "inline": true,
+          "name": "Zahlungsdienste",
+          "value": "🟠 0/1",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output OVERVIEW renders unchanged (en) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "🟠 Partial service degradation
+\`\`\`diff
+- 2 services down
++ 4 services Operational
+\`\`\`",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Cloud - Platform",
+          "value": "🟢 3/3",
+        },
+        {
+          "inline": true,
+          "name": "Cloud - Edge",
+          "value": "🔴 1/2 • **1** down",
+        },
+        {
+          "inline": true,
+          "name": "Zahlungsdienste",
+          "value": "🟠 0/1",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Services from status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output TREE renders unchanged (de) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "**🟢 Cloud - Platform**
+    🟢 Homepage
+    🟢 Documentation
+    🟢 Application Load-Balancer
+
+**🔴 Cloud - Edge**
+    🔴 Edge Frankfurt
+    🟢 Edge Nürnberg
+
+**🟠 Zahlungsdienste**
+    🔴 Stripe
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output TREE renders unchanged (en) 1`] = `
+[
+  {
+    "embed": {
+      "color": 15965202,
+      "description": "**🟢 Cloud - Platform**
+    🟢 Homepage
+    🟢 Documentation
+    🟢 Application Load-Balancer
+
+**🔴 Cloud - Edge**
+    🔴 Edge Frankfurt
+    🟢 Edge Nürnberg
+
+**🟠 Zahlungsdienste**
+    🔴 Stripe
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Services from status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output category without monitors renders unchanged 1`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Leer",
+          "value": "Keine Dienste vorhanden.",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output category without monitors renders unchanged 2`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "fields": [
+        {
+          "inline": true,
+          "name": "Leer",
+          "value": "┃ **0/0** Dienste
+┗━ 🟢 Betriebsbereit",
+        },
+        {
+          "inline": true,
+          "name": "​",
+          "value": "​",
+        },
+        {
+          "inline": true,
+          "name": "​",
+          "value": "​",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output category without monitors renders unchanged 3`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "description": "🟢 Alle Systeme betriebsbereit
+\`\`\`diff
++ 0/0 Dienste Betriebsbereit
+\`\`\`",
+      "fields": [
+        {
+          "inline": true,
+          "name": "Leer",
+          "value": "🟢 0/0",
+        },
+        {
+          "inline": true,
+          "name": "​",
+          "value": "​",
+        },
+        {
+          "inline": true,
+          "name": "​",
+          "value": "​",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output category without monitors renders unchanged 4`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "description": "**🟢 Leer**
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output category without monitors renders unchanged 5`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "description": "**Leer**
+",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output empty statuspage renders unchanged 1`] = `
+[
+  {
+    "embed": {
+      "description": "Keine Kategorien verfügbar.",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output empty statuspage renders unchanged 2`] = `
+[
+  {
+    "embed": {
+      "description": "Keine Kategorien verfügbar.",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output empty statuspage renders unchanged 3`] = `
+[
+  {
+    "embed": {
+      "description": "Keine Kategorien verfügbar.",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output empty statuspage renders unchanged 4`] = `
+[
+  {
+    "embed": {
+      "description": "Keine Kategorien verfügbar.",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output empty statuspage renders unchanged 5`] = `
+[
+  {
+    "embed": {
+      "description": "Keine Kategorien verfügbar.",
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;
+
+exports[`Layout golden output missing category name falls back to the translated placeholder 1`] = `
+[
+  {
+    "embed": {
+      "color": 3066993,
+      "fields": [
+        {
+          "inline": false,
+          "name": "Unbekannte Kategorie",
+          "value": "<a:status_up:1344187859921535047> **Ding**",
+        },
+      ],
+      "footer": {
+        "text": "status.livck.com",
+      },
+      "title": "Dienste von status.livck.com",
+      "url": "https://status.livck.com",
+    },
+    "type": "single",
+  },
+]
+`;

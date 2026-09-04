@@ -556,7 +556,9 @@ export default (models) => ({
                         return;
                     }
 
-                    if (!statuspage.paused) {
+                    // A page can be waiting out a backoff without having been announced as
+                    // paused yet; `resume` is meaningful in both cases, so both are allowed.
+                    if (!statuspage.paused && !statuspage.nextAttemptAt) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.not_paused', { url }),
                             flags: 64
@@ -567,13 +569,17 @@ export default (models) => ({
                     // Import pause manager
                     const { default: StatuspagePauseManager } = await import('../../services/statuspagePauseManager.js');
 
-                    const result = await StatuspagePauseManager.resume(statuspage, true);
+                    // Read the reason BEFORE resuming — resume() clears it, so reading it
+                    // afterwards always reported "unknown".
+                    const pauseReason = statuspage.pauseReason || 'unknown';
+
+                    const result = await StatuspagePauseManager.resume(statuspage);
 
                     if (result.success) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.success', {
                                 url,
-                                reason: translation.trans(`commands.livck.resume.reasons.${statuspage.pauseReason || 'unknown'}`)
+                                reason: translation.trans(`commands.livck.resume.reasons.${pauseReason}`)
                             }),
                             flags: 64
                         });

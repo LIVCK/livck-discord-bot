@@ -41,6 +41,19 @@ const initializeBot = async (commandsFolder, models) => {
         console.log(`Logged in as ${client.user.tag}!`);
     });
 
+    /**
+     * Discord allows a bot 50 requests per second overall, plus per-route buckets keyed by
+     * channel. discord.js queues rather than throwing when a limit is reached, so the only
+     * symptom used to be status updates quietly arriving later and later — with nothing in
+     * the logs. This surfaces it.
+     */
+    client.rest.on('rateLimited', (info) => {
+        console.warn(
+            `[Discord] Rate limited: ${info.global ? 'global' : info.route} — waiting ${info.timeToReset}ms ` +
+            `(limit ${info.limit}, method ${info.method})`
+        );
+    });
+
     client.on('interactionCreate', async (interaction) => {
         // Handle autocomplete
         if (interaction.isAutocomplete()) {

@@ -1,3 +1,19 @@
+import { HttpError } from '../util/errors.js';
+import logger from '../util/logger.js';
+
+/**
+ * Client for a self-hosted LIVCK status page (`/api/v3`, `/api/v1`).
+ *
+ * ERRORS PROPAGATE. `get()` used to catch everything and return `{data: []}`, which made an
+ * unreachable status page indistinguishable from an empty one: the update loop saw "no
+ * categories", never an error, so the backoff never engaged and the page was polled every
+ * 15 seconds forever. Callers now decide what a failure means; this class only classifies
+ * and reports it.
+ */
+
+/** Give up on a request after this long. Must stay below the update interval. */
+const REQUEST_TIMEOUT_MS = Number(process.env.LIVCK_TIMEOUT_MS || 10_000);
+
 export default class LIVCK {
 
     constructor(baseUrl = 'https://status.livck.com/api', apiVersion = 'v3', token = null, locale = null) {
@@ -28,17 +44,17 @@ export default class LIVCK {
             headers['Accept-Language'] = this.locale
         }
 
+        // Without an explicit deadline a stalled connection hangs for undici's default
+        // (minutes), holding up the whole cycle and never surfacing as an error.
         const response = await fetch(url.toString(), {
             method: method,
             headers,
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
             ...params,
-        }).catch((error) => {
-            console.error('Error:', error)
-            throw error
         })
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            throw new HttpError(response.status, response.statusText, url.toString())
         }
 
         const contentType = response.headers.get('content-type')
@@ -49,31 +65,28 @@ export default class LIVCK {
         return response.json()
     }
 
+    /**
+     * Perform a GET. Throws on any failure — see the class docblock.
+     */
     async get(path, query = {}, apiVersion = this.apiVersion) {
-        try {
-            return await this.request('GET', path, {}, query, apiVersion)
-        } catch (error) {
-            if (error.message && error.message.includes('HTTP 403')) {
-                console.warn(`[LIVCK] Access denied (403) for ${this.baseURL}: ${path}`)
-            } else if (error.cause?.code === 'UND_ERR_CONNECT_TIMEOUT') {
-                console.warn(`[LIVCK] Connection timeout for ${this.baseURL}: ${path}`)
-            } else if (error.message && error.message.includes('fetch failed')) {
-                console.warn(`[LIVCK] Network error for ${this.baseURL}: ${path}`)
-            } else {
-                console.error('Error:', error, { path, query, apiVersion, statuspage: this.baseURL })
-            }
-            return { data: [] }
-        }
+        return this.request('GET', path, {}, query, apiVersion)
     }
 
+    /**
+     * Is this URL a LIVCK status page?
+     *
+     * Self-hosted instances answer with an `lvk-version` header. This is the one place that
+     * still swallows its error: the caller only asks a yes/no question, and "unreachable"
+     * and "not LIVCK" lead to the same answer here.
+     */
     async ensureIsLIVCK() {
-        const fetchOptions = {}
+        const fetchOptions = { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }
         if (this.token) {
             fetchOptions.headers = { 'Authorization': `Bearer ${this.token}` }
         }
 
         const response = await fetch(this.baseURL, fetchOptions).catch((error) => {
-            console.error('Error [ensureIsLIVCK]:', error)
+            logger.failure('[LIVCK] ensureIsLIVCK', this.baseURL, error)
             return null
         })
 

@@ -5,8 +5,12 @@ export default {
   collectCoverageFrom: [
     'api/**/*.js',
     'services/**/*.js',
-    'utils/**/*.js',
+    // The directory is `util/`, not `utils/` — the old pattern matched nothing, so none of
+    // the helpers ever appeared in a coverage report.
+    'util/**/*.js',
     'handlers/**/*.js',
+    'messages/**/*.js',
+    'config/**/*.js',
     '!**/node_modules/**',
     '!**/__tests__/**'
   ],
