@@ -1,8 +1,7 @@
-import StatuspageService from '../services/statuspage.js'
 import models from '../models/index.js'
 import { getLayoutRenderer } from '../messages/layoutRenderers.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
-import LIVCK from '../api/livck.js'
+import { fetchSnapshot } from '../providers/selfHosted.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, UNKNOWN_CHANNEL, MISSING_ACCESS } from '../util/messageSync.js'
@@ -53,11 +52,11 @@ const buildLinkButtons = (customLinks) => {
  * Render and deliver the status message for one subscription.
  * @returns {Promise<'created'|'updated'|'skipped'|'recreate'|'ignored'>}
  */
-const deliverStatus = async (subscription, statuspageService, statuspageRecord, client) => {
+const deliverStatus = async (subscription, snapshot, client) => {
     if (!subscription.eventTypes.STATUS) return 'ignored'
 
     const renderer = getLayoutRenderer(subscription.layout || 'DETAILED')
-    const embeds = renderer(statuspageService, statuspageRecord, subscription.locale).map((r) => r.embed)
+    const embeds = renderer(snapshot, subscription.locale).map((r) => r.embed)
 
     const customLinks = await models.CustomLink.findAll({
         where: { subscriptionId: subscription.id },
@@ -100,12 +99,12 @@ export const handleStatusPage = async (statuspageId, client) => {
     let firstError = null
 
     for (const { token, locale, subscriptions } of groups) {
-        const statuspageService = new StatuspageService(
-            new LIVCK(statuspageRecord.url, 'v3', token, locale)
-        )
+        let snapshot
 
         try {
-            await statuspageService.fetchAll()
+            // Alerts are handled by handleAlerts, which fetches them itself — asking for them
+            // here as well doubled the requests to every self-hosted page, every cycle.
+            snapshot = await fetchSnapshot(statuspageRecord, { token, locale, withAlerts: false })
             fetched += 1
         } catch (error) {
             // Render nothing for this group. Publishing an empty result would replace a
@@ -117,7 +116,7 @@ export const handleStatusPage = async (statuspageId, client) => {
 
         for (const subscription of subscriptions) {
             try {
-                await deliverStatus(subscription, statuspageService, statuspageRecord, client)
+                await deliverStatus(subscription, snapshot, client)
             } catch (error) {
                 if (error.code === UNKNOWN_CHANNEL || error.code === MISSING_ACCESS) {
                     logger.info(

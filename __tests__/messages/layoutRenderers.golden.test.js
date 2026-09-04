@@ -18,6 +18,7 @@ import {
     renderMinimalLayout,
     getLayoutRenderer,
 } from '../../messages/layoutRenderers.js';
+import { toSnapshot } from '../../providers/selfHosted.js';
 
 /** Shape produced by services/statuspage.js for a self-hosted LIVCK page. */
 const buildService = () => ({
@@ -54,6 +55,12 @@ const buildService = () => ({
 
 const STATUSPAGE = { name: 'status.livck.com', url: 'https://status.livck.com' };
 
+/**
+ * The raw v3 shape goes through the self-hosted adapter, so these snapshots prove the DTO
+ * refactor changed nothing: same source data, new code path, byte-identical embeds.
+ */
+const snapshotOf = (service) => toSnapshot(service, STATUSPAGE);
+
 /** Embeds carry a render-time timestamp; drop it so snapshots are stable. */
 const normalize = (renderResult) => renderResult.map(({ embed, type }) => {
     const json = JSON.parse(JSON.stringify(embed.toJSON()));
@@ -72,26 +79,26 @@ const LAYOUTS = [
 describe('Layout golden output', () => {
     describe.each(LAYOUTS)('%s', (name, renderer) => {
         test.each(['de', 'en'])('renders unchanged (%s)', (locale) => {
-            expect(normalize(renderer(buildService(), STATUSPAGE, locale))).toMatchSnapshot();
+            expect(normalize(renderer(snapshotOf(buildService()), locale))).toMatchSnapshot();
         });
     });
 
     test('empty statuspage renders unchanged', () => {
         for (const [, renderer] of LAYOUTS) {
-            expect(normalize(renderer({ categories: [] }, STATUSPAGE, 'de'))).toMatchSnapshot();
+            expect(normalize(renderer(snapshotOf({ categories: [] }), 'de'))).toMatchSnapshot();
         }
     });
 
     test('category without monitors renders unchanged', () => {
-        const service = { categories: [{ id: 'x', name: 'Leer', monitors: [] }] };
+        const snapshot = snapshotOf({ categories: [{ id: 'x', name: 'Leer', monitors: [] }] });
         for (const [, renderer] of LAYOUTS) {
-            expect(normalize(renderer(service, STATUSPAGE, 'de'))).toMatchSnapshot();
+            expect(normalize(renderer(snapshot, 'de'))).toMatchSnapshot();
         }
     });
 
     test('missing category name falls back to the translated placeholder', () => {
-        const service = { categories: [{ id: 'x', name: null, monitors: [{ id: 'm', name: 'Ding', state: 'AVAILABLE' }] }] };
-        expect(normalize(renderDetailedLayout(service, STATUSPAGE, 'de'))).toMatchSnapshot();
+        const snapshot = snapshotOf({ categories: [{ id: 'x', name: null, monitors: [{ id: 'm', name: 'Ding', state: 'AVAILABLE' }] }] });
+        expect(normalize(renderDetailedLayout(snapshot, 'de'))).toMatchSnapshot();
     });
 });
 

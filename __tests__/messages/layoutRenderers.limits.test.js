@@ -8,6 +8,7 @@
  */
 
 import { DISCORD_LIMITS, embedLength } from '../../util/discordLimits.js';
+import { toSnapshot } from '../../providers/selfHosted.js';
 import {
     renderCompactLayout,
     renderDetailedLayout,
@@ -31,6 +32,9 @@ const hugeService = ({ categories = 60, monitorsPerCategory = 80, nameLength = 4
     })),
 });
 
+/** Raw v3 shape → DTO, the same path production takes. */
+const snapshotOf = (service) => toSnapshot(service, STATUSPAGE);
+
 const LAYOUTS = [
     ['DETAILED', renderDetailedLayout],
     ['COMPACT', renderCompactLayout],
@@ -40,7 +44,7 @@ const LAYOUTS = [
 ];
 
 describe.each(LAYOUTS)('%s stays within Discord limits', (name, renderer) => {
-    const rendered = renderer(hugeService(), STATUSPAGE, 'de');
+    const rendered = renderer(snapshotOf(hugeService()), 'de');
     const embeds = rendered.map(({ embed }) => embed.toJSON());
 
     test('at most 10 embeds per message', () => {
@@ -79,7 +83,7 @@ describe.each(LAYOUTS)('%s stays within Discord limits', (name, renderer) => {
 
 describe('overflow is reported, not silently dropped', () => {
     test('DETAILED names the categories it could not show', () => {
-        const [{ embed }] = renderDetailedLayout(hugeService({ categories: 60 }), STATUSPAGE, 'de');
+        const [{ embed }] = renderDetailedLayout(snapshotOf(hugeService({ categories: 60 })), 'de');
         const json = embed.toJSON();
 
         expect(json.fields.length).toBeLessThanOrEqual(DISCORD_LIMITS.EMBED_FIELDS);
@@ -103,7 +107,7 @@ describe('overflow is reported, not silently dropped', () => {
             }],
         };
 
-        const [{ embed }] = renderDetailedLayout(service, STATUSPAGE, 'de');
+        const [{ embed }] = renderDetailedLayout(snapshotOf(service), 'de');
         const value = embed.toJSON().fields[0].value;
 
         expect(value.length).toBeLessThanOrEqual(DISCORD_LIMITS.EMBED_FIELD_VALUE);
@@ -123,7 +127,7 @@ describe('degenerate input does not throw', () => {
 
     describe.each(LAYOUTS)('%s', (name, renderer) => {
         test.each(cases)('%s', (_label, service) => {
-            expect(() => renderer(service, STATUSPAGE, 'de')).not.toThrow();
+            expect(() => renderer(snapshotOf(service), 'de')).not.toThrow();
         });
     });
 });
