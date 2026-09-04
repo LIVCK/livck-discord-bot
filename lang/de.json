@@ -88,7 +88,8 @@
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
         "select_channel_final": "Wähle nun den Channel für **:url**",
-        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen."
+        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen.",
+        "cloud_disabled": "Die Statusseite **:url** läuft auf LIVCK Cloud. Diese Instanz des Bots unterstützt bisher nur Self-Hosted-Statusseiten."
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
@@ -224,9 +225,8 @@
         "name": "Weitere",
         "value": "Noch :count Kategorien — auf der Statusseite ansehen."
       },
-      "hidden_all": "keine Dienste betriebsbereit|:count Dienst betriebsbereit|:count Dienste betriebsbereit",
-      "hidden_more": "|+:count weiterer betriebsbereit|+:count weitere betriebsbereit",
-      "ungrouped": "Weitere Dienste"
+      "ungrouped": "Weitere Dienste",
+      "group_summary": "keine Systeme|:total System · :affected betroffen|:total Systeme · :affected betroffen"
     },
     "alerts": {
       "view_button": "Ansehen",

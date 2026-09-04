@@ -159,25 +159,48 @@ const countUp = (services) => services.filter((s) => s.status === STATUS.OPERATI
 const countDown = (services) => services.filter((s) => s.status === STATUS.MAJOR_OUTAGE).length;
 
 /**
- * Service counts for a group, accounting for children the source hid.
+ * Service counts for a group, and whether the bot may state them.
  *
  * A Cloud group with `hide_operational_children` ships only its AFFECTED children and reports
- * how many healthy ones it left out — status.emeraldhost.de has one with 66 of 66 hidden.
- * Counting only what arrived would render that group as "0/0". The hidden ones are hidden
- * BECAUSE they are operational, so they count as up.
+ * how many healthy ones it left out. The statuspage renders that summary under exactly one
+ * condition — `isGroup && collapseOperational && affectedCount > 0` in HorizonComponentItem.vue
+ * — so while everything behind such a group is healthy, the page states NO number at all.
  *
- * `childrenTotal` is null for a self-hosted page, where this reduces to the plain counts.
+ * The bot mirrors that. Printing "66 services operational" for a quiet group would disclose a
+ * fleet size the operator deliberately keeps off their own page, and the bot must never show
+ * more than the page it reports on.
+ *
+ * `disclose` is false only for a hiding group with nothing affected. A normal group has
+ * `childrenTotal === null` and always discloses, which is what keeps self-hosted unchanged.
  */
 const groupCounts = (group) => {
     const visibleUp = countUp(group.services);
     const down = countDown(group.services);
 
+    // The page's own rule: count what is actually non-neutral rather than `total - hidden`,
+    // which would treat a healthy kept sub-group as affected forever.
+    const affected = group.services.filter(
+        (s) => s.status !== STATUS.OPERATIONAL && s.status !== STATUS.UNKNOWN
+    ).length;
+
     if (group.childrenTotal === null || group.childrenTotal === undefined) {
-        return { up: visibleUp, down, total: group.services.length, hidden: 0 };
+        return { up: visibleUp, down, total: group.services.length, affected, disclose: true };
     }
 
-    const hidden = group.childrenHidden ?? 0;
-    return { up: visibleUp + hidden, down, total: group.childrenTotal, hidden };
+    return {
+        up: visibleUp + (group.childrenHidden ?? 0),
+        down,
+        total: group.childrenTotal,
+        affected,
+        disclose: affected > 0,
+    };
+};
+
+/** Human label for a status, for wherever a group shows no numbers. */
+const describeStatus = (status) => {
+    if (status === STATUS.OPERATIONAL) return translation.trans('messages.status.operational');
+    if (status === STATUS.MAJOR_OUTAGE) return translation.trans('messages.status.critical');
+    return translation.trans('messages.status.degraded');
 };
 
 /**
@@ -191,7 +214,7 @@ const groupCounts = (group) => {
  *  - hidden healthy children are summarised rather than omitted.
  */
 const groupBody = (group, snapshot, locale) => {
-    const { hidden, total } = groupCounts(group);
+    const { total, affected, disclose } = groupCounts(group);
     const lines = [];
     let lastPath = null;
 
@@ -209,10 +232,15 @@ const groupBody = (group, snapshot, locale) => {
         lines.push(`${prefix}${emoji} **${nameOf(service.name, snapshot, locale)}**`);
     }
 
-    if (hidden > 0) {
-        lines.push(group.services.length === 0
-            ? `${getStatusDot(STATUS.OPERATIONAL)} ${translation.trans('messages.status.hidden_all', {}, total)}`
-            : `${getStatusDot(STATUS.OPERATIONAL)} ${translation.trans('messages.status.hidden_more', {}, hidden)}`);
+    // Only when the page itself would show it — see groupCounts.
+    if (disclose && group.childrenTotal !== null && group.childrenTotal !== undefined) {
+        lines.push(translation.trans('messages.status.group_summary', { total, affected }, total));
+    }
+
+    // A hiding group with nothing affected lists nothing and states no number: just its own
+    // status, which is all the page shows there too.
+    if (lines.length === 0 && !disclose) {
+        return `${getStatusDot(group.status)} ${describeStatus(group.status)}`;
     }
 
     return serviceLines(lines) || translation.trans('messages.status.no_services');
@@ -278,23 +306,21 @@ export const renderCompactLayout = (snapshot, locale = 'de') => {
     const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall));
 
     const fields = groups.map((group) => {
-        const { up, down, total } = groupCounts(group);
+        const { up, down, total, disclose } = groupCounts(group);
 
         const statusDot = getStatusDot(group.status);
-        let statusLabel;
-        if (group.status === STATUS.OPERATIONAL) {
-            statusLabel = translation.trans('messages.status.operational');
-        } else if (group.status === STATUS.MAJOR_OUTAGE) {
-            statusLabel = translation.trans('messages.status.critical');
-        } else {
-            statusLabel = translation.trans('messages.status.degraded');
-        }
+        const statusLabel = describeStatus(group.status);
 
-        let statusText = `┃ **${up}/${total}** ${translation.trans('messages.status.services')}`;
-        if (down > 0) {
-            statusText += `\n┗━ ${statusDot} **${down}** ${translation.trans('messages.status.down')}`;
+        // A hiding group with nothing affected gets no fraction — the count is the very thing
+        // the page withholds there — and no second line, which would only repeat the label.
+        let statusText;
+        if (!disclose) {
+            statusText = `┃ ${statusDot} ${statusLabel}`;
         } else {
-            statusText += `\n┗━ ${statusDot} ${statusLabel}`;
+            statusText = `┃ **${up}/${total}** ${translation.trans('messages.status.services')}`;
+            statusText += down > 0
+                ? `\n┗━ ${statusDot} **${down}** ${translation.trans('messages.status.down')}`
+                : `\n┗━ ${statusDot} ${statusLabel}`;
         }
 
         return {
@@ -318,9 +344,12 @@ export const renderOverviewLayout = (snapshot, locale = 'de') => {
     const groups = snapshot.groups || [];
     if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
+    // The page-wide total must not smuggle hidden systems back in through the summary line.
     const totals = groups.reduce((acc, group) => {
-        const { up, total } = groupCounts(group);
-        return { up: acc.up + up, total: acc.total + total };
+        const { up, total, disclose } = groupCounts(group);
+        return disclose
+            ? { up: acc.up + up, total: acc.total + total }
+            : { up: acc.up + group.services.length, total: acc.total + group.services.length };
     }, { up: 0, total: 0 });
     const totalAvailable = totals.up;
     const totalUnavailable = totals.total - totalAvailable;
@@ -346,9 +375,11 @@ export const renderOverviewLayout = (snapshot, locale = 'de') => {
         .setDescription(clampDescription(description));
 
     const fields = groups.map((group) => {
-        const { up, down, total } = groupCounts(group);
+        const { up, down, total, disclose } = groupCounts(group);
 
-        let statusText = `${getStatusDot(group.status)} ${up}/${total}`;
+        let statusText = disclose
+            ? `${getStatusDot(group.status)} ${up}/${total}`
+            : `${getStatusDot(group.status)} ${describeStatus(group.status)}`;
         if (down > 0) {
             statusText += ` • **${down}** ${translation.trans('messages.status.down')}`;
         }

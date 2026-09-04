@@ -14,12 +14,15 @@ status pages just as much.
 
 - **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
   first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
+  Gated behind `CLOUD_ENABLED` (off by default) while Cloud news handling is still incomplete.
 - Cloud component trees nest up to five levels; Discord offers two. The tree is folded onto
   top-level groups and the remaining depth becomes typography inside the field — a sub-heading,
   or a breadcrumb once indentation stops being readable.
-- Groups that hide their healthy children are summarised ("66 services operational") instead of
-  rendering as "no services available" — which is what an unaware renderer would have shown for
-  four of the six groups on status.emeraldhost.de.
+- Groups that hide their healthy children render as their own status rather than "no services
+  available" — which is what an unaware renderer would have shown for four of the six groups on
+  status.emeraldhost.de. The bot states a count only when the statuspage itself would (i.e.
+  when something is affected), so it never discloses a fleet size the operator keeps off their
+  own page.
 - Cloud incidents, maintenance windows and standing advisories arrive as three separate concepts
   and are rendered as one alert stream. An advisory is never coloured like an outage and never
   pings a role: it carries no severity at all, so that cannot be got wrong.

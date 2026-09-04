@@ -48,46 +48,81 @@ const descriptionOf = (result) => result[0].embed.toJSON().description ?? '';
 describe('hidden healthy children', () => {
     const emerald = () => toSnapshot(load('emeraldhost.full.json'), EMERALD);
 
-    test('a fully hidden group says how many services it stands for', () => {
-        // Without this the group renders as "no services available" — four times over on this
-        // page — which reads as broken rather than healthy.
+    /**
+     * The statuspage prints its "N components · M affected" summary only when something IS
+     * affected (HorizonComponentItem.vue: `isGroup && collapseOperational && affectedCount > 0`).
+     * While a hiding group is healthy it states no number at all — and neither may the bot,
+     * or it would disclose a fleet size the operator keeps off their own page.
+     */
+    test('a quiet hiding group never reveals how many systems are behind it', () => {
         const fields = fieldsOf(renderDetailedLayout(emerald(), 'de'));
         const gameserver = fields.find((f) => f.name === 'Gameserver');
 
-        expect(gameserver.value).toContain('66');
-        expect(gameserver.value).not.toContain('Keine Dienste');
+        expect(gameserver.value).not.toContain('66');
+        expect(gameserver.value).toContain('Betriebsbereit');
     });
 
-    test('the count is pluralised', () => {
-        const fields = fieldsOf(renderDetailedLayout(emerald(), 'de'));
-        const teamspeak = fields.find((f) => f.name === 'TeamSpeak Server');
+    test('no hidden count leaks into any layout while everything is healthy', () => {
+        const snapshot = emerald();
+        const counts = ['66', '17'];   // the real hidden totals on that page
 
-        expect(teamspeak.value).toContain('1 Dienst ');
-        expect(teamspeak.value).not.toContain('1 Dienste');
+        for (const render of [renderDetailedLayout, renderCompactLayout, renderOverviewLayout, renderTreeLayout, renderMinimalLayout]) {
+            for (const locale of ['de', 'en']) {
+                const json = render(snapshot, locale)[0].embed.toJSON();
+                const text = [json.description ?? '', ...(json.fields ?? []).map((f) => `${f.name} ${f.value}`)].join(' ');
+
+                for (const count of counts) {
+                    expect(text).not.toContain(count);
+                }
+            }
+        }
     });
 
-    test('the compact counter uses the real total, not the visible one', () => {
+    test('the compact tile shows a status instead of a fraction', () => {
         const fields = fieldsOf(renderCompactLayout(emerald(), 'de'));
         const gameserver = fields.find((f) => f.name === 'Gameserver');
 
-        expect(gameserver.value).toContain('66/66');
-        expect(gameserver.value).not.toContain('0/0');
+        expect(gameserver.value).not.toMatch(/\d+\/\d+/);
+        expect(gameserver.value).toContain('Betriebsbereit');
     });
 
-    test('the overview total counts hidden services too', () => {
+    test('the overview total counts only what the page discloses', () => {
+        // 2 visible under "Allgemein" + 1 root leaf; the 86 hidden ones stay uncounted.
         const description = descriptionOf(renderOverviewLayout(emerald(), 'de'));
-        // 2 + 66 + 2 + 17 + 1 + 1 = 89
-        expect(description).toContain('89');
+
+        expect(description).toContain('3/3');
+        expect(description).not.toContain('89');
     });
 
-    test('a partially affected group lists the affected and summarises the rest', () => {
+    test('once something IS affected, the page discloses and so does the bot', () => {
+        // At that point the count is on the customer's own status page, so repeating it in
+        // Discord reveals nothing new — and the affected node has to be nameable.
         const snapshot = snapshotOf([group('g', { de: 'Nodes' }, [leaf('n1', { de: 'node-01' }, STATUS.MAJOR_OUTAGE)], {
             hide_operational_children: true, children_total: 50, children_hidden: 49,
         })]);
 
         const [field] = fieldsOf(renderDetailedLayout(snapshot, 'de'));
+
         expect(field.value).toContain('node-01');
-        expect(field.value).toContain('49');
+        expect(field.value).toContain('50');
+        expect(field.value).toContain('1');
+    });
+
+    test('the summary is worded exactly like the statuspage', () => {
+        const snapshot = snapshotOf([group('g', { de: 'Nodes' }, [leaf('n1', { de: 'node-01' }, STATUS.MAJOR_OUTAGE)], {
+            hide_operational_children: true, children_total: 50, children_hidden: 49,
+        })]);
+
+        expect(fieldsOf(renderDetailedLayout(snapshot, 'de'))[0].value).toContain('50 Systeme · 1 betroffen');
+        expect(fieldsOf(renderDetailedLayout(snapshot, 'en'))[0].value).toContain('50 components · 1 affected');
+    });
+
+    test('a normal group is unaffected by any of this', () => {
+        const snapshot = snapshotOf([group('g', { de: 'Web' }, [leaf('s', { de: 'Website' })])]);
+        const [field] = fieldsOf(renderDetailedLayout(snapshot, 'de'));
+
+        expect(field.value).toContain('Website');
+        expect(field.value).not.toContain('·');
     });
 });
 
