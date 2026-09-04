@@ -18,19 +18,21 @@ export const handleStatusPage = async (statuspageId, client) => {
         console.log('[handleStatusPage] Processing statuspage:', statuspageRecord.url)
         console.log('[handleStatusPage] Subscriptions count:', statuspageRecord.Subscriptions?.length || 0)
 
-        // Group subscriptions by apiToken (null = public access)
-        const tokenGroups = new Map()
+        // Group subscriptions by apiToken + locale (null = public access)
+        const tokenLocaleGroups = new Map()
         for (const subscription of statuspageRecord.Subscriptions) {
             const token = subscription.apiToken || null
-            if (!tokenGroups.has(token)) {
-                tokenGroups.set(token, [])
+            const locale = subscription.locale || 'de'
+            const groupKey = `${token || ''}::${locale}`
+            if (!tokenLocaleGroups.has(groupKey)) {
+                tokenLocaleGroups.set(groupKey, { token, locale, subscriptions: [] })
             }
-            tokenGroups.get(token).push(subscription)
+            tokenLocaleGroups.get(groupKey).subscriptions.push(subscription)
         }
 
-        // Process each token group with its own LIVCK client
-        for (const [token, groupSubscriptions] of tokenGroups) {
-            const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url, 'v3', token))
+        // Process each token+locale group with its own LIVCK client
+        for (const [, { token, locale, subscriptions: groupSubscriptions }] of tokenLocaleGroups) {
+            const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url, 'v3', token, locale))
 
             try {
                 await statuspageService.fetchAll()

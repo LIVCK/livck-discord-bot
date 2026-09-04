@@ -4,6 +4,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } fr
 import LIVCK from '../api/livck.js'
 import { truncate } from '../util/String.js'
 import { buildRoleMentions } from '../util/roleMentions.js'
+import translation from '../util/Translation.js'
 
 // Convert HTML to Discord Markdown
 const convertHtmlToMarkdown = (html) => {
@@ -78,19 +79,21 @@ export const handleAlerts = async (statuspageId, client) => {
             return
         }
 
-        // Group subscriptions by apiToken (null = public access)
-        const tokenGroups = new Map()
+        // Group subscriptions by apiToken + locale (null = public access)
+        const tokenLocaleGroups = new Map()
         for (const subscription of statuspageRecord.Subscriptions) {
             const token = subscription.apiToken || null
-            if (!tokenGroups.has(token)) {
-                tokenGroups.set(token, [])
+            const locale = subscription.locale || 'de'
+            const groupKey = `${token || ''}::${locale}`
+            if (!tokenLocaleGroups.has(groupKey)) {
+                tokenLocaleGroups.set(groupKey, { token, locale, subscriptions: [] })
             }
-            tokenGroups.get(token).push(subscription)
+            tokenLocaleGroups.get(groupKey).subscriptions.push(subscription)
         }
 
-        // Process each token group with its own LIVCK client
-        for (const [token, groupSubscriptions] of tokenGroups) {
-            const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url, 'v3', token))
+        // Process each token+locale group with its own LIVCK client
+        for (const [, { token, locale, subscriptions: groupSubscriptions }] of tokenLocaleGroups) {
+            const statuspageService = new StatuspageService(new LIVCK(statuspageRecord.url, 'v3', token, locale))
             await statuspageService.fetchAlerts()
 
             const alerts = statuspageService.alerts
@@ -102,6 +105,8 @@ export const handleAlerts = async (statuspageId, client) => {
                 const alertAge = now - new Date(newsItem.created_at).getTime()
                 return alertAge <= THREE_DAYS_MS
             })
+
+            translation.setLocale(locale)
 
             await Promise.all(recentAlerts.map(async (newsItem) => {
                 let color = Colors.Blurple
@@ -120,7 +125,7 @@ export const handleAlerts = async (statuspageId, client) => {
                     .setFooter({ text: statuspageRecord.name })
 
                 const button = new ButtonBuilder()
-                    .setLabel('Ansehen')
+                    .setLabel(translation.trans('messages.alerts.view_button'))
                     .setStyle(ButtonStyle.Link)
                     .setURL(newsItem.link)
 
@@ -198,7 +203,7 @@ export const handleAlerts = async (statuspageId, client) => {
                                 .setFooter({ text: statuspageRecord.name })
 
                             const button = new ButtonBuilder()
-                                .setLabel('Zum Update')
+                                .setLabel(translation.trans('messages.alerts.update_button'))
                                 .setStyle(ButtonStyle.Link)
                                 .setURL(newsItem.link)
 

@@ -214,7 +214,9 @@ describe('Translation System', () => {
       'commands.livck.unsubscribe.success',
       'commands.livck.list.no_subscriptions',
       'commands.livck.edit.editing',
-      'commands.livck.custom_links.add_button'
+      'commands.livck.custom_links.add_button',
+      'messages.alerts.view_button',
+      'messages.alerts.update_button'
     ];
 
     test.each(criticalKeys)('should have %s in both DE and EN', (key) => {

@@ -1,9 +1,10 @@
 export default class LIVCK {
 
-    constructor(baseUrl = 'https://status.livck.com/api', apiVersion = 'v3', token = null) {
+    constructor(baseUrl = 'https://status.livck.com/api', apiVersion = 'v3', token = null, locale = null) {
         this.baseURL = baseUrl
         this.apiVersion = apiVersion
         this.token = token || null
+        this.locale = locale || null
     }
 
     build(path, version = this.apiVersion) {
@@ -21,6 +22,10 @@ export default class LIVCK {
 
         if (this.token) {
             headers['Authorization'] = `Bearer ${this.token}`
+        }
+
+        if (this.locale) {
+            headers['Accept-Language'] = this.locale
         }
 
         const response = await fetch(url.toString(), {

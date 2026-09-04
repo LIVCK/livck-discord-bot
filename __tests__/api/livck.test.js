@@ -28,6 +28,19 @@ describe('LIVCK API Client', () => {
     test('should initialize with base URL', () => {
       expect(client.baseURL).toBe(TEST_URL);
       expect(client.apiVersion).toBe('v3');
+      expect(client.token).toBeNull();
+      expect(client.locale).toBeNull();
+    });
+
+    test('should initialize with locale', () => {
+      const localizedClient = new LIVCK(TEST_URL, 'v3', null, 'de');
+      expect(localizedClient.locale).toBe('de');
+    });
+
+    test('should initialize with token and locale', () => {
+      const fullClient = new LIVCK(TEST_URL, 'v3', 'test-token', 'en');
+      expect(fullClient.token).toBe('test-token');
+      expect(fullClient.locale).toBe('en');
     });
 
     test('should build correct API paths', () => {
