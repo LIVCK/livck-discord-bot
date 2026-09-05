@@ -98,6 +98,24 @@ layouts in both languages, the message-sync decisions and every database write. 
 catches the class of bug fixtures cannot — a group that renders as an empty heading, a
 translation key that leaks as itself, a second cycle that sends when it should stay silent.
 
+**Against a real Discord bot** (needs a throwaway application, guild and database — see the
+header of `__tests__/e2e/discord.live.test.js` for the setup, including the four permissions
+the bot actually needs):
+
+```bash
+docker exec mariadb mariadb -u root -e "CREATE DATABASE IF NOT EXISTS livck_bot_discord"
+DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_discord DB_USERNAME=root DB_PASSWORD= node migrate.js
+
+LIVCK_DISCORD_E2E=1 DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_discord DB_USERNAME=root \
+  DB_PASSWORD= REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_PASSWORD= \
+  npm test -- __tests__/e2e/discord.live.test.js --runInBand
+```
+
+Credentials come from `.env.test`, which `.gitignore` already covers. This is the only test
+that proves Discord ACCEPTS what the bot builds — everything else validates the payload
+locally and records what would have been sent. It skips itself when `.env.test` is absent, and
+refuses to run against a database whose name does not look like a throwaway.
+
 **Contract checks against the live APIs** (network only, no database):
 
 ```bash
