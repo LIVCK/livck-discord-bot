@@ -8,6 +8,7 @@ import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
+import { mayReap, recordReap } from '../util/subscriptionReaper.js'
 import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
 
 /** Alerts older than this are no longer tracked. */
@@ -249,7 +250,11 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
                     logger.info(
                         `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
                     )
+                    // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
+                    // answer 10003, and this is the line that would delete every subscription.
+                    if (!mayReap()) continue
                     await models.Subscription.destroy({ where: { id: subscription.id } })
+                    recordReap()
                     continue
                 }
 
@@ -312,7 +317,11 @@ export const handleAlerts = async (statuspageId, client) => {
                         logger.info(
                             `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
                         )
+                        // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
+                        // answer 10003, and this is the line that would delete every subscription.
+                        if (!mayReap()) continue
                         await models.Subscription.destroy({ where: { id: subscription.id } })
+                        recordReap()
                         continue
                     }
 

@@ -390,6 +390,11 @@ describe('custom link buttons', () => {
 });
 
 describe('channel problems', () => {
+    beforeEach(async () => {
+        const { resetReaper } = await import('../../util/subscriptionReaper.js');
+        resetReaper();
+    });
+
     test('a deleted channel removes the subscription', async () => {
         const error = new Error('Unknown Channel');
         error.code = 10003;
@@ -431,6 +436,24 @@ describe('channel problems', () => {
 
         await expect(handleStatusPage(7, makeClient())).resolves.toBeUndefined();
         expect(db.destroyed).toEqual([]);
+    });
+
+    test('a run that would delete everything is stopped instead', async () => {
+        // What a bot holding the wrong token sees: every channel answers 10003. Without a
+        // brake this loop deletes the whole table, one ordinary-looking tidy-up at a time.
+        const { REAP_LIMIT } = await import('../../util/subscriptionReaper.js');
+
+        db.statuspage.Subscriptions = Array.from({ length: REAP_LIMIT + 20 }, (_, i) => ({
+            ...subscription(), id: i + 1, channelId: `chan-${i + 1}`,
+        }));
+
+        const error = new Error('Unknown Channel');
+        error.code = 10003;
+        discord.channelError = error;
+
+        await handleStatusPage(7, makeClient());
+
+        expect(db.destroyed).toHaveLength(REAP_LIMIT);
     });
 
     test('one broken channel does not cost the others their update', async () => {

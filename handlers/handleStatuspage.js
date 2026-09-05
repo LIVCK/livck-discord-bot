@@ -5,6 +5,7 @@ import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
+import { mayReap, recordReap } from '../util/subscriptionReaper.js'
 import { withLocale } from '../util/Translation.js'
 
 /** Discord allows 5 buttons per row and 5 rows. */
@@ -126,7 +127,11 @@ export const handleStatusPage = async (statuspageId, client) => {
                     logger.info(
                         `[handleStatusPage] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
                     )
+                    // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
+                    // answer 10003, and this is the line that would delete every subscription.
+                    if (!mayReap()) continue
                     await models.Subscription.destroy({ where: { id: subscription.id } })
+                    recordReap()
                     continue
                 }
 

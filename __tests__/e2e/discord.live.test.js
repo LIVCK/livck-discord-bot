@@ -59,22 +59,58 @@ const readCredentials = () => {
     );
 };
 
-const credentials = enabled ? readCredentials() : {};
+/**
+ * `.env.test` first, then whatever is already in the environment.
+ *
+ * The Discord credentials may live in `.env` (dotenv puts them in `process.env`), and the
+ * DATABASE deliberately does not come from here at all — it is passed on the command line,
+ * where dotenv will not overwrite it, and checked against the real connection in
+ * assertThrowaway. That separation is the point: the same `.env` can hold a test token beside
+ * a production database, and this suite must never follow it to the second one.
+ */
+const credentials = enabled
+    ? { ...process.env, ...readCredentials() }
+    : {};
+
 const ready = enabled
     && credentials.DISCORD_BOT_TOKEN
+    && credentials.DISCORD_CLIENT_ID
     && credentials.TEST_GUILD_ID
     && credentials.TEST_CHANNEL_ID;
 
+if (enabled && !ready) {
+    const missing = ['DISCORD_BOT_TOKEN', 'DISCORD_CLIENT_ID', 'TEST_GUILD_ID', 'TEST_CHANNEL_ID']
+        .filter((name) => !credentials[name]);
+    console.warn(`[discord-e2e] Skipped — missing: ${missing.join(', ')}`);
+}
+
 const e2e = ready ? describe : describe.skip;
 
-/** A guard, not a convenience: this suite posts and deletes messages. */
-const assertThrowaway = () => {
-    const database = process.env.DB_DATABASE || '';
-    if (!/test|e2e|discord|throwaway|scratch/i.test(database)) {
+/**
+ * A guard, not a convenience: this suite writes rows and posts messages.
+ *
+ * It checks the CONNECTION Sequelize actually opened, not the environment variable that was
+ * supposed to shape it. `.env` in this repo still carries production database credentials, and
+ * `dotenv` only declines to overwrite a variable that is already set — a convention, and the
+ * wrong thing to stake a production database on. A remote host is refused outright, whatever
+ * it is called.
+ */
+const assertThrowaway = (models) => {
+    const { host, database } = models.database.config;
+
+    if (!['127.0.0.1', 'localhost', '::1'].includes(host)) {
+        throw new Error(
+            `Refusing to run against host "${host}". This suite only ever talks to a local database.`
+        );
+    }
+
+    if (!/test|e2e|discord|throwaway|scratch/i.test(database || '')) {
         throw new Error(
             `Refusing to run against database "${database}". Point DB_DATABASE at a throwaway.`
         );
     }
+
+    console.log(`[discord-e2e] Using ${host}/${database}`);
 };
 
 e2e('against a real Discord bot', () => {
@@ -95,7 +131,8 @@ e2e('against a real Discord bot', () => {
     const LAYOUTS = ['DETAILED', 'COMPACT', 'OVERVIEW', 'TREE', 'MINIMAL'];
 
     beforeAll(async () => {
-        assertThrowaway();
+        models = (await import('../../models/index.js')).default;
+        assertThrowaway(models);
 
         process.env.DISCORD_BOT_TOKEN = credentials.DISCORD_BOT_TOKEN;
         process.env.DISCORD_CLIENT_ID = credentials.DISCORD_CLIENT_ID;
@@ -106,7 +143,6 @@ e2e('against a real Discord bot', () => {
 
         channel = await client.channels.fetch(credentials.TEST_CHANNEL_ID);
 
-        models = (await import('../../models/index.js')).default;
         ({ runCycle } = await import('../../services/updateLoop.js'));
         ({ clearSnapshotCache } = await import('../../providers/index.js'));
 
