@@ -418,6 +418,13 @@ export const renderTreeLayout = (snapshot, locale = 'de') => {
             description += `    ${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
+        // A group whose children the source hid would otherwise be a bare heading with
+        // nothing under it, which reads as broken rather than as healthy. State its own
+        // status instead — the same thing the field layouts do, and without a count.
+        if (group.services.length === 0 && !groupCounts(group).disclose) {
+            description += `    ${describeStatus(group.status)}\n`;
+        }
+
         if (index < groups.length - 1) {
             description += '\n';
         }
@@ -447,6 +454,11 @@ export const renderMinimalLayout = (snapshot, locale = 'de') => {
             const dot = getStatusDot(service.status === STATUS.OPERATIONAL ? STATUS.OPERATIONAL : STATUS.MAJOR_OUTAGE);
             description += `${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
+
+        // See the tree layout: a hiding group must not render as an empty heading.
+        if (group.services.length === 0 && !groupCounts(group).disclose) {
+            description += `${getStatusDot(group.status)} ${describeStatus(group.status)}\n`;
+        }
 
         if (index < groups.length - 1) {
             description += '\n';

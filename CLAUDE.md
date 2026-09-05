@@ -75,6 +75,28 @@ node server.js
 node migrate.js
 ```
 
+**End-to-end run against the real status pages** (needs a throwaway database — it truncates
+every table it uses, so never point it at one you care about):
+
+```bash
+docker exec mariadb mariadb -u root -e "CREATE DATABASE IF NOT EXISTS livck_bot_e2e"
+DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_e2e DB_USERNAME=root DB_PASSWORD= node migrate.js
+
+LIVCK_E2E=1 DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_e2e DB_USERNAME=root DB_PASSWORD= \
+  npm test -- __tests__/e2e/pipeline.live.test.js
+```
+
+Everything except the Discord transport executes: detection, both adapters, the DTO, all five
+layouts in both languages, the message-sync decisions and every database write. It is what
+catches the class of bug fixtures cannot — a group that renders as an empty heading, a
+translation key that leaks as itself, a second cycle that sends when it should stay silent.
+
+**Contract checks against the live APIs** (network only, no database):
+
+```bash
+LIVCK_LIVE_TESTS=1 npm test -- __tests__/providers/live.test.js
+```
+
 ## Environment Variables
 
 Required variables (see `.env.example`):

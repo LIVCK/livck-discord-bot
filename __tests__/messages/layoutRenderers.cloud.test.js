@@ -117,6 +117,37 @@ describe('hidden healthy children', () => {
         expect(fieldsOf(renderDetailedLayout(snapshot, 'en'))[0].value).toContain('50 components · 1 affected');
     });
 
+    test('the tree layout does not render a hiding group as an empty heading', () => {
+        // Found by running the real pipeline against status.emeraldhost.de: four of its six
+        // groups appeared as bare headings with nothing underneath, which reads as broken
+        // rather than as healthy. The field layouts had the fallback; these two did not.
+        const description = descriptionOf(renderTreeLayout(emerald(), 'de'));
+        const lines = description.split('\n');
+        const heading = lines.findIndex((l) => l.includes('Gameserver') && l.startsWith('**'));
+
+        expect(lines[heading + 1].trim()).not.toBe('');
+        expect(lines[heading + 1]).toContain('Betriebsbereit');
+        expect(description).not.toContain('66');
+    });
+
+    test('the minimal layout does not either', () => {
+        const description = descriptionOf(renderMinimalLayout(emerald(), 'de'));
+        const lines = description.split('\n');
+        const heading = lines.findIndex((l) => l === '**Gameserver**');
+
+        expect(lines[heading + 1].trim()).not.toBe('');
+        expect(description).not.toContain('66');
+    });
+
+    test('an ordinary empty group still renders as it always has', () => {
+        // A self-hosted category with no monitors is genuinely empty — not hiding anything —
+        // and must keep its previous rendering. The golden snapshots pin the field layouts;
+        // this pins the description ones.
+        const snapshot = snapshotOf([group('g', { de: 'Leer' }, [])]);
+
+        expect(descriptionOf(renderTreeLayout(snapshot, 'de'))).toBe('**🟢 Leer**\n');
+    });
+
     test('a normal group is unaffected by any of this', () => {
         const snapshot = snapshotOf([group('g', { de: 'Web' }, [leaf('s', { de: 'Website' })])]);
         const [field] = fieldsOf(renderDetailedLayout(snapshot, 'de'));

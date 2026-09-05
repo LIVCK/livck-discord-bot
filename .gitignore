@@ -1,5 +1,8 @@
 .idea
 .env
+# Any local variant too — a `git add -A` swept .env.prod into a commit once.
+.env.*
+!.env.example
 node_modules
 package-lock.json
 
