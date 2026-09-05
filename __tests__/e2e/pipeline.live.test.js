@@ -195,6 +195,65 @@ e2e('the whole pipeline against real status pages', () => {
         });
     });
 
+    /**
+     * The status path runs on every page; the ALERT path does not, because none of the
+     * reference pages currently has an incident inside the reporting window. These render the
+     * real historical ones instead — the same payloads, through the same adapters and the same
+     * embed builder — so the news path is covered by production content rather than fixtures.
+     */
+    describe('real alert content', () => {
+        const REAL = [
+            { url: 'https://status.emeraldhost.de', id: 'pgtKC95GkvxUcC1Cl1rPT', kind: 'maintenance' },
+            { url: 'https://status.emeraldhost.de', id: '0coRsn8ll1vrJSo2yAF3T', kind: 'incident' },
+        ];
+
+        test.each(REAL)('$kind $id renders cleanly in both languages', async ({ url, id, kind }) => {
+            const { fetchClosedAlert } = await import('../../providers/cloud.js');
+            const { bodyToDiscord } = await import('../../util/markdown.js');
+            const { resolveText } = await import('../../dto/statuspage.js');
+            const { DISCORD_LIMITS: L } = await import('../../util/discordLimits.js');
+
+            const alert = await fetchClosedAlert({ url, name: 'e2e' }, id);
+            expect(alert).not.toBeNull();
+            expect(alert.kind).toBe(kind);
+            expect(alert.url.startsWith(url)).toBe(true);
+
+            for (const locale of LOCALES) {
+                const title = resolveText(alert.title, locale, 'de');
+                const body = bodyToDiscord(resolveText(alert.body, locale, 'de'), alert.format);
+
+                expect(title.length).toBeGreaterThan(0);
+                expect(title.length).toBeLessThanOrEqual(L.EMBED_TITLE);
+                expect(body.length).toBeLessThanOrEqual(L.EMBED_DESCRIPTION);
+
+                // Markdown that Discord cannot render must not survive the converter.
+                expect(body).not.toMatch(/^\s*\|.*\|\s*$/m);
+                expect(body).not.toMatch(/!\[[^\]]*\]\(/);
+                expect(body).not.toMatch(/<\/?(p|div|span|br|table)\b/i);
+
+                for (const update of alert.updates) {
+                    expect(resolveText(update.body, locale, 'de').length).toBeGreaterThan(0);
+                }
+            }
+        }, 60000);
+
+        test('a closed maintenance is recoverable even though the live payload dropped it', async () => {
+            // The whole reason the close-out works without a backend change.
+            const { fetchClosedAlert } = await import('../../providers/cloud.js');
+            const alert = await fetchClosedAlert({ url: 'https://status.emeraldhost.de', name: 'e2e' }, 'pgtKC95GkvxUcC1Cl1rPT');
+
+            expect(alert.state).toBe('completed');
+            expect(alert.updates.at(-1).state).toBe('completed');
+        }, 60000);
+
+        test('an id nobody knows yields null rather than an invented ending', async () => {
+            const { fetchClosedAlert } = await import('../../providers/cloud.js');
+            await expect(
+                fetchClosedAlert({ url: 'https://status.emeraldhost.de', name: 'e2e' }, 'definitelynotanid00')
+            ).resolves.toBeNull();
+        }, 60000);
+    });
+
     describe('a second cycle', () => {
         test('sends nothing, because nothing changed', async () => {
             // The dirty check is what keeps the bot under Discord's 50 req/s budget; this is

@@ -229,7 +229,21 @@
     },
     "alerts": {
       "view_button": "View",
-      "update_button": "View Update"
+      "update_button": "View Update",
+      "state": {
+        "incident": {
+          "investigating": "Investigating",
+          "identified": "Identified",
+          "monitoring": "Monitoring",
+          "resolved": "Resolved"
+        },
+        "maintenance": {
+          "scheduled": "Scheduled",
+          "in_progress": "In Progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        }
+      }
     },
     "pause": {
       "title": "Updates paused",

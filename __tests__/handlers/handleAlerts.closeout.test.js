@@ -231,6 +231,81 @@ describe('an alert that vanished from the live payload', () => {
     });
 });
 
+describe('thread headlines', () => {
+    // The parent already has a Message row in these fixtures, so it is EDITED; only the
+    // replies are sent. That is exactly the shape of a real close-out.
+    const titlesOf = () => discord.sent.map((p) => p.embeds[0].toJSON().title);
+
+    test('a Cloud update is distinguished by its state', async () => {
+        // Without this every message in a thread repeats the incident's title and a reader has
+        // to open each one to find out which is the resolution.
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = incident({
+            state: 'resolved',
+            updates: [
+                makeUpdate({ id: 'u-2', state: 'monitoring', body: { de: 'Fix deployed.' }, createdAt: hoursAgo(2) }),
+                makeUpdate({ id: 'u-3', state: 'resolved', body: { de: 'Behoben.' }, createdAt: hoursAgo(1) }),
+            ],
+        });
+
+        await handleAlerts(7, makeClient());
+
+        expect(titlesOf()).toEqual([
+            'Störung — Wird überwacht',
+            'Störung — Behoben',
+        ]);
+    });
+
+    test('the wording matches the statuspage own labels', async () => {
+        // Taken verbatim from the Cloud's i18n, so a thread never phrases a state differently
+        // from the page it reports on.
+        db.messages.push(trackedMessage('maint-1'));
+        provider.closed['maint-1'] = makeAlert({
+            id: 'maint-1', kind: ALERT_KIND.MAINTENANCE,
+            url: 'https://status.example.com/maintenances/maint-1',
+            title: { de: 'Datenbank-Upgrade' }, body: { de: 'Start.' },
+            format: BODY_FORMAT.MARKDOWN, state: 'completed', startedAt: hoursAgo(6),
+            updates: [
+                makeUpdate({ id: 'm-2', state: 'in_progress', body: { de: 'Läuft.' }, createdAt: hoursAgo(5) }),
+                makeUpdate({ id: 'm-3', state: 'completed', body: { de: 'Fertig.' }, createdAt: hoursAgo(1) }),
+            ],
+        });
+
+        await handleAlerts(7, makeClient());
+
+        expect(titlesOf()).toEqual([
+            'Datenbank-Upgrade — Läuft',
+            'Datenbank-Upgrade — Abgeschlossen',
+        ]);
+    });
+
+    test('an unknown state leaves the plain title rather than printing a key', async () => {
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = incident({
+            updates: [makeUpdate({ id: 'u-x', state: 'brand_new_state', body: { de: 'x' }, createdAt: hoursAgo(1) })],
+        });
+
+        await handleAlerts(7, makeClient());
+
+        expect(titlesOf().at(-1)).toBe('Störung');
+    });
+
+    test('a self-hosted update keeps its own headline', async () => {
+        // It has one; the suffix exists only because a Cloud update does not.
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = incident({
+            updates: [makeUpdate({
+                id: 'u-own', title: 'Hotline Störung behoben', state: 'RESOLVED',
+                body: 'Behoben.', createdAt: hoursAgo(1),
+            })],
+        });
+
+        await handleAlerts(7, makeClient());
+
+        expect(titlesOf().at(-1)).toBe('Hotline Störung behoben');
+    });
+});
+
 describe('idempotence', () => {
     test('a second cycle adds nothing', async () => {
         // The closing reply goes through the same syncMessage path as everything else, so its

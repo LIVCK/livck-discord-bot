@@ -229,7 +229,21 @@
     },
     "alerts": {
       "view_button": "Ansehen",
-      "update_button": "Zum Update"
+      "update_button": "Zum Update",
+      "state": {
+        "incident": {
+          "investigating": "Wird untersucht",
+          "identified": "Identifiziert",
+          "monitoring": "Wird überwacht",
+          "resolved": "Behoben"
+        },
+        "maintenance": {
+          "scheduled": "Geplant",
+          "in_progress": "Läuft",
+          "completed": "Abgeschlossen",
+          "cancelled": "Abgesagt"
+        }
+      }
     },
     "pause": {
       "title": "Updates pausiert",
