@@ -2,7 +2,7 @@ import models from '../models/index.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from 'discord.js'
 import { fetchSnapshot, fetchClosedAlert } from '../providers/index.js'
 import { truncate } from '../util/String.js'
-import { bodyToDiscord } from '../util/markdown.js'
+import { bodyToDiscord, truncateMarkdown } from '../util/markdown.js'
 import { buildRoleMentions } from '../util/roleMentions.js'
 import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
@@ -14,8 +14,17 @@ import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
 /** Alerts older than this are no longer tracked. */
 const ALERT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
-/** Embed description budget, so a pasted postmortem cannot fill a channel. */
-const BODY_MAX = 500
+/**
+ * Embed description budget.
+ *
+ * Discord allows 4096; the cap exists so a pasted postmortem cannot fill a channel on its own.
+ * It was 500, which is smaller than an ordinary announcement — the maintenance notice that
+ * prompted this was 783 characters and lost its last third mid-sentence, including the part
+ * saying which services stay online. 1500 is roughly twenty lines: still nowhere near filling
+ * a channel, and enough that a normal notice arrives whole. Anything genuinely longer is one
+ * click away behind the button the embed already carries.
+ */
+const BODY_MAX = 1500
 
 /**
  * Colour for an alert.
@@ -38,7 +47,8 @@ const alertColor = (alert) => {
 const buildAlertEmbed = (item, alert, snapshot, locale, footer, timestamp) => new EmbedBuilder()
     .setColor(alertColor(alert))
     .setTitle(truncate(resolveText(item.title, locale, snapshot.defaultLocale), 256))
-    .setDescription(truncate(bodyToDiscord(resolveText(item.body, locale, snapshot.defaultLocale), alert.format), BODY_MAX))
+    // truncateMarkdown, not truncate: a plain cut leaves emphasis and code fences open.
+    .setDescription(truncateMarkdown(bodyToDiscord(resolveText(item.body, locale, snapshot.defaultLocale), alert.format), BODY_MAX))
     .setURL(alert.url)
     .setTimestamp(new Date(timestamp))
     .setFooter({ text: footer })
