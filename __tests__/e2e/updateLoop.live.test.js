@@ -136,8 +136,11 @@ e2e('the update loop', () => {
             expect(sent.filter((m) => m.channelId === 'loop-live')).toHaveLength(1);
         }, 120000);
 
-        test('is skipped by the Redis lock in the cycle right after', async () => {
-            // Two overlapping cycles must not both do the work; the lock is what prevents it.
+        test('is skipped while its claim is still held', async () => {
+            // Back-to-back, which is the overlap case the claim exists for. NOT the case of
+            // the next scheduled cycle: the TTL is deliberately shorter than the 15s interval,
+            // because a claim that outlives the interval made half of all cycles skip their
+            // own work and turned a documented 15-second loop into a 30-second one.
             const summary = await runCycle(client);
 
             expect(summary.skipped).toBeGreaterThanOrEqual(1);

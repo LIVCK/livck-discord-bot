@@ -17,8 +17,19 @@ import logger from '../util/logger.js';
 
 const BATCH_SIZE = 100;
 
-/** How long a page stays claimed, so two overlapping cycles cannot both do the work. */
-const LOCK_TTL = 20;
+/**
+ * How long a page stays claimed, in seconds.
+ *
+ * Deliberately BELOW the 15s interval. It used to be 20, which meant the key written for one
+ * cycle outlived the next one — so half of all cycles found the page still claimed and skipped
+ * it, and a status page that documents a 15-second loop actually refreshed every 30. An
+ * incident reached Discord up to twice as late as intended, and the wasted cycles still cost a
+ * full query plus a Redis round trip per page.
+ *
+ * 12 leaves the claim covering the work of one cycle (a page that takes longer than this has
+ * already blown the interval) while being gone before the next one starts.
+ */
+const LOCK_TTL = Number(process.env.REDIS_LOCK_TTL_SECONDS || 12);
 
 /**
  * How long to wait on Redis before deciding it is not going to answer.
