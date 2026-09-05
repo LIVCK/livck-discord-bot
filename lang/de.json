@@ -88,7 +88,8 @@
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
         "select_channel_final": "Wähle nun den Channel für **:url**",
-        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen."
+        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen.",
+        "unreachable": "⚠️ **:url** war gerade nicht erreichbar (:reason).\n\nDie Adresse sieht in Ordnung aus – wahrscheinlich ist die Seite kurzzeitig offline. Versuche es in ein paar Minuten noch einmal."
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",

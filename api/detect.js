@@ -66,12 +66,19 @@ export const classifyHeaders = (headers) => {
 /**
  * Probe a status page URL.
  *
+ * "I could not reach it" and "it answered, and it is not LIVCK" are DIFFERENT answers, and an
+ * earlier version returned null for both. That was wrong in the two places it mattered: a page
+ * whose domain had expired told its subscribers "no longer a LIVCK status page" — blaming the
+ * customer for a DNS outage — and `/livck subscribe` rejected a perfectly valid URL during a
+ * network blip. So a transport failure THROWS (already classified, so the backoff and the
+ * pause notice name the real cause) and null means only the second thing.
+ *
  * @param {string} url - origin, e.g. `https://status.example.com`
  * @param {object} [options]
  * @param {string|null} [options.token] - API token for a private self-hosted page
- * @returns {Promise<string|null>} SOURCE.CLOUD, SOURCE.SELF_HOSTED, or null when it is neither
- *   or unreachable. Never throws: the caller asks a yes/no question and both failure modes
- *   lead to the same answer.
+ * @returns {Promise<string|null>} SOURCE.CLOUD, SOURCE.SELF_HOSTED, or null when the page
+ *   answered but carries no LIVCK marker.
+ * @throws when the page could not be reached at all (DNS, TLS, timeout, refused).
  */
 export const detectSource = async (url, { token = null } = {}) => {
     const options = {
@@ -85,12 +92,13 @@ export const detectSource = async (url, { token = null } = {}) => {
         options.headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, options).catch((error) => {
+    let response;
+    try {
+        response = await fetch(url, options);
+    } catch (error) {
         logger.failure('[Detect]', url, error);
-        return null;
-    });
-
-    if (!response) return null;
+        throw error;
+    }
 
     const source = classifyHeaders(response.headers);
     logger.debug(`[Detect] ${url} → ${source ?? 'not LIVCK'} (HTTP ${response.status})`);

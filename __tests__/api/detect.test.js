@@ -90,15 +90,17 @@ describe('detectSource', () => {
         await expect(detectSource('https://example.com')).resolves.toBeNull();
     });
 
-    test('returns null when the host is unreachable', async () => {
-        // "unreachable" and "not LIVCK" are the same answer to the caller's yes/no question.
+    test('throws when the host is unreachable, rather than calling it not-LIVCK', async () => {
+        // These are DIFFERENT answers. Collapsing them into null told subscribers of a page
+        // with an expired domain that it was "no longer a LIVCK status page", and made
+        // `/livck subscribe` reject a valid URL during a network blip.
         stubFetch(async () => {
             const error = new Error('fetch failed');
             error.cause = { code: 'ENOTFOUND' };
             throw error;
         });
 
-        await expect(detectSource('https://invalid.test')).resolves.toBeNull();
+        await expect(detectSource('https://invalid.test')).rejects.toThrow('fetch failed');
     });
 
     test('sends the API token when one is configured', async () => {

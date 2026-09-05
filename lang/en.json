@@ -88,7 +88,8 @@
         "select_locale": "Select language",
         "select_layout": "Select layout",
         "select_channel_final": "Now select the channel for **:url**",
-        "protected_page": "The status page **:url** is password- or access-protected. The bot can only read public pages."
+        "protected_page": "The status page **:url** is password- or access-protected. The bot can only read public pages.",
+        "unreachable": "⚠️ **:url** could not be reached right now (:reason).\n\nThe address itself looks fine – the page is probably briefly offline. Please try again in a few minutes."
       },
       "unsubscribe": {
         "success": "Subscription for **:url** successfully removed.",

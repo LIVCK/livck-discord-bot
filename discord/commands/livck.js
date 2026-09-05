@@ -6,6 +6,7 @@ import { handleStatusPage } from "../../handlers/handleStatuspage.js";
 import LIVCKCloud from "../../api/livckCloud.js";
 import { detectSource } from "../../api/detect.js";
 import { SOURCE } from "../../dto/statuspage.js";
+import { classifyError } from "../../util/errors.js";
 import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
 
@@ -2039,7 +2040,24 @@ export default (models) => ({
             // One request decides both questions at once: is this LIVCK, and which product?
             // The answer is stored on the row so the update loop never probes again.
             const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
-            const source = await detectSource(url, { token: apiToken || null });
+
+            let source;
+            try {
+                source = await detectSource(url, { token: apiToken || null });
+            } catch (error) {
+                // Unreachable is not the same as "not LIVCK". Telling someone their own status
+                // page is not a status page, because of a DNS blip on our side, is the kind of
+                // answer that costs a support ticket.
+                logger.failure('[Subscribe]', url, error);
+                await interaction[replyMethod]({
+                    content: translation.trans('commands.livck.subscribe.unreachable', {
+                        url,
+                        reason: translation.trans(`messages.pause.reason.${classifyError(error).kind}`),
+                    }),
+                    flags: 64 // EPHEMERAL flag
+                });
+                return;
+            }
 
             if (!source) {
                 logger.info(`[Subscribe] ${url} is not a LIVCK statuspage`);

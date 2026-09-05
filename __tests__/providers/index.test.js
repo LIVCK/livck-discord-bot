@@ -5,12 +5,16 @@
 
 import { jest } from '@jest/globals';
 
-const detect = { result: null, calls: 0 };
+const detect = { result: null, error: null, calls: 0 };
 const cloud = { calls: 0, pageId: 'cloud-page-id' };
 const selfHosted = { calls: 0 };
 
 jest.unstable_mockModule('../../api/detect.js', () => ({
-    detectSource: async () => { detect.calls += 1; return detect.result; },
+    detectSource: async () => {
+        detect.calls += 1;
+        if (detect.error) throw detect.error;
+        return detect.result;
+    },
     classifyHeaders: () => null,
     default: {},
 }));
@@ -59,6 +63,7 @@ const makePage = (overrides = {}) => {
 
 beforeEach(() => {
     detect.result = null;
+    detect.error = null;
     detect.calls = 0;
     cloud.calls = 0;
     cloud.pageId = 'cloud-page-id';
@@ -85,14 +90,35 @@ describe('resolveSource', () => {
         expect(detect.calls).toBe(0);
     });
 
-    test('an undetectable page is not remembered as anything', async () => {
-        // A page that is merely unreachable right now must stay probeable next cycle.
+    test('a page that answers without a marker is not remembered as anything', async () => {
         detect.result = null;
         const page = makePage();
 
         await expect(resolveSource(page)).resolves.toBeNull();
         expect(page.kind).toBeNull();
         expect(page.saves).toBe(0);
+    });
+
+    test('an unreachable page fails as unreachable, not as "not LIVCK"', async () => {
+        // The distinction reaches a customer's Discord channel: the pause notice names the
+        // reason, and "no longer a LIVCK status page" for what is really a DNS outage blames
+        // the wrong party. It also has to stay probeable once the domain comes back.
+        detect.error = Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } });
+        const page = makePage();
+
+        await expect(resolveSource(page)).rejects.toThrow('fetch failed');
+        expect(page.kind).toBeNull();
+        expect(page.saves).toBe(0);
+    });
+
+    test('the failure keeps its kind all the way up through fetchSnapshot', async () => {
+        const { classifyError, FAILURE_KINDS } = await import('../../util/errors.js');
+        detect.error = Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } });
+
+        const error = await fetchSnapshot(makePage()).catch((e) => e);
+
+        expect(error).not.toBeInstanceOf(NotLivckError);
+        expect(classifyError(error).kind).toBe(FAILURE_KINDS.DNS);
     });
 });
 
