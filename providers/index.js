@@ -33,7 +33,24 @@ const MAX_CACHE_ENTRIES = 5000;
 /** key → { at, promise } */
 const inFlight = new Map();
 
-const cacheKey = (statuspage, token, locale) => `${statuspage.url}::${token || ''}::${locale}`;
+/**
+ * What actually makes two fetches different.
+ *
+ * For a CLOUD page: nothing but the page itself. `/full` ships every language in one payload
+ * and takes no token, so a key carrying the locale split one request into one per language.
+ * Subscriptions are grouped by (token, locale) for both backends, so a Cloud page watched from
+ * channels in three languages issued three byte-identical requests every cycle — and the bot
+ * offers thirteen. Thirteen locales × four cycles a minute is 52 requests a minute for a
+ * single page, against the shared edge budget this memo exists to protect.
+ *
+ * For a SELF-HOSTED page both matter: the locale is sent as `Accept-Language` and decides what
+ * comes back, and the token decides what the caller is allowed to see. Dropping either would
+ * serve one subscription's private page to another — so the key keeps them, always.
+ */
+const cacheKey = (statuspage, token, locale, source) =>
+    source === SOURCE.CLOUD
+        ? `${statuspage.url}::cloud`
+        : `${statuspage.url}::${token || ''}::${locale}`;
 
 const rememberSnapshot = (key, promise) => {
     if (inFlight.size >= MAX_CACHE_ENTRIES) {
@@ -71,7 +88,7 @@ const closedAlerts = new Map();
  *
  * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
  */
-export const fetchClosedAlert = async (statuspage, alertId) => {
+export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null) => {
     if (statuspage.kind !== SOURCE.CLOUD) return null;
 
     const key = `${statuspage.url}::${alertId}`;
@@ -85,7 +102,7 @@ export const fetchClosedAlert = async (statuspage, alertId) => {
         if (oldest !== undefined) closedAlerts.delete(oldest);
     }
 
-    const promise = cloudProvider.fetchClosedAlert(statuspage, alertId);
+    const promise = cloudProvider.fetchClosedAlert(statuspage, alertId, expectedKind);
     closedAlerts.set(key, { at: Date.now(), promise });
     promise.catch(() => closedAlerts.delete(key));
 
@@ -155,7 +172,10 @@ const fetchFresh = async (statuspage, { token, locale }) => {
  * @returns {Promise<object>} snapshot
  */
 export const fetchSnapshot = async (statuspage, { token = null, locale = 'de' } = {}) => {
-    const key = cacheKey(statuspage, token, locale);
+    // The kind decides what the key looks like, so it has to be known first. This costs
+    // nothing in steady state: it is read straight off the row after the first detection.
+    const source = statuspage.kind || null;
+    const key = cacheKey(statuspage, token, locale, source);
     const cached = inFlight.get(key);
 
     if (cached && Date.now() - cached.at < SNAPSHOT_TTL_MS) {
@@ -164,6 +184,16 @@ export const fetchSnapshot = async (statuspage, { token = null, locale = 'de' } 
 
     const promise = fetchFresh(statuspage, { token, locale });
     rememberSnapshot(key, promise);
+
+    // An undetected page keys as self-hosted above, which is the conservative choice — but the
+    // fetch itself may have discovered it is a Cloud page. Publish it under the Cloud key too,
+    // so the very first cycle already shares one request across every language rather than
+    // paying for the split exactly once per page.
+    promise.then(() => {
+        if (statuspage.kind === SOURCE.CLOUD && !source) {
+            rememberSnapshot(cacheKey(statuspage, token, locale, SOURCE.CLOUD), promise);
+        }
+    }).catch(() => {});
 
     return promise;
 };

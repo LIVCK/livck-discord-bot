@@ -80,6 +80,25 @@ export class StatuspagePauseManager {
         statuspage.pauseReason = kind;
         if (crossedThreshold) statuspage.paused = true;
 
+        // FORGET WHAT WE THINK THE PAGE IS, once it has been failing this long.
+        //
+        // `kind` and `externalId` were written once and never revisited, and there is no path
+        // that clears them: a Statuspage row is never deleted, and `/livck subscribe` reuses
+        // the row it finds by URL — so unsubscribing and subscribing again hands back the same
+        // poisoned row. A customer migrating self-hosted → Cloud on the same domain (LIVCK's
+        // own upgrade path) therefore stayed on kind = 'SELF_HOSTED' for ever: every cycle hit
+        // /api/v3/categories, got a 404, and the page sat paused with "the status page returns
+        // a client error" until somebody edited the database by hand. The same for a Cloud
+        // page recreated at the same domain, whose stored page id 404s on /full for ever.
+        //
+        // Clearing them at the threshold costs one extra detection request per backoff rung on
+        // a page that is already failing, and gives every one of those cases a way back.
+        if (crossedThreshold && (statuspage.kind || statuspage.externalId)) {
+            logger.info(`[PauseManager] ${statuspage.url}: forgetting the detected product so the next attempt re-detects`);
+            statuspage.kind = null;
+            statuspage.externalId = null;
+        }
+
         await statuspage.save();
 
         // Routine ladder movement is `debug`: the line carries the level and the next attempt

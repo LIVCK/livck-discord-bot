@@ -63,6 +63,23 @@ export const classifyHeaders = (headers) => {
     return null;
 };
 
+const isRedirect = (status) => status >= 300 && status < 400;
+
+/** Absolute target of a `location` header, or null when there is nothing usable to follow. */
+const resolveLocation = (from, location) => {
+    if (!location) return null;
+    try {
+        const target = new URL(location, from);
+        // http and https only: a redirect to any other scheme is not a status page.
+        if (target.protocol !== 'http:' && target.protocol !== 'https:') return null;
+        // A self-referencing redirect would just be a second identical request.
+        if (target.href === from) return null;
+        return target.href;
+    } catch {
+        return null;
+    }
+};
+
 /**
  * Probe a status page URL.
  *
@@ -100,7 +117,39 @@ export const detectSource = async (url, { token = null } = {}) => {
         throw error;
     }
 
-    const source = classifyHeaders(response.headers);
+    let source = classifyHeaders(response.headers);
+
+    // ONE HOP, when the first answer is only a signpost.
+    //
+    // The Cloud's 302 to its locale prefix carries the marker, which is why redirects are not
+    // followed by default. Plenty of real deployments answer with a redirect that does NOT:
+    // an `http://` origin upgrading to https, an apex sending you to www, HSTS at the proxy.
+    // Both reference pages do it — status.livck.com answers `http://` with a bare Cloudflare
+    // 301, cloud.statuspage.de with a Caddy 308 — and without this every one of them was
+    // classified "not a LIVCK page". That matters most on the first cycle after deploy, when
+    // every existing row still has `kind = null` and is detected for the first time.
+    if (!source && isRedirect(response.status)) {
+        const target = resolveLocation(url, response.headers.get('location'));
+
+        if (target) {
+            // The token is dropped when the host changes. It belongs to one customer's status
+            // page, and a redirect can point anywhere — handing it to whatever is on the other
+            // end would turn a convenience into a credential leak.
+            const sameHost = new URL(target).host === new URL(url).host;
+            const followOptions = sameHost ? options : { ...options, headers: {} };
+
+            try {
+                const hop = await fetch(target, { ...followOptions, signal: AbortSignal.timeout(DETECT_TIMEOUT_MS) });
+                source = classifyHeaders(hop.headers);
+                logger.debug(`[Detect] ${url} → ${target} (HTTP ${response.status}) → ${source ?? 'not LIVCK'}`);
+                return source;
+            } catch (error) {
+                logger.failure('[Detect]', target, error);
+                throw error;
+            }
+        }
+    }
+
     logger.debug(`[Detect] ${url} → ${source ?? 'not LIVCK'} (HTTP ${response.status})`);
 
     return source;

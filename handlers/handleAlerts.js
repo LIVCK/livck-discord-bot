@@ -111,7 +111,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
             ...(mentions.roleIds.length > 0 ? { allowedMentions: mentions.allowedMentions } : {}),
         },
         models,
-        create: { subscriptionId: subscription.id, category: 'NEWS', serviceId: alert.id },
+        create: { subscriptionId: subscription.id, category: 'NEWS', serviceId: alert.id, kind: alert.kind },
     })
 
     // The parent was deleted in Discord; it is recreated next cycle, and replies would have
@@ -144,7 +144,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
                 components: [linkRow(alert.url, updateLabel)],
             },
             models,
-            create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id },
+            create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id, kind: alert.kind },
             send: (payload, channel) => channel.send({
                 ...payload,
                 reply: { messageReference: parentId, failIfNotExists: false },
@@ -190,7 +190,10 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
             // that keeps an unconfirmable alert from being re-checked every cycle forever.
             if (new Date(record.createdAt).getTime() < cutoff) continue
 
-            const closed = await fetchClosedAlert(statuspageRecord, record.serviceId)
+            // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
+            // returns a notice shaped exactly like an incident and says nothing about which
+            // it is, so without this a closed advisory came back red with an outage severity.
+            const closed = await fetchClosedAlert(statuspageRecord, record.serviceId, record.kind || null)
             if (!closed) continue
 
             try {

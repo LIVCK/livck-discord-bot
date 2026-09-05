@@ -32,6 +32,9 @@ const makeStatuspage = (overrides = {}) => {
         lastFailure: null,
         backoffLevel: 0,
         nextAttemptAt: null,
+        // Faithful to a real row: both are nullable and empty until the page is first probed.
+        kind: null,
+        externalId: null,
         saves: 0,
         save: async () => { row.saves += 1; },
         ...overrides,
@@ -206,6 +209,39 @@ describe('handleFailure', () => {
 
         expect(sent).toHaveLength(0);
         expect(edits).toHaveLength(2);
+    });
+
+    test('the detected product is forgotten at the threshold, so the page can be re-detected', async () => {
+        // `kind` and `externalId` were written once and never revisited, and nothing clears
+        // them: a Statuspage row is never deleted and `/livck subscribe` reuses the row it
+        // finds by URL, so unsubscribe + re-subscribe hands back the same poisoned row. A
+        // customer migrating self-hosted → Cloud on the same domain — LIVCK's own upgrade
+        // path — stayed on SELF_HOSTED for ever, 404ing every cycle, paused with no way out
+        // but a hand edit of the database.
+        const page = makeStatuspage({ kind: 'SELF_HOSTED', externalId: 'alte-page-id' });
+        const { client, models } = makeContext();
+
+        for (let i = 0; i < NOTIFY_AT_LEVEL - 1; i += 1) {
+            await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
+        }
+        // Still remembered while it is only backing off: a blip must not cost a re-detection.
+        expect(page.kind).toBe('SELF_HOSTED');
+
+        await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
+
+        expect(page.kind).toBeNull();
+        expect(page.externalId).toBeNull();
+    });
+
+    test('a page that was never detected is not written to needlessly', async () => {
+        const page = makeStatuspage();
+        const { client, models } = makeContext();
+
+        for (let i = 0; i < NOTIFY_AT_LEVEL; i += 1) {
+            await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
+        }
+
+        expect(page.kind).toBeNull();
     });
 
     test('nothing at all happens before the threshold', async () => {

@@ -25,6 +25,22 @@ export default (sequelize) => {
             defaultValue: 'STATUS'
         },
         /**
+         * Which kind of alert this message belongs to: incident, notice or maintenance.
+         *
+         * The Cloud's detail endpoint — the only way to recover an alert that has left the
+         * live payload — returns a notice shaped exactly like an incident, with no field
+         * saying which it is. Without remembering it here, a standing advisory came back days
+         * later as a red incident with an outage severity, by editing the very message that
+         * had been calm and blurple.
+         *
+         * NULL on rows written before this column existed, and on status messages.
+         */
+        kind: {
+            type: DataTypes.STRING(16),
+            allowNull: true,
+            defaultValue: null,
+        },
+        /**
          * Hash of the last payload actually sent to Discord.
          *
          * The status message is re-rendered every cycle but changes only when the status

@@ -174,6 +174,50 @@ describe('one fetch per cycle', () => {
         expect(cloud.calls).toBe(1);
     });
 
+    test('a Cloud page is fetched ONCE for every language', async () => {
+        // /full ships every language in one payload and takes no token, so keying on the
+        // locale split one request into one per language. Subscriptions are grouped by
+        // (token, locale), so a Cloud page watched in three languages issued three
+        // byte-identical requests every cycle — and the bot offers thirteen. That is 52
+        // requests a minute for a single page against the shared edge budget this memo
+        // exists to protect.
+        detect.result = SOURCE.CLOUD;
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await Promise.all([
+            fetchSnapshot(page, { locale: 'de' }),
+            fetchSnapshot(page, { locale: 'en' }),
+            fetchSnapshot(page, { locale: 'fr' }),
+        ]);
+
+        expect(cloud.calls).toBe(1);
+    });
+
+    test('a self-hosted page is still fetched per language', async () => {
+        // Here the locale is sent as Accept-Language and decides what comes back.
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await Promise.all([
+            fetchSnapshot(page, { locale: 'de' }),
+            fetchSnapshot(page, { locale: 'en' }),
+        ]);
+
+        expect(selfHosted.calls).toBe(2);
+    });
+
+    test('a self-hosted page is still fetched per token', async () => {
+        // And here the token decides what the caller is allowed to see. Sharing across tokens
+        // would serve one subscription's private page to another.
+        const page = makePage({ kind: SOURCE.SELF_HOSTED });
+
+        await Promise.all([
+            fetchSnapshot(page, { token: 'token-a', locale: 'de' }),
+            fetchSnapshot(page, { token: 'token-b', locale: 'de' }),
+        ]);
+
+        expect(selfHosted.calls).toBe(2);
+    });
+
     test('different locales are fetched separately', async () => {
         const page = makePage({ kind: SOURCE.SELF_HOSTED });
 

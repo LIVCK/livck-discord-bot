@@ -285,7 +285,7 @@ export const toSnapshot = (payload, statuspage) => {
  * @param {string} alertId
  * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
  */
-export const fetchClosedAlert = async (statuspage, alertId) => {
+export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null) => {
     const base = statuspage.url.replace(/\/+$/, '');
     const client = new LIVCKCloud(statuspage.url, statuspage.externalId || null);
 
@@ -294,7 +294,25 @@ export const fetchClosedAlert = async (statuspage, alertId) => {
     try {
         const payload = await client.fetchIncident(alertId);
         const incident = payload?.data ?? payload;
-        if (incident?.id) return incidentToAlert(incident, base);
+
+        if (incident?.id) {
+            // A NOTICE COMES BACK THROUGH THE SAME DOOR.
+            //
+            // The live listing keeps the two apart: it applies a service-state filter
+            // precisely so a notice never appears with a severity badge. The detail endpoint
+            // has no such filter, so a closed notice is returned shaped like an incident —
+            // with a severity — and rendering it that way turned a standing advisory
+            // ("phishing mails are going around") RED with an outage severity days after it
+            // was posted, by editing the very message that had been calm and blurple.
+            //
+            // The kind the bot originally saw is the authority. `notice` beats whatever the
+            // payload claims; the payload decides only when the caller had no expectation.
+            const kind = expectedKind ?? (incident.kind === 'notice' ? ALERT_KIND.NOTICE : ALERT_KIND.INCIDENT);
+
+            return kind === ALERT_KIND.NOTICE
+                ? noticeToAlert(incident, base)
+                : incidentToAlert(incident, base);
+        }
     } catch (error) {
         if (!notFound(error)) throw error;
     }
