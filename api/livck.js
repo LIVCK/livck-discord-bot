@@ -1,4 +1,5 @@
 import { HttpError } from '../util/errors.js';
+import { readJsonCapped } from '../util/readJson.js';
 import logger from '../util/logger.js';
 
 /**
@@ -62,7 +63,9 @@ export default class LIVCK {
             throw new Error(`Expected JSON response, got: ${contentType}`)
         }
 
-        return response.json()
+        // Capped: the URL belongs to a customer, and an unbounded body is an OOM away from
+        // taking the bot down for every guild. See util/readJson.js.
+        return readJsonCapped(response, url.toString())
     }
 
     /**

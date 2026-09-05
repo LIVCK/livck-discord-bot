@@ -1,4 +1,5 @@
 import { HttpError } from '../util/errors.js';
+import { readJsonCapped } from '../util/readJson.js';
 
 /**
  * Client for a LIVCK Cloud status page.
@@ -54,7 +55,8 @@ export default class LIVCKCloud {
             throw new Error(`Expected JSON response, got: ${contentType}`);
         }
 
-        return response.json();
+        // Capped for the same reason as the self-hosted client: see util/readJson.js.
+        return readJsonCapped(response, url);
     }
 
     /**
