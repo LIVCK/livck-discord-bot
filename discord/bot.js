@@ -89,7 +89,12 @@ const initializeBot = async (commandsFolder, models) => {
         await client.login(process.env.DISCORD_BOT_TOKEN);
         console.log('Bot logged in successfully.');
     } catch (error) {
+        // Fatal, deliberately. A client that never logged in still satisfies every call the
+        // update loop makes — it just fails each one — so the bot would keep polling status
+        // pages for ever and deliver nothing, looking healthy the whole time. Exiting hands
+        // the problem to whatever supervises the process, which can restart and alert.
         console.error(`Failed to login bot: ${error}`);
+        process.exit(1);
     }
 
     return client;

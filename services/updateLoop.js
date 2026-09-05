@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import models from '../models/index.js';
 import { handleStatusPage } from '../handlers/handleStatuspage.js';
 import { handleAlerts } from '../handlers/handleAlerts.js';
@@ -84,11 +84,25 @@ export const processStatuspage = async (statuspage, client) => {
 export const runCycle = async (client) => {
     const now = new Date();
 
-    // Backoff is enforced in the QUERY: a page waiting out its penalty is never loaded, so a
-    // few hundred unreachable pages cost nothing per cycle.
+    // Two filters, both in the QUERY, because everything they exclude would otherwise cost a
+    // request to a customer's status page every 15 seconds:
+    //
+    //   1. Nobody is listening. Nothing ever deletes a Statuspage — not `/livck unsubscribe`,
+    //      not the automatic removal of a subscription whose channel is gone — so every page
+    //      the bot has ever been pointed at stays in the table and was polled for ever, with
+    //      no subscriber left to receive the result. Filtering beats deleting: the row keeps
+    //      its detected `kind` and Cloud page id for whenever someone subscribes again, and
+    //      the pages that have already piled up simply go quiet without a migration.
+    //
+    //   2. It is serving a backoff penalty. A few hundred unreachable pages then cost nothing
+    //      per cycle instead of one failing request each.
+    //
+    // A subquery rather than a join: an INNER JOIN would return the page once per
+    // subscription, and this must yield each page exactly once.
     const due = await models.Statuspage.findAll({
         attributes: LOOP_ATTRIBUTES,
         where: {
+            id: { [Op.in]: literal('(SELECT DISTINCT statuspageId FROM Subscriptions)') },
             [Op.or]: [
                 { nextAttemptAt: null },
                 { nextAttemptAt: { [Op.lte]: now } },

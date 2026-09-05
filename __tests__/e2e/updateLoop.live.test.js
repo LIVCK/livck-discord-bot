@@ -279,6 +279,42 @@ e2e('the update loop', () => {
         }, 120000);
     });
 
+    describe('a status page nobody subscribes to', () => {
+        // A real, reachable Cloud page, so "was it fetched?" is answered by whether the bot
+        // detected its product — not by whether it happened to fail.
+        const UNWATCHED_URL = 'https://status.emeraldhost.de';
+        let orphan;
+
+        test('is not fetched at all', async () => {
+            // Nothing deletes a Statuspage — not `/livck unsubscribe`, not the automatic
+            // removal of a subscription whose channel is gone. Every page the bot has ever
+            // been pointed at was polled for ever, with nobody left to receive the result.
+            orphan = await seed(UNWATCHED_URL, 'unwatched');
+
+            await dropLock(orphan.id);
+            await runCycle(client);
+            await orphan.reload();
+
+            // Detection is the first thing a fetch does, so a null kind means no request.
+            expect(orphan.kind).toBeNull();
+            expect(orphan.failureCount).toBe(0);
+            expect(orphan.nextAttemptAt).toBeNull();
+        }, 60000);
+
+        test('is picked up again the moment somebody does', async () => {
+            // Filtering, not deleting: the row is still there with everything the bot had
+            // already learned about it, so subscribing again costs nothing extra.
+            await subscribe(orphan.id, 'loop-revived');
+
+            await dropLock(orphan.id);
+            await runCycle(client);
+            await orphan.reload();
+
+            expect(orphan.kind).toBe('CLOUD');
+            expect(sent.filter((m) => m.channelId === 'loop-revived')).toHaveLength(1);
+        }, 120000);
+    });
+
     describe('a channel the bot may not post in', () => {
         test('does not pause the status page for everybody else', async () => {
             // The failure that is NOT the status page's fault. One guild revoking "Send
