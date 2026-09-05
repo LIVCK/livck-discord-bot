@@ -248,7 +248,7 @@
       }
     },
     "pause": {
-      "footer": "nicht erreichbar (:reason)",
+      "footer": "inaktiv",
       "reason": {
         "TIMEOUT": "Zeitüberschreitung bei der Verbindung",
         "DNS": "Domain nicht auflösbar",

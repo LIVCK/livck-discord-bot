@@ -82,8 +82,8 @@ const makeContext = () => {
     return { client, models, sent, edits };
 };
 
-/** The footer note, in one of the two languages. */
-const footerNote = /nicht erreichbar|unreachable/;
+/** The one word the footer is given over to while a page is down. */
+const footerNote = /^(inaktiv|inactive)$/;
 
 describe('backoffDelay', () => {
     test('level 1 is the shortest rung', () => {
@@ -162,15 +162,28 @@ describe('handleFailure', () => {
         expect(edits).toHaveLength(2); // one per subscribed channel
 
         for (const { payload } of edits) {
-            const footer = payload.embeds[0].footer.text;
-            expect(footer.startsWith('Example')).toBe(true);
-            expect(footer).toMatch(footerNote);
-            // The message keeps everything it was showing.
+            // One word, in place of the page name. The name is still in the title, which is
+            // also the link, so nothing is lost by giving the footer over to the state.
+            expect(payload.embeds[0].footer.text).toMatch(footerNote);
+            // And the message keeps everything else it was showing.
+            expect(payload.embeds[0].title).toBe('Dienste von Example');
             expect(payload.embeds[0].description).toBe('alles gut');
         }
     });
 
-    test('the note names the real cause', async () => {
+    test('each channel gets it in its own language', async () => {
+        const page = makeStatuspage();
+        const { client, models, edits } = makeContext();
+
+        for (let i = 0; i < NOTIFY_AT_LEVEL; i += 1) {
+            await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
+        }
+
+        expect(edits.map((e) => e.payload.embeds[0].footer.text)).toEqual(['inaktiv', 'inactive']);
+    });
+
+    test('the reason stays in the log, not in the customer channel', async () => {
+        // An operator needs to know it was DNS. A reader of the status page does not.
         const page = makeStatuspage();
         const { client, models, edits } = makeContext();
 
@@ -179,7 +192,8 @@ describe('handleFailure', () => {
             await StatuspagePauseManager.handleFailure(page, dns, client, models);
         }
 
-        expect(edits[0].payload.embeds[0].footer.text).toContain('Domain nicht auflösbar');
+        expect(page.pauseReason).toBe('DNS');
+        expect(edits[0].payload.embeds[0].footer.text).not.toMatch(/DNS|Domain/i);
     });
 
     test('the footer is not annotated twice on a later failure', async () => {

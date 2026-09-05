@@ -248,7 +248,7 @@
       }
     },
     "pause": {
-      "footer": "unreachable (:reason)",
+      "footer": "inactive",
       "reason": {
         "TIMEOUT": "Connection timed out",
         "DNS": "Domain does not resolve",

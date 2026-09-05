@@ -21,7 +21,7 @@
  */
 
 import { hashPayload } from '../util/messageSync.js';
-import { classifyError, FAILURE_KINDS } from '../util/errors.js';
+import { classifyError } from '../util/errors.js';
 import logger from '../util/logger.js';
 import translation, { withLocale } from '../util/Translation.js';
 import cache from '../database/redis.js';
@@ -45,9 +45,6 @@ export const BACKOFF_LADDER_MS = [
  * short enough to be useful.
  */
 export const NOTIFY_AT_LEVEL = 4;
-
-/** What separates the page name from the staleness note in a footer. */
-const FOOTER_SEPARATOR = ' · ';
 
 /** Cooldown between two manual `/livck resume` attempts for the same page. */
 const RESUME_COOLDOWN_MS = 60 * 1000;
@@ -151,11 +148,16 @@ export class StatuspagePauseManager {
      * something the reader did not ask to be told about. A status page going quiet is not
      * news; it is the absence of news, and it belongs in the message that is already there.
      *
-     * So the existing status embed keeps its last known content and gains one line in its
-     * FOOTER. It costs one edit per subscription at the moment the page crosses the pause
-     * threshold — not one per cycle — and the next successful render rebuilds the footer
-     * normally, which is what clears it. There is no "back online" message at all: the
-     * content simply starts moving again.
+     * So the existing status embed keeps its last known content, and the one word in its
+     * FOOTER — normally the page's name — is replaced by "inaktiv". Nothing else changes. The
+     * name is still right there in the title, which is also the link to the page, so nothing
+     * is lost by giving the footer over to the state for the duration.
+     *
+     * It costs one edit per subscription at the moment the page crosses the pause threshold —
+     * not one per cycle — and the next successful render writes the name back, which is what
+     * clears it. There is no "back online" message at all: the content simply starts moving
+     * again. The reason for the outage stays in the log, where the operator is, rather than
+     * in a customer's channel.
      *
      * The stored hash is updated to the annotated payload on purpose. Leaving it would make
      * the recovery render look identical to what is stored, the edit would be skipped, and the
@@ -184,17 +186,10 @@ export class StatuspagePauseManager {
                     if (!embed) continue;
 
                     const locale = subscription.locale || 'de';
-                    const note = withLocale(locale, () => {
-                        const reason = translation.trans(`messages.pause.reason.${kind}`)
-                            || translation.trans(`messages.pause.reason.${FAILURE_KINDS.UNKNOWN}`);
-                        return translation.trans('messages.pause.footer', { reason });
-                    });
-
-                    const base = (embed.footer?.text || statuspage.name || statuspage.url)
-                        .split(FOOTER_SEPARATOR)[0];
+                    const note = withLocale(locale, () => translation.trans('messages.pause.footer'));
 
                     const payload = {
-                        embeds: [{ ...embed, footer: { ...embed.footer, text: `${base}${FOOTER_SEPARATOR}${note}` } }],
+                        embeds: [{ ...embed, footer: { ...embed.footer, text: note } }],
                         components: existing.components ?? [],
                     };
 
