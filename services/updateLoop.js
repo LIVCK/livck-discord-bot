@@ -17,8 +17,58 @@ import logger from '../util/logger.js';
 
 const BATCH_SIZE = 100;
 
-/** How long a processed page is skipped, so two overlapping cycles cannot both do the work. */
+/** How long a page stays claimed, so two overlapping cycles cannot both do the work. */
 const LOCK_TTL = 20;
+
+/**
+ * How long to wait on Redis before deciding it is not going to answer.
+ *
+ * Redis is not a correctness boundary for a single instance — the backoff and the content
+ * hash are — so an unreachable Redis must degrade to unlocked polling, never to a stopped
+ * bot. It stopped the bot before: the lock read was the first `await` of every page, and with
+ * Redis down that promise never settled, so the cycle never finished and the timer that
+ * schedules the next one never ran. Silent, indefinite, and invisible in the log.
+ */
+const LOCK_TIMEOUT_MS = Number(process.env.REDIS_LOCK_TIMEOUT_MS || 2000);
+
+const withDeadline = (promise, ms, label) => Promise.race([
+    promise,
+    new Promise((_resolve, reject) =>
+        setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms).unref()),
+]);
+
+/**
+ * Claim a status page for this cycle.
+ *
+ * `SET NX EX` in ONE round trip, BEFORE the work — the previous version read the key first
+ * and wrote it only after the handlers had finished, which is a check-then-act with the whole
+ * cycle in between. Two overlapping cycles therefore both saw no key, both ran, both found no
+ * `Message` row and both POSTED: two status embeds in the customer's channel, two rows for
+ * one subscription, and the second message frozen at its first content for ever because
+ * `findOne` only ever returns the first row again. Overlap is not hypothetical — a redeploy
+ * where the new process starts before the old one drains is enough.
+ *
+ * @returns {Promise<boolean>} true when this cycle owns the page
+ */
+const claim = async (statuspageId) => {
+    const key = `dc-bot:statuspage:${statuspageId}`;
+
+    try {
+        const reply = await withDeadline(
+            cache.set(key, '1', { NX: true, EX: LOCK_TTL }),
+            LOCK_TIMEOUT_MS,
+            'redis SET NX',
+        );
+        return reply === 'OK';
+    } catch (error) {
+        // One line for the whole outage, not one per page per cycle.
+        logger.once(
+            'redis:lock', 'warn',
+            `[UpdateLoop] Redis unavailable (${error.message}); polling without the lock`
+        );
+        return true;
+    }
+};
 
 export const INTERVAL = 15 * 1000;
 
@@ -44,9 +94,9 @@ const LOOP_ATTRIBUTES = [
  * @returns {Promise<{skipped?: boolean, updated?: boolean, failed?: boolean, paused?: boolean, duration?: number, level?: number}>}
  */
 export const processStatuspage = async (statuspage, client) => {
-    const cacheKey = `dc-bot:statuspage:${statuspage.id}`;
-
-    if (await cache.get(cacheKey)) {
+    // Claimed before any work, and held for LOCK_TTL — which also keeps the page out of the
+    // cycle right after, the way the old post-hoc marker did.
+    if (!await claim(statuspage.id)) {
         return { skipped: true };
     }
 
@@ -59,7 +109,6 @@ export const processStatuspage = async (statuspage, client) => {
         ]);
 
         await StatuspagePauseManager.handleSuccess(statuspage, client, models);
-        await cache.set(cacheKey, 'true', { EX: LOCK_TTL });
 
         const duration = Date.now() - startTime;
         logger.debug(`[UpdateLoop] ${statuspage.url} completed in ${duration}ms`);

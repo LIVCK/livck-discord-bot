@@ -279,6 +279,29 @@ e2e('the update loop', () => {
         }, 120000);
     });
 
+    describe('two cycles that overlap', () => {
+        test('only one of them posts', async () => {
+            // The claim used to be a check-then-act with the ENTIRE cycle in between: read the
+            // key first, write it only after the handlers had finished. Two overlapping cycles
+            // therefore both saw no key, both ran, both found no Message row and both POSTED —
+            // two status embeds in the customer's channel, two rows for one subscription, and
+            // the second message frozen at its first content for ever, because findOne only
+            // ever returns the first row again. A redeploy where the new process starts before
+            // the old one drains is enough to hit it.
+            const page = await models.Statuspage.findOne({ where: { url: LIVE_URL } });
+            const subscription = await subscribe(page.id, 'loop-overlap');
+
+            for (const row of await models.Statuspage.findAll()) await dropLock(row.id);
+
+            await Promise.all([runCycle(client), runCycle(client)]);
+
+            expect(sent.filter((m) => m.channelId === 'loop-overlap')).toHaveLength(1);
+
+            const rows = await models.Message.findAll({ where: { subscriptionId: subscription.id } });
+            expect(rows).toHaveLength(1);
+        }, 120000);
+    });
+
     describe('the heartbeat', () => {
         test('advances the row, so it fires again in fifteen minutes and not in fifteen seconds', async () => {
             // The bug only exists against a real database. `record.update({contentHash})` with

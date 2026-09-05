@@ -193,7 +193,28 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
             const closed = await fetchClosedAlert(statuspageRecord, record.serviceId)
             if (!closed) continue
 
-            await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
+            try {
+                await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
+            } catch (error) {
+                // The same guard the live path has, which this loop was missing. Without it
+                // one guild that revoked "Send Messages" aborted the whole reconciliation:
+                // every OTHER guild's thread stayed on "we are investigating" and read as an
+                // ongoing outage, and it never recovered — the same error threw every cycle
+                // until the three-day window closed the thread out of scope for good.
+                if (isChannelGone(error)) {
+                    logger.info(
+                        `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
+                    )
+                    await models.Subscription.destroy({ where: { id: subscription.id } })
+                    continue
+                }
+
+                logger.once(
+                    `deliver:${subscription.id}`, 'error',
+                    `[handleAlerts] Could not close out in channel ${subscription.channelId} ` +
+                    `(${error.code ?? error.name}): ${error.message}`
+                )
+            }
         }
     }
 }
