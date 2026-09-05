@@ -7,6 +7,7 @@ import LIVCKCloud from "../../api/livckCloud.js";
 import { detectSource } from "../../api/detect.js";
 import { SOURCE } from "../../dto/statuspage.js";
 import { classifyError } from "../../util/errors.js";
+import { DISCORD_LIMITS, joinWithinLimit, truncate } from "../../util/discordLimits.js";
 import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
 
@@ -19,6 +20,12 @@ import translation from "../../util/Translation.js";
  * only ever be read or destroyed from the guild that owns it. The slash-command paths in this
  * file already did this; the component paths did not.
  */
+/** How much of a link's URL and label the management screen previews. */
+const LINK_URL_PREVIEW = 60;
+const LINK_LABEL_PREVIEW = 60;
+/** Room kept free for the heading the list is appended to. */
+const LINK_LIST_HEADROOM = 400;
+
 /**
  * May this member change anything?
  *
@@ -868,6 +875,19 @@ export default (models) => ({
             });
 
             // Trigger status page refresh with new locale (fire-and-forget)
+            // The lookup above is guild-scoped and correctly returns null for a stale or a
+            // foreign id, but the code below used it unconditionally. No attacker needed:
+            // open `/livck edit` twice, delete the subscription in one panel and act in the
+            // other, and the TypeError surfaces as the generic error notice instead of
+            // "subscription not found".
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             if (subscription && subscription.Statuspage) {
                 handleStatusPage(subscription.Statuspage.id, client).catch(error => {
                     console.error('[Locale Update] Failed to regenerate status message:', error);
@@ -980,6 +1000,19 @@ export default (models) => ({
             });
 
             // Trigger immediate status page refresh with new layout (fire-and-forget)
+            // The lookup above is guild-scoped and correctly returns null for a stale or a
+            // foreign id, but the code below used it unconditionally. No attacker needed:
+            // open `/livck edit` twice, delete the subscription in one panel and act in the
+            // other, and the TypeError surfaces as the generic error notice instead of
+            // "subscription not found".
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             if (subscription && subscription.Statuspage) {
                 handleStatusPage(subscription.Statuspage.id, client).then(() => {
                     console.log(`[Layout Update] Regenerated status message for subscription ${subscriptionId} with layout ${newLayout}`);
@@ -1077,8 +1110,16 @@ export default (models) => ({
         if (interaction.customId.startsWith('manage_links_')) {
             const subscriptionId = interaction.customId.replace('manage_links_', '');
 
-            // Defer update immediately to prevent timeout
-            await interaction.deferUpdate();
+            // Only if nobody has answered yet. `delete_link_` defers and then RE-ENTERS this
+            // handler to redraw the list, and deferring a second time throws
+            // InteractionAlreadyReplied — so every single link deletion ended in "There was an
+            // error handling that interaction!" even though the link was gone from the
+            // database, and the stale list still offered a Delete button that then reported
+            // "link not found". `manage_roles_` has had this guard all along, which is why the
+            // role screens redraw and this one did not.
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferUpdate();
+            }
 
             const subscription = await models.Subscription.findOne({
                 where: { id: subscriptionId, guildId: interaction.guildId },
@@ -1099,12 +1140,26 @@ export default (models) => ({
                 order: [['position', 'ASC']]
             });
 
-            // Build link list message with emoji preview
-            let linksList = customLinks.length > 0
-                ? customLinks.map((link, index) => {
-                    const emoji = link.emoji || '🔗';
-                    return `${index + 1}. ${emoji} **${link.label}** - \`${link.url}\``;
-                  }).join('\n')
+            // Build link list message with emoji preview.
+            //
+            // Bounded, because this is sent as message CONTENT and Discord caps that at 2000
+            // characters — `CustomLink.url` alone is a STRING(512). Over the cap Discord
+            // rejects the message whole and the handler throws, and since this screen is the
+            // ONLY route to the per-link edit and delete controls, a guild that crossed the
+            // line could never delete a link to get back under it. Twenty-four links with
+            // ordinary values was enough, while the Add button only locks at 25.
+            const linksList = customLinks.length > 0
+                ? joinWithinLimit(
+                    customLinks.map((link, index) => {
+                        const emoji = link.emoji || '🔗';
+                        const url = truncate(link.url, LINK_URL_PREVIEW);
+                        return `${index + 1}. ${emoji} **${truncate(link.label, LINK_LABEL_PREVIEW)}** - \`${url}\``;
+                    }),
+                    {
+                        max: DISCORD_LIMITS.MESSAGE_CONTENT - LINK_LIST_HEADROOM,
+                        more: (count) => translation.trans('commands.livck.custom_links.more_links', { count }, count),
+                    }
+                )
                 : translation.trans('commands.livck.custom_links.no_links');
 
             // Build buttons
@@ -1283,14 +1338,26 @@ export default (models) => ({
                 return;
             }
 
+            // Derived from the LINK, which findGuildCustomLink already verified belongs to
+            // this guild — not from the id in the custom_id, which is only a value the bot
+            // put there. The two used to be read independently, so the link list below was
+            // fetched for whatever subscription the custom_id named.
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId, guildId: interaction.guildId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             // Get link position info
             const allLinks = await models.CustomLink.findAll({
-                where: { subscriptionId },
+                where: { subscriptionId: link.subscriptionId },
                 order: [['position', 'ASC']]
             });
 
@@ -1986,17 +2053,30 @@ export default (models) => ({
 
         if (focusedOption.name === 'subscription') {
             try {
-                // Fetch all subscriptions for this guild
+                // Every subscription in the guild, NOT the first 25.
+                //
+                // The limit used to be applied in SQL, before the user's text was matched
+                // against anything — so the candidate set was the first 25 rows rather than
+                // the 25 best matches. In a guild with 40 subscriptions, typing the exact name
+                // of the 40th returned nothing, and since `subscription` is a required option
+                // whose id can only come from this list, subscriptions 26 and up could not be
+                // edited AT ALL: no layout, locale, link, role mention or token change, and no
+                // delete by that route. Discord's cap of 25 belongs on the RESULT, and it is
+                // already applied below.
                 const subscriptions = await models.Subscription.findAll({
                     where: { guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }],
-                    limit: 25
                 });
 
-                // Filter based on user input
-                const filtered = subscriptions.filter(sub =>
-                    sub.Statuspage.name.toLowerCase().includes(focusedOption.value.toLowerCase()) ||
-                    sub.Statuspage.url.toLowerCase().includes(focusedOption.value.toLowerCase())
+                const needle = focusedOption.value.toLowerCase();
+
+                // A row whose status page is gone would otherwise throw here and empty the
+                // whole suggestion list, taking every healthy subscription with it.
+                const filtered = subscriptions.filter((sub) =>
+                    sub.Statuspage && (
+                        (sub.Statuspage.name || '').toLowerCase().includes(needle) ||
+                        (sub.Statuspage.url || '').toLowerCase().includes(needle)
+                    )
                 );
 
                 // Format choices

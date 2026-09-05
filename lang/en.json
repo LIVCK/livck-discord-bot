@@ -137,6 +137,7 @@
         "modal_label_url": "URL (must start with https://)",
         "modal_label_emoji": "Emoji (optional, e.g. 🔗)",
         "no_links": "No custom links available.",
+        "more_links": "… and :count more",
         "list_item": "**:label**",
         "select_placeholder": "Select link...",
         "link_details": "Link Details for **:name**",
