@@ -2,6 +2,7 @@ import { REST, Routes } from 'discord.js';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
+import { routeInteraction } from './interactionRouter.js';
 
 const registerCommands = async (commandsFolder, models) => {
     const commands = [];
@@ -82,76 +83,7 @@ const initializeBot = async (commandsFolder, models) => {
         );
     });
 
-    client.on('interactionCreate', async (interaction) => {
-        // Handle autocomplete
-        if (interaction.isAutocomplete()) {
-            const command = client.commands.get(interaction.commandName);
-
-            if (!command || typeof command.autocomplete !== 'function') {
-                return;
-            }
-
-            try {
-                await command.autocomplete(interaction, client);
-            } catch (error) {
-                console.error(`Error handling autocomplete for ${interaction.commandName}: ${error}`);
-            }
-            return;
-        }
-
-        // Handle modal submits
-        if (interaction.isModalSubmit()) {
-            const livckCommand = client.commands.get('livck');
-
-            if (livckCommand && typeof livckCommand.handleModalSubmit === 'function') {
-                try {
-                    await livckCommand.handleModalSubmit(interaction, client);
-                } catch (error) {
-                    console.error(`Error handling modal submit: ${error}`);
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'There was an error handling that modal!', ephemeral: true });
-                    }
-                }
-            }
-            return;
-        }
-
-        // Handle slash commands
-        if (interaction.isChatInputCommand()) {
-            const command = client.commands.get(interaction.commandName);
-
-            if (!command) {
-                console.warn(`Unhandled command: ${interaction.commandName}`);
-                await interaction.reply({ content: 'Unknown command!', ephemeral: true });
-                return;
-            }
-
-            try {
-                await command.execute(interaction, client);
-            } catch (error) {
-                console.error(`Error executing command ${interaction.commandName}: ${error}`);
-                await interaction.reply({ content: 'There was an error executing that command!', ephemeral: true });
-            }
-            return;
-        }
-
-        // Handle select menus and buttons
-        if (interaction.isStringSelectMenu() || interaction.isButton() || interaction.isRoleSelectMenu()) {
-            // Find the command that owns this interaction
-            const livckCommand = client.commands.get('livck');
-
-            if (livckCommand && typeof livckCommand.handleComponentInteraction === 'function') {
-                try {
-                    await livckCommand.handleComponentInteraction(interaction, client);
-                } catch (error) {
-                    console.error(`Error handling component interaction: ${error}`);
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: 'There was an error handling that interaction!', ephemeral: true });
-                    }
-                }
-            }
-        }
-    });
+    client.on('interactionCreate', (interaction) => routeInteraction(interaction, client));
 
     try {
         await client.login(process.env.DISCORD_BOT_TOKEN);

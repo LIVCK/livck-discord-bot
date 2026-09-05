@@ -19,6 +19,38 @@ import translation from "../../util/Translation.js";
  * only ever be read or destroyed from the guild that owns it. The slash-command paths in this
  * file already did this; the component paths did not.
  */
+/**
+ * May this member change anything?
+ *
+ * `default_member_permissions` is a DEFAULT, not a lock: a server admin can hand `/livck` to
+ * any role under Server Settings → Integrations, and that is exactly why `execute()` re-checks
+ * ManageGuild for the write subcommands instead of trusting Discord's gate.
+ *
+ * The component and modal paths did not, and they are where the destructive actions actually
+ * live — unsubscribe, delete a subscription, remove a link or a role mention, replace a
+ * customer's API token. Anyone who could reach those buttons could press them. Guarding the
+ * whole handler rather than the individual ids means a button added later is covered by
+ * default instead of by remembering.
+ *
+ * `memberPermissions` first: it accounts for channel overwrites, and it is populated for every
+ * guild interaction even when the member is not cached.
+ */
+const mayManage = (interaction) => {
+    const permissions = interaction.memberPermissions ?? interaction.member?.permissions;
+    return Boolean(permissions?.has?.('ManageGuild'));
+};
+
+/** Reply and report true when the member may not act, so the caller just returns. */
+const denyWithoutPermission = async (interaction) => {
+    if (mayManage(interaction)) return false;
+
+    await interaction.reply({
+        content: translation.trans('errors.missing_permissions'),
+        flags: 64 // EPHEMERAL
+    });
+    return true;
+};
+
 const findGuildCustomLink = (models, linkId, interaction) => models.CustomLink.findOne({
     where: { id: linkId },
     include: [{
@@ -636,6 +668,8 @@ export default (models) => ({
     async handleComponentInteraction(interaction, client) {
         const userLocale = interaction.locale?.split('-')[0] || 'de';
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
+        if (await denyWithoutPermission(interaction)) return;
 
         // Handle subscription select menu
         if (interaction.customId === 'subscription_select') {
@@ -2140,6 +2174,8 @@ export default (models) => ({
     async handleModalSubmit(interaction, client) {
         const userLocale = interaction.locale?.split('-')[0] || 'de';
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
+        if (await denyWithoutPermission(interaction)) return;
 
         if (interaction.customId === 'subscribe_complete_modal') {
             try {
