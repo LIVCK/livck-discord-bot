@@ -19,6 +19,8 @@ export const FAILURE_KINDS = {
     HTTP_5XX: 'HTTP_5XX',
     RATE_LIMITED: 'RATE_LIMITED',
     NOT_LIVCK: 'NOT_LIVCK',
+    /** Answered, but not with JSON — a Cloudflare interstitial, a maintenance page, a proxy. */
+    NOT_JSON: 'NOT_JSON',
     NETWORK: 'NETWORK',
     UNKNOWN: 'UNKNOWN',
 };
@@ -43,6 +45,7 @@ const EXPECTED_KINDS = new Set([
     FAILURE_KINDS.HTTP_5XX,
     FAILURE_KINDS.RATE_LIMITED,
     FAILURE_KINDS.NOT_LIVCK,
+    FAILURE_KINDS.NOT_JSON,
     FAILURE_KINDS.NETWORK,
 ]);
 
@@ -88,6 +91,14 @@ export const classifyError = (error) => {
     }
     if (/not a LIVCK|lvk-version/i.test(message)) {
         return { kind: FAILURE_KINDS.NOT_LIVCK, status: null, detail: 'no LIVCK marker', expected: true };
+    }
+    // The documented Cloudflare Bot-Shield case, and any origin serving an interstitial or a
+    // static maintenance page. It used to fall through to UNKNOWN, which told subscribers
+    // "Unbekannter Fehler" — the one reason that says nothing actionable — and, because
+    // UNKNOWN is not an expected kind, printed a full stack trace on every attempt up the
+    // whole backoff ladder.
+    if (/Expected JSON response|Invalid JSON|Unexpected token .* in JSON/i.test(message)) {
+        return { kind: FAILURE_KINDS.NOT_JSON, status: null, detail: message.slice(0, 120), expected: true };
     }
     if (/fetch failed|network/i.test(message)) {
         return { kind: FAILURE_KINDS.NETWORK, status: null, detail: code || 'fetch failed', expected: true };

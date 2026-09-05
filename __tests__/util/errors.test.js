@@ -6,6 +6,31 @@ const withCause = (message, code) => {
     return error;
 };
 
+describe('a page that answers with something other than JSON', () => {
+    // The documented Cloudflare Bot-Shield case from CLAUDE.md, plus any origin serving an
+    // interstitial or a static maintenance page. It fell through to UNKNOWN, which told
+    // subscribers "Unbekannter Fehler" — the one reason that says nothing actionable — and,
+    // because UNKNOWN is not an expected kind, printed a full stack trace on every attempt
+    // all the way up the backoff ladder.
+    test.each([
+        'Expected JSON response, got: text/html',
+        'Expected JSON response, got: null',
+        'Invalid JSON from https://status.example.com: Unexpected token < in JSON at position 0',
+    ])('%s is classified, not unknown', (message) => {
+        const info = classifyError(new Error(message));
+
+        expect(info.kind).toBe(FAILURE_KINDS.NOT_JSON);
+    });
+
+    test('and is routine, so it costs one line rather than a stack trace per attempt', () => {
+        expect(isExpectedFailure(FAILURE_KINDS.NOT_JSON)).toBe(true);
+    });
+
+    test('an actually unknown error keeps its stack', () => {
+        expect(isExpectedFailure(classifyError(new Error('something nobody predicted')).kind)).toBe(false);
+    });
+});
+
 describe('classifyError', () => {
     test('HttpError carries its status through', () => {
         const result = classifyError(new HttpError(503, 'Service Unavailable', 'https://x'));

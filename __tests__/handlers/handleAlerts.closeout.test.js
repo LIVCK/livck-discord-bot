@@ -66,7 +66,7 @@ jest.unstable_mockModule('../../models/index.js', () => ({
     },
 }));
 
-const { handleAlerts } = await import('../../handlers/handleAlerts.js');
+const { handleAlerts, clearCloseoutCooldowns } = await import('../../handlers/handleAlerts.js');
 const { ALERT_KIND, BODY_FORMAT, SOURCE, STATUS, makeAlert, makeSnapshot, makeUpdate } =
     await import('../../dto/statuspage.js');
 
@@ -122,6 +122,10 @@ const trackedMessage = (serviceId, ageHours = 2) => ({
 });
 
 beforeEach(() => {
+    // A vanished alert is only re-asked about every CLOSEOUT_RECHECK_MS; the cooldown lives in
+    // the module, so consecutive tests reusing an alert id would throttle each other.
+    clearCloseoutCooldowns();
+
     provider.snapshot = snapshotWith([]);
     provider.closed = {};
     provider.closedCalls = [];
@@ -188,6 +192,42 @@ describe('an alert that vanished from the live payload', () => {
         expect(provider.closedCalls).toEqual(['inc-1']);
         expect(discord.sent).toHaveLength(0);
         expect(discord.edits).toBe(0);
+    });
+
+    test('is not asked about again on the very next cycle', async () => {
+        // It fails the "still live" test on EVERY cycle for as long as the reporting window
+        // lasts, and the provider memo expires between cycles — so the same detail request
+        // went out every 15 seconds for three days: about 17,000 per resolved incident per
+        // token/locale group, and double that when the endpoint 404s and nothing is ever
+        // delivered. All against the Cloud's shared edge budget.
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = incident({
+            state: 'resolved',
+            updates: [makeUpdate({ id: 'u-final', state: 'resolved', body: { de: 'Behoben.' }, createdAt: hoursAgo(1) })],
+        });
+
+        const client = makeClient();
+        await handleAlerts(7, client);
+        await handleAlerts(7, client);
+        await handleAlerts(7, client);
+
+        expect(provider.closedCalls).toEqual(['inc-1']);
+    });
+
+    test('is asked again once the cooldown has passed', async () => {
+        // Deliberately not "settled for ever": an alert can still change after it resolves —
+        // a postmortem attached after the fact — so the point is to stop hammering, not to
+        // stop looking.
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = null;
+
+        const client = makeClient();
+        await handleAlerts(7, client);
+
+        clearCloseoutCooldowns();
+        await handleAlerts(7, client);
+
+        expect(provider.closedCalls).toEqual(['inc-1', 'inc-1']);
     });
 
     test('is never touched again once it is out of the reporting window', async () => {

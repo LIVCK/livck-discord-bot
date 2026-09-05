@@ -184,6 +184,7 @@
         "reasons": {
           "TIMEOUT": "Connection timeout",
           "NOT_LIVCK": "No longer a LIVCK status page",
+          "NOT_JSON": "The page does not answer with data (bot protection or a maintenance page)",
           "MANUAL": "Manually paused",
           "unknown": "Unknown",
           "DNS": "Domain does not resolve",
@@ -258,6 +259,7 @@
         "HTTP_5XX": "The status page returns a server error",
         "RATE_LIMITED": "Too many requests (rate limited)",
         "NOT_LIVCK": "No longer a LIVCK status page",
+        "NOT_JSON": "The page does not answer with data (bot protection or a maintenance page)",
         "NETWORK": "Network error",
         "UNKNOWN": "Unknown error"
       }

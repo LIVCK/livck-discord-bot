@@ -173,6 +173,42 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
  * Costs nothing in steady state: the lookup happens only for an alert that actually vanished,
  * and the result is shared across every subscription watching the same page.
  */
+/**
+ * How long to leave a vanished alert alone between close-out attempts.
+ *
+ * A row whose alert has left the live payload fails the "still live" test on EVERY cycle for
+ * as long as the reporting window lasts, and the provider memo has a 10s TTL against a 15s
+ * cycle, so it never carried across cycles either. The result was one detail request every 15
+ * seconds for three days — about 17,000 per resolved incident, per token/locale group, and
+ * double that when `show_incident_history` is off and both endpoints 404 every time while
+ * nothing is ever delivered. All of it against the Cloud's shared edge budget.
+ *
+ * Half an hour cuts that by 99% and still picks up a late edit — a postmortem attached after
+ * the fact — within one cooldown. Deliberately NOT "settled for ever": an alert can still
+ * change after it resolves, and the point is to stop hammering, not to stop looking.
+ */
+const CLOSEOUT_RECHECK_MS = Number(process.env.ALERT_CLOSEOUT_RECHECK_MS || 30 * 60 * 1000);
+
+/** `${statuspageId}:${alertId}` → when it was last asked about. Memory only, by design. */
+const closeoutAttempts = new Map();
+const MAX_CLOSEOUT_KEYS = 5000;
+
+const recentlyAttempted = (statuspageId, alertId) => {
+    const at = closeoutAttempts.get(`${statuspageId}:${alertId}`);
+    return at !== undefined && Date.now() - at < CLOSEOUT_RECHECK_MS;
+};
+
+const rememberAttempt = (statuspageId, alertId) => {
+    if (closeoutAttempts.size >= MAX_CLOSEOUT_KEYS) {
+        const oldest = closeoutAttempts.keys().next().value;
+        if (oldest !== undefined) closeoutAttempts.delete(oldest);
+    }
+    closeoutAttempts.set(`${statuspageId}:${alertId}`, Date.now());
+};
+
+/** Forget the cooldowns. Exposed for tests. */
+export const clearCloseoutCooldowns = () => closeoutAttempts.clear();
+
 const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, locale, footer, client) => {
     const stillLive = new Set(snapshot.alerts.map((alert) => alert.id))
     const cutoff = Date.now() - ALERT_WINDOW_MS
@@ -189,6 +225,11 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
             // Outside the window the thread stays as it is, permanently. This is the bound
             // that keeps an unconfirmable alert from being re-checked every cycle forever.
             if (new Date(record.createdAt).getTime() < cutoff) continue
+
+            // Asked about recently enough. Without this the same request went out every 15
+            // seconds for the full three days — see CLOSEOUT_RECHECK_MS.
+            if (recentlyAttempted(statuspageRecord.id, record.serviceId)) continue
+            rememberAttempt(statuspageRecord.id, record.serviceId)
 
             // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
             // returns a notice shaped exactly like an incident and says nothing about which
