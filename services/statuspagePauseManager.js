@@ -20,7 +20,7 @@
  * answers again.
  */
 
-import { EmbedBuilder, Colors } from 'discord.js';
+import { hashPayload } from '../util/messageSync.js';
 import { classifyError, FAILURE_KINDS } from '../util/errors.js';
 import logger from '../util/logger.js';
 import translation, { withLocale } from '../util/Translation.js';
@@ -46,6 +46,9 @@ export const BACKOFF_LADDER_MS = [
  */
 export const NOTIFY_AT_LEVEL = 4;
 
+/** What separates the page name from the staleness note in a footer. */
+const FOOTER_SEPARATOR = ' · ';
+
 /** Cooldown between two manual `/livck resume` attempts for the same page. */
 const RESUME_COOLDOWN_MS = 60 * 1000;
 
@@ -62,7 +65,7 @@ export class StatuspagePauseManager {
      * @param {Error} error
      * @param {object} client - Discord client (optional; no notification without it)
      * @param {object} models
-     * @returns {Promise<{level: number, kind: string, nextAttemptAt: Date, paused: boolean, notified: boolean}>}
+     * @returns {Promise<{level: number, kind: string, nextAttemptAt: Date, paused: boolean, marked: boolean}>}
      */
     static async handleFailure(statuspage, error, client, models) {
         const { kind } = classifyError(error);
@@ -90,24 +93,24 @@ export class StatuspagePauseManager {
             `[PauseManager] ${statuspage.url}: ${kind}, backoff level ${level}, next attempt ${nextAttemptAt.toISOString()}`
         );
 
-        let notified = false;
+        let marked = false;
         if (crossedThreshold) {
             // Crossing the threshold happens once per outage, so it is worth a warning.
             logger.warn(`[PauseManager] ${statuspage.url} paused after ${statuspage.failureCount} failures (${kind})`);
 
             if (client && models) {
-                notified = await this.notifyPause(statuspage, kind, client, models);
+                marked = await this.#markStale(statuspage, kind, client, models);
             }
         }
 
-        return { level, kind, nextAttemptAt, paused: Boolean(statuspage.paused), notified };
+        return { level, kind, nextAttemptAt, paused: Boolean(statuspage.paused), marked };
     }
 
     /**
-     * Record a successful cycle. Clears the backoff and, if the page had been announced as
+     * Record a successful cycle. Clears the backoff. Nothing is announced either way — if
      * paused, tells the subscribers it is back.
      *
-     * @returns {Promise<boolean>} true when the page recovered from an announced pause
+     * @returns {Promise<boolean>} true when the page recovered from a paused state
      */
     static async handleSuccess(statuspage, client, models) {
         const wasPaused = Boolean(statuspage.paused);
@@ -128,10 +131,9 @@ export class StatuspagePauseManager {
         logger.resetOnce(`fetch:${statuspage.id}`);
         logger.info(`[PauseManager] ${statuspage.url} recovered`);
 
-        if (wasPaused && client && models) {
-            await this.notifyResume(statuspage, client, models);
-        }
-
+        // Nothing is announced on the way back either. The next render simply produces the
+        // page's real content again, footer included, and the edit that carries it is the
+        // only signal a reader needs.
         return wasPaused;
     }
 
@@ -142,78 +144,79 @@ export class StatuspagePauseManager {
     }
 
     /**
-     * Send one embed to every channel subscribed to this page, in that subscription's locale.
-     * @returns {Promise<boolean>} true when at least one channel was reached
+     * Mark the pages status messages as stale, quietly.
+     *
+     * NO SEPARATE MESSAGE. An outage used to post its own embed into every subscribed channel,
+     * and a recovery posted another one — two notifications, per channel, per outage, for
+     * something the reader did not ask to be told about. A status page going quiet is not
+     * news; it is the absence of news, and it belongs in the message that is already there.
+     *
+     * So the existing status embed keeps its last known content and gains one line in its
+     * FOOTER. It costs one edit per subscription at the moment the page crosses the pause
+     * threshold — not one per cycle — and the next successful render rebuilds the footer
+     * normally, which is what clears it. There is no "back online" message at all: the
+     * content simply starts moving again.
+     *
+     * The stored hash is updated to the annotated payload on purpose. Leaving it would make
+     * the recovery render look identical to what is stored, the edit would be skipped, and the
+     * stale marker would sit there for ever.
      */
-    static async #broadcast(statuspage, models, client, buildEmbed) {
+    static async #markStale(statuspage, kind, client, models) {
+        let marked = 0;
+
         try {
             const subscriptions = await models.Subscription.findAll({
                 where: { statuspageId: statuspage.id },
             });
 
-            let delivered = 0;
-
             for (const subscription of subscriptions) {
                 try {
+                    const record = await models.Message.findOne({
+                        where: { subscriptionId: subscription.id, category: 'STATUS' },
+                    });
+                    if (!record?.messageId) continue;
+
                     const channel = await client.channels.fetch(subscription.channelId);
                     if (!channel) continue;
 
-                    // Own locale slot per recipient — see util/Translation.js.
+                    const existing = await channel.messages.fetch(record.messageId);
+                    const embed = existing?.embeds?.[0]?.toJSON?.();
+                    if (!embed) continue;
+
                     const locale = subscription.locale || 'de';
-                    const embed = withLocale(locale, () => buildEmbed(locale));
-                    await channel.send({ embeds: [embed] });
-                    delivered += 1;
+                    const note = withLocale(locale, () => {
+                        const reason = translation.trans(`messages.pause.reason.${kind}`)
+                            || translation.trans(`messages.pause.reason.${FAILURE_KINDS.UNKNOWN}`);
+                        return translation.trans('messages.pause.footer', { reason });
+                    });
+
+                    const base = (embed.footer?.text || statuspage.name || statuspage.url)
+                        .split(FOOTER_SEPARATOR)[0];
+
+                    const payload = {
+                        embeds: [{ ...embed, footer: { ...embed.footer, text: `${base}${FOOTER_SEPARATOR}${note}` } }],
+                        components: existing.components ?? [],
+                    };
+
+                    await channel.messages.edit(record.messageId, payload);
+                    await models.Message.update(
+                        { contentHash: hashPayload(payload) },
+                        { where: { id: record.id } }
+                    );
+                    marked += 1;
                 } catch (error) {
-                    // A channel we can no longer reach is not worth a stack trace here; the
-                    // update loop removes such subscriptions on its own next pass.
+                    // A channel we can no longer reach is not worth a stack trace; the update
+                    // loop removes such subscriptions on its own next pass.
                     logger.debug(
-                        `[PauseManager] Could not notify channel ${subscription.channelId}: ${error.message}`
+                        `[PauseManager] Could not mark channel ${subscription.channelId}: ${error.message}`
                     );
                 }
             }
-
-            return delivered > 0;
         } catch (error) {
-            logger.error('[PauseManager] Error broadcasting:', error);
-            return false;
+            logger.error('[PauseManager] Error marking status messages stale:', error);
         }
-    }
 
-    static async notifyPause(statuspage, kind, client, models) {
-        const name = statuspage.name || statuspage.url;
-
-        return this.#broadcast(statuspage, models, client, (locale) => {
-            translation.setLocale(locale);
-
-            const reason = translation.trans(`messages.pause.reason.${kind}`)
-                || translation.trans(`messages.pause.reason.${FAILURE_KINDS.UNKNOWN}`);
-
-            return new EmbedBuilder()
-                .setColor(Colors.Orange)
-                .setTitle(`⏸️ ${translation.trans('messages.pause.title')}`)
-                .setDescription([
-                    translation.trans('messages.pause.description', { name, count: statuspage.failureCount }),
-                    '',
-                    `**${translation.trans('messages.pause.reason_label')}:** ${reason}`,
-                    '',
-                    translation.trans('messages.pause.resume_hint', { url: statuspage.url }),
-                ].join('\n'))
-                .setTimestamp();
-        });
-    }
-
-    static async notifyResume(statuspage, client, models) {
-        const name = statuspage.name || statuspage.url;
-
-        return this.#broadcast(statuspage, models, client, (locale) => {
-            translation.setLocale(locale);
-
-            return new EmbedBuilder()
-                .setColor(Colors.Green)
-                .setTitle(`▶️ ${translation.trans('messages.resume.title')}`)
-                .setDescription(translation.trans('messages.resume.description', { name }))
-                .setTimestamp();
-        });
+        return marked > 0;
     }
 
     /**
@@ -261,7 +264,7 @@ export class StatuspagePauseManager {
         return { success: true, message: 'Statuspage resumed — it will be retried on the next cycle' };
     }
 
-    /** All announced-paused statuspages a guild is subscribed to. */
+    /** All paused statuspages a guild is subscribed to. */
     static async getPausedForGuild(models, guildId) {
         return models.Statuspage.findAll({
             where: { paused: true },

@@ -197,30 +197,26 @@ e2e('the update loop', () => {
             expect(dead.failureCount).toBe(before.count);
         }, 60000);
 
-        test('tells the subscribers exactly once when it crosses the threshold', async () => {
+        test('marks the message it already posted, without posting a new one', async () => {
+            // An outage is the absence of news, not news. It used to post its own embed into
+            // every subscribed channel — and the recovery posted a second one — so a page
+            // having a bad night meant two notifications per channel about something nobody
+            // asked to be told. The status message that is already there gains one line in
+            // its footer instead, once, and says nothing when it comes back.
             await dropLock(dead.id);
             await expireBackoff(dead);
+            // Nothing to annotate: this page has never been reachable, so it never rendered
+            // a status message. Nothing at all reaches the channel.
             const summary = await runCycle(client);
-
-            expect(summary.announced).toBe(1);
+            expect(summary.marked).toBe(0);
 
             await dead.reload();
             expect(dead.backoffLevel).toBe(NOTIFY_AT_LEVEL);
             expect(dead.paused).toBe(true);
 
-            const notices = sent.filter((m) => m.channelId === 'loop-dead');
-            expect(notices).toHaveLength(1);
-
-            const text = textOf().join('\n');
-            expect(text).toContain('dead.invalid');
-            // A key instead of a sentence is the most visible way i18n breaks here.
-            expect(text).not.toMatch(/messages\.pause\./);
-
-            // And it must name the ACTUAL cause. This is what the bug looked like from a
-            // customer's channel: a DNS outage was announced as "no longer a LIVCK status
-            // page", which reads as "you broke your own status page".
-            expect(text).toContain(deLang.messages.pause.reason.DNS);
-            expect(text).not.toContain(deLang.messages.pause.reason.NOT_LIVCK);
+            // This page never rendered anything (it has never been reachable), so there is no
+            // message to annotate and therefore nothing at all in the channel.
+            expect(sent.filter((m) => m.channelId === 'loop-dead')).toHaveLength(0);
         }, 60000);
 
         test('does not repeat itself on the cycles after', async () => {

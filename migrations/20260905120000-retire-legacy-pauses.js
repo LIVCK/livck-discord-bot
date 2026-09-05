@@ -8,16 +8,17 @@
  * nobody noticed is still sitting there with `paused = 1`, possibly for years.
  *
  * The new loop deliberately no longer filters on `paused`, because the backoff ladder replaced
- * the dead end. That means the first cycle after this deploy would pick every one of those rows
- * up, succeed, see `wasPaused`, and broadcast "▶️ Updates fortgesetzt — die Statusseite ist
- * wieder erreichbar" to every channel subscribed to it: the end of an outage those subscribers
- * were never told about, sometimes years old. All of it in a single cycle, 100 pages in
- * parallel, one `channel.send` per subscription — which is exactly the burst shape that puts a
- * bot near Discord's invalid-request ceiling and the Cloudflare ban behind it.
+ * the dead end — so the first cycle after this deploy picks every one of those rows up again.
+ * Left alone they would each carry a stale `pauseReason` and `failureCount` from an outage
+ * that may be years old, and `handleSuccess` would write to every one of them on the same
+ * cycle. Clearing them up front means the new state machine starts from a clean slate: a page
+ * that is still broken climbs the ladder from level zero, and one that recovered long ago is
+ * simply healthy.
  *
- * So the legacy pauses are cleared here, before the loop ever sees them. A page that is still
- * broken simply climbs the new ladder and announces itself properly; a page that recovered
- * long ago comes back without shouting about it.
+ * (An earlier version of this branch also broadcast a "back online" embed into every
+ * subscribed channel on recovery, which would have made this migration urgent rather than
+ * tidy. That message is gone — an outage is now a line in the footer of the status message
+ * that is already there, and coming back is announced by nothing at all.)
  *
  * Only rows the OLD code paused are touched. Anything the new state machine paused carries a
  * `backoffLevel` of at least NOTIFY_AT_LEVEL, so `backoffLevel = 0` identifies the legacy ones

@@ -248,10 +248,7 @@
       }
     },
     "pause": {
-      "title": "Updates paused",
-      "description": "Updates for **:name** were paused automatically after :count consecutive failed fetches.",
-      "reason_label": "Reason",
-      "resume_hint": "Updates resume on their own once the page is reachable again. Use `/livck resume url::url` to retry right away.",
+      "footer": "unreachable (:reason)",
       "reason": {
         "TIMEOUT": "Connection timed out",
         "DNS": "Domain does not resolve",
@@ -264,10 +261,6 @@
         "NETWORK": "Network error",
         "UNKNOWN": "Unknown error"
       }
-    },
-    "resume": {
-      "title": "Updates resumed",
-      "description": "Status page **:name** is reachable again. Updates continue."
     }
   },
   "errors": {

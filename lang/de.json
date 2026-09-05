@@ -248,10 +248,7 @@
       }
     },
     "pause": {
-      "title": "Updates pausiert",
-      "description": "Die Updates für **:name** wurden automatisch pausiert, nachdem :count Abrufe in Folge fehlgeschlagen sind.",
-      "reason_label": "Grund",
-      "resume_hint": "Sobald die Seite wieder erreichbar ist, laufen die Updates von selbst weiter. Mit `/livck resume url::url` kannst du es sofort erneut versuchen.",
+      "footer": "nicht erreichbar (:reason)",
       "reason": {
         "TIMEOUT": "Zeitüberschreitung bei der Verbindung",
         "DNS": "Domain nicht auflösbar",
@@ -264,10 +261,6 @@
         "NETWORK": "Netzwerkfehler",
         "UNKNOWN": "Unbekannter Fehler"
       }
-    },
-    "resume": {
-      "title": "Updates fortgesetzt",
-      "description": "Die Statusseite **:name** ist wieder erreichbar. Die Updates laufen weiter."
     }
   },
   "errors": {

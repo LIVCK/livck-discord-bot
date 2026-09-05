@@ -132,14 +132,14 @@ export const processStatuspage = async (statuspage, client) => {
 
         const result = await StatuspagePauseManager.handleFailure(statuspage, error, client, models);
 
-        return { failed: true, paused: result.notified, level: result.level };
+        return { failed: true, marked: result.marked, level: result.level };
     }
 };
 
 /**
  * Process every status page that is due.
  *
- * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, announced: number}>}
+ * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, marked: number}>}
  */
 export const runCycle = async (client) => {
     const now = new Date();
@@ -170,7 +170,7 @@ export const runCycle = async (client) => {
         },
     });
 
-    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, announced: 0 };
+    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, marked: 0 };
 
     if (due.length === 0) {
         logger.debug('[UpdateLoop] Nothing due');
@@ -191,14 +191,14 @@ export const runCycle = async (client) => {
             if (result.value?.updated) summary.updated += 1;
             if (result.value?.skipped) summary.skipped += 1;
             if (result.value?.failed) summary.failed += 1;
-            if (result.value?.paused) summary.announced += 1;
+            if (result.value?.marked) summary.marked += 1;
         }
     }
 
     // One summary line per cycle instead of several lines per statuspage.
     logger.info(
         `[UpdateLoop] ${summary.due} due · ${summary.updated} updated · ${summary.skipped} cached · ` +
-        `${summary.failed} failed${summary.announced > 0 ? ` · ${summary.announced} paused` : ''}`
+        `${summary.failed} failed${summary.marked > 0 ? ` · ${summary.marked} marked stale` : ''}`
     );
 
     return summary;

@@ -39,21 +39,51 @@ const makeStatuspage = (overrides = {}) => {
     return row;
 };
 
+/**
+ * A pause NEVER posts anything. It edits the footer of the status message that is already in
+ * the channel — so `sent` must stay empty for ever, and `edits` is what carries the signal.
+ */
 const makeContext = () => {
     const sent = [];
+    const edits = [];
+
+    const existing = (id) => ({
+        embeds: [{ toJSON: () => ({ title: 'Dienste von Example', description: 'alles gut', footer: { text: 'Example' } }) }],
+        components: [],
+        id,
+    });
+
     const client = {
-        channels: { fetch: async (id) => ({ id, send: async (msg) => { sent.push({ id, msg }); } }) },
+        channels: {
+            fetch: async (id) => ({
+                id,
+                send: async (msg) => { sent.push({ id, msg }); },
+                messages: {
+                    fetch: async (messageId) => existing(messageId),
+                    edit: async (messageId, payload) => { edits.push({ channelId: id, messageId, payload }); return {}; },
+                },
+            }),
+        },
     };
+
     const models = {
         Subscription: {
             findAll: async () => [
-                { channelId: 'c1', locale: 'de' },
-                { channelId: 'c2', locale: 'en' },
+                { id: 1, channelId: 'c1', locale: 'de' },
+                { id: 2, channelId: 'c2', locale: 'en' },
             ],
         },
+        Message: {
+            findOne: async ({ where }) => ({ id: where.subscriptionId, messageId: `msg-${where.subscriptionId}` }),
+            update: async () => [1],
+        },
     };
-    return { client, models, sent };
+
+    return { client, models, sent, edits };
 };
+
+/** The footer note, in one of the two languages. */
+const footerNote = /nicht erreichbar|unreachable/;
 
 describe('backoffDelay', () => {
     test('level 1 is the shortest rung', () => {
@@ -116,32 +146,57 @@ describe('handleFailure', () => {
         expect(page.backoffLevel).toBe(BACKOFF_LADDER_MS.length);
     });
 
-    test('subscribers are told once the threshold is crossed', async () => {
+    test('the existing message gains a footer note, and nothing is posted', async () => {
+        // An outage is the absence of news, not news. It used to post its own embed into
+        // every subscribed channel, and the recovery posted another one — two notifications
+        // per channel per outage, about something nobody asked to be told.
         const page = makeStatuspage();
-        const { client, models, sent } = makeContext();
+        const { client, models, sent, edits } = makeContext();
 
         for (let i = 0; i < NOTIFY_AT_LEVEL; i += 1) {
             await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
         }
 
         expect(page.paused).toBe(true);
-        expect(sent).toHaveLength(2); // one per subscribed channel
+        expect(sent).toHaveLength(0);
+        expect(edits).toHaveLength(2); // one per subscribed channel
+
+        for (const { payload } of edits) {
+            const footer = payload.embeds[0].footer.text;
+            expect(footer.startsWith('Example')).toBe(true);
+            expect(footer).toMatch(footerNote);
+            // The message keeps everything it was showing.
+            expect(payload.embeds[0].description).toBe('alles gut');
+        }
     });
 
-    test('they are not told again on every later failure', async () => {
+    test('the note names the real cause', async () => {
         const page = makeStatuspage();
-        const { client, models, sent } = makeContext();
+        const { client, models, edits } = makeContext();
+
+        const dns = Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } });
+        for (let i = 0; i < NOTIFY_AT_LEVEL; i += 1) {
+            await StatuspagePauseManager.handleFailure(page, dns, client, models);
+        }
+
+        expect(edits[0].payload.embeds[0].footer.text).toContain('Domain nicht auflösbar');
+    });
+
+    test('the footer is not annotated twice on a later failure', async () => {
+        const page = makeStatuspage();
+        const { client, models, sent, edits } = makeContext();
 
         for (let i = 0; i < NOTIFY_AT_LEVEL + 6; i += 1) {
             await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
         }
 
-        expect(sent).toHaveLength(2);
+        expect(sent).toHaveLength(0);
+        expect(edits).toHaveLength(2);
     });
 
-    test('nothing is announced before the threshold', async () => {
+    test('nothing at all happens before the threshold', async () => {
         const page = makeStatuspage();
-        const { client, models, sent } = makeContext();
+        const { client, models, sent, edits } = makeContext();
 
         for (let i = 0; i < NOTIFY_AT_LEVEL - 1; i += 1) {
             await StatuspagePauseManager.handleFailure(page, new Error('fetch failed'), client, models);
@@ -149,6 +204,7 @@ describe('handleFailure', () => {
 
         expect(page.paused).toBe(false);
         expect(sent).toHaveLength(0);
+        expect(edits).toHaveLength(0);
     });
 
     test('the reason reflects the actual failure', async () => {
@@ -196,18 +252,21 @@ describe('handleSuccess', () => {
         expect(page.pauseReason).toBeNull();
     });
 
-    test('an announced pause is followed by a recovery notice', async () => {
+    test('coming back says nothing either', async () => {
+        // There is no "back online" message. The next render simply produces the page's real
+        // content again, footer included, and that edit is the whole signal.
         const page = makeStatuspage({ paused: true, backoffLevel: 5, pauseReason: 'DNS' });
-        const { client, models, sent } = makeContext();
+        const { client, models, sent, edits } = makeContext();
 
         const recovered = await StatuspagePauseManager.handleSuccess(page, client, models);
 
         expect(recovered).toBe(true);
         expect(page.paused).toBe(false);
-        expect(sent).toHaveLength(2);
+        expect(sent).toHaveLength(0);
+        expect(edits).toHaveLength(0);
     });
 
-    test('recovering from a silent backoff needs no announcement', async () => {
+    test('recovering from a silent backoff is silent too', async () => {
         const page = makeStatuspage({ backoffLevel: 2, failureCount: 2 });
         const { client, models, sent } = makeContext();
 
