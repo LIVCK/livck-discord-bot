@@ -39,6 +39,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// The Discord credentials usually live in `.env`, and Jest loads nothing on its own. `dotenv`
+// never overwrites a variable that is already set, so the DB_* passed on the command line
+// survive this — and assertThrowaway checks the connection that was actually opened rather
+// than trusting that, because `.env` may still be pointing at a production database.
+dotenv.config();
 
 const enabled = process.env.LIVCK_DISCORD_E2E === '1';
 
@@ -123,6 +130,16 @@ e2e('against a real Discord bot', () => {
     /** Everything this suite created, so it can be removed again. */
     const posted = [];
 
+    /**
+     * Read a message from the API, not from discord.js's cache.
+     *
+     * The cache holds the message as it looked when the bot last saw it, so a plain
+     * `messages.fetch(id)` right after the bot edited it hands back the version BEFORE the
+     * edit — and every assertion about what the reader now sees would be checking the wrong
+     * object. This is a property of the test, not of the bot.
+     */
+    const fetchFresh = (messageId) => channel.messages.fetch({ message: messageId, force: true });
+
     const PAGES = [
         { url: 'https://status.livck.com', name: 'status.livck.com', kind: 'SELF_HOSTED' },
         { url: 'https://cloud.statuspage.de', name: 'cloud.statuspage.de', kind: 'CLOUD' },
@@ -195,103 +212,123 @@ e2e('against a real Discord bot', () => {
 
     describe('a status message', () => {
         let page;
+        let subscription;
 
-        beforeAll(async () => {
-            page = await models.Statuspage.create({ url: PAGES[0].url, name: PAGES[0].name });
-            for (const layout of LAYOUTS) {
-                await models.Subscription.create({
-                    guildId: credentials.TEST_GUILD_ID,
-                    channelId: credentials.TEST_CHANNEL_ID,
-                    statuspageId: page.id,
-                    layout,
-                    locale: 'de',
-                    eventTypes: { STATUS: true, NEWS: true },
-                    interval: 60,
-                    createdAt: new Date('2020-01-01'),
-                });
-            }
-        }, 60000);
-
-        test('every layout is accepted by the API', async () => {
-            // Locally an EmbedBuilder validates the shape; only Discord decides whether it is
-            // actually deliverable.
-            clearSnapshotCache();
-            const summary = await runCycle(client);
-            await track();
-
-            expect(summary.failed).toBe(0);
-
-            const rows = await models.Message.findAll({ where: { category: 'STATUS' } });
-            expect(rows).toHaveLength(LAYOUTS.length);
-            for (const row of rows) {
-                const message = await channel.messages.fetch(row.messageId);
-                expect(message.embeds).toHaveLength(1);
-                expect(message.embeds[0].title.length).toBeGreaterThan(0);
-            }
-        }, 180000);
-
-        test('a second cycle sends nothing at all', async () => {
-            // The dirty check is what keeps the bot under 50 requests a second. Measured here
-            // against the real API rather than a counter in a stub.
-            const before = await Promise.all(
-                (await models.Message.findAll({ where: { category: 'STATUS' } }))
-                    .map(async (row) => (await channel.messages.fetch(row.messageId)).editedTimestamp)
-            );
-
+        /** Drop every claim, so the next runCycle actually does the work. */
+        const nextCycle = async () => {
+            const cache = (await import('../../database/redis.js')).default;
             for (const row of await models.Statuspage.findAll()) {
-                const cache = (await import('../../database/redis.js')).default;
                 await cache.del(`dc-bot:statuspage:${row.id}`);
             }
             clearSnapshotCache();
+        };
+
+        beforeAll(async () => {
+            page = await models.Statuspage.create({ url: PAGES[0].url, name: PAGES[0].name });
+
+            // ONE subscription. There is a unique index on
+            // (guildId, channelId, statuspageId, locale), so a channel cannot hold the same
+            // page twice in the same language — the layouts are exercised by switching this
+            // one over, which also puts the "layout changed" edit through the real API.
+            subscription = await models.Subscription.create({
+                guildId: credentials.TEST_GUILD_ID,
+                channelId: credentials.TEST_CHANNEL_ID,
+                statuspageId: page.id,
+                layout: 'DETAILED',
+                locale: 'de',
+                eventTypes: { STATUS: true, NEWS: true },
+                interval: 60,
+                createdAt: new Date('2020-01-01'),
+            });
+        }, 60000);
+
+        test.each(LAYOUTS)('the %s layout is accepted by the API', async (layout) => {
+            // Locally an EmbedBuilder validates the shape; only Discord decides whether it is
+            // actually deliverable.
+            await subscription.update({ layout });
+            await nextCycle();
+
+            const summary = await runCycle(client);
+            expect(summary.failed).toBe(0);
+            await track();
+
+            const row = await models.Message.findOne({
+                where: { subscriptionId: subscription.id, category: 'STATUS' },
+            });
+            expect(row).not.toBeNull();
+
+            const message = await fetchFresh(row.messageId);
+            expect(message.embeds).toHaveLength(1);
+            expect(message.embeds[0].title.length).toBeGreaterThan(0);
+
+            // Nothing a reader should ever see.
+            const text = JSON.stringify(message.embeds[0].toJSON());
+            expect(text).not.toMatch(/undefined|\[object Object\]|\bNaN\b/);
+            expect(text).not.toMatch(/messages\.[a-z_]+\.[a-z_.]+/i);
+        }, 180000);
+
+        test('a second cycle edits nothing at all', async () => {
+            // The dirty check is what keeps the bot under 50 requests a second. Measured here
+            // on the real message rather than on a counter in a stub.
+            const row = await models.Message.findOne({
+                where: { subscriptionId: subscription.id, category: 'STATUS' },
+            });
+            const before = (await fetchFresh(row.messageId)).editedTimestamp;
+
+            await nextCycle();
             await runCycle(client);
 
-            const after = await Promise.all(
-                (await models.Message.findAll({ where: { category: 'STATUS' } }))
-                    .map(async (row) => (await channel.messages.fetch(row.messageId)).editedTimestamp)
-            );
-
-            expect(after).toEqual(before);
+            const after = (await fetchFresh(row.messageId)).editedTimestamp;
+            expect(after).toBe(before);
         }, 180000);
 
         test('the pause footer edits the message that is already there', async () => {
             // The path that reads a real Embed back out of Discord and writes it again — the
-            // one place where `messages.fetch` and `Read Message History` actually matter.
+            // one place where messages.fetch and Read Message History actually matter.
             const { default: PauseManager, NOTIFY_AT_LEVEL } =
                 await import('../../services/statuspagePauseManager.js');
 
             await page.reload();
-            const before = (await models.Message.findAll({ where: { category: 'STATUS' } })).length;
+            const before = await models.Message.count({ where: { category: 'STATUS' } });
 
             for (let i = 0; i < NOTIFY_AT_LEVEL; i += 1) {
                 await PauseManager.handleFailure(page, new Error('fetch failed'), client, models);
             }
 
-            const rows = await models.Message.findAll({ where: { category: 'STATUS' } });
-            expect(rows).toHaveLength(before); // nothing new was posted
+            // Nothing new was posted.
+            expect(await models.Message.count({ where: { category: 'STATUS' } })).toBe(before);
 
-            for (const row of rows) {
-                const message = await channel.messages.fetch(row.messageId);
-                expect(message.embeds[0].footer.text).toBe('inaktiv');
-                // And everything else survived the edit.
-                expect(message.embeds[0].title.length).toBeGreaterThan(0);
-            }
+            const row = await models.Message.findOne({
+                where: { subscriptionId: subscription.id, category: 'STATUS' },
+            });
+            const message = await fetchFresh(row.messageId);
+
+            expect(message.embeds[0].footer.text).toBe('inaktiv');
+            // And everything else survived the edit.
+            expect(message.embeds[0].title.length).toBeGreaterThan(0);
+            expect(message.embeds[0].description || message.embeds[0].fields.length).toBeTruthy();
         }, 180000);
 
-        test('and the next good cycle puts the name back', async () => {
+        test('and the next good cycle puts the name back, saying nothing', async () => {
             await page.reload();
-            await page.update({ paused: false, backoffLevel: 0, nextAttemptAt: null, failureCount: 0 });
+            await page.update({
+                paused: false, backoffLevel: 0, nextAttemptAt: null,
+                failureCount: 0, pauseReason: null, kind: 'SELF_HOSTED',
+            });
 
-            for (const row of await models.Statuspage.findAll()) {
-                const cache = (await import('../../database/redis.js')).default;
-                await cache.del(`dc-bot:statuspage:${row.id}`);
-            }
-            clearSnapshotCache();
+            const beforeCount = await models.Message.count({ where: { category: 'STATUS' } });
+
+            await nextCycle();
             await runCycle(client);
 
-            for (const row of await models.Message.findAll({ where: { category: 'STATUS' } })) {
-                const message = await channel.messages.fetch(row.messageId);
-                expect(message.embeds[0].footer.text).not.toBe('inaktiv');
-            }
+            const row = await models.Message.findOne({
+                where: { subscriptionId: subscription.id, category: 'STATUS' },
+            });
+            const message = await fetchFresh(row.messageId);
+
+            expect(message.embeds[0].footer.text).not.toBe('inaktiv');
+            // No "back online" message was posted — the edit is the whole signal.
+            expect(await models.Message.count({ where: { category: 'STATUS' } })).toBe(beforeCount);
         }, 180000);
     });
 
