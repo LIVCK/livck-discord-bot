@@ -58,7 +58,32 @@ const collectLeaves = (nodes, path, out) => {
         if (!isVisible(node)) continue;
 
         if (node.is_group) {
+            const before = out.length;
             collectLeaves(node.children, [...path, node.name], out);
+
+            // A NESTED GROUP THAT YIELDED NOTHING STILL HAS TO SHOW UP.
+            //
+            // When a group hides its healthy children the server prunes them, so `children`
+            // comes back empty and recursing past it left nothing behind — the group, its
+            // name and its rolled-up status all vanished. A page laid out as
+            // `Region EU > Gameserver (hides 66 healthy children)` therefore rendered as
+            // "Region EU — Keine Dienste vorhanden." while the customer's own page showed
+            // "Gameserver — operational". Only TOP-LEVEL hiding groups were handled.
+            //
+            // One line, carrying exactly what the public page carries: the group's name and
+            // its own status. Never a count — how many services sit behind a hiding group is
+            // precisely what it is hiding. If some of its children ARE affected they came
+            // through the recursion above and are listed individually, which is the more
+            // useful answer, so the summary line is only added when there was nothing.
+            if (out.length === before) {
+                out.push(makeService({
+                    id: node.id,
+                    name: node.name,
+                    description: node.description ?? null,
+                    status: normalizeStatus(node.status),
+                    path,
+                }));
+            }
             continue;
         }
 

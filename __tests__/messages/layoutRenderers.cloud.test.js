@@ -139,13 +139,23 @@ describe('hidden healthy children', () => {
         expect(description).not.toContain('66');
     });
 
-    test('an ordinary empty group still renders as it always has', () => {
-        // A self-hosted category with no monitors is genuinely empty — not hiding anything —
-        // and must keep its previous rendering. The golden snapshots pin the field layouts;
-        // this pins the description ones.
+    test('an ordinary empty group gets a line too, not just a hiding one', () => {
+        // This test used to pin the opposite, on the reasoning that a genuinely empty category
+        // "must keep its previous rendering". That reasoning was wrong: a bold heading with
+        // nothing under it reads as broken whether the group is hiding something or not, and
+        // an ordinary empty group has no `childrenTotal`, so the guard that was supposed to
+        // catch this skipped it. If it is the only category, the entire description was one
+        // bold word.
         const snapshot = snapshotOf([group('g', { de: 'Leer' }, [])]);
 
-        expect(descriptionOf(renderTreeLayout(snapshot, 'de'))).toBe('**🟢 Leer**\n');
+        const tree = descriptionOf(renderTreeLayout(snapshot, 'de'));
+        expect(tree.split('\n')[1].trim()).not.toBe('');
+
+        const minimal = descriptionOf(renderMinimalLayout(snapshot, 'de'));
+        expect(minimal.split('\n')[1].trim()).not.toBe('');
+
+        // And still no count, for a group that has nothing to count.
+        expect(tree).not.toMatch(/\d+\s*\/\s*\d+/);
     });
 
     test('a normal group is unaffected by any of this', () => {

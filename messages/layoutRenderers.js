@@ -444,10 +444,13 @@ export const renderTreeLayout = (snapshot, locale = 'de') => {
             description += `    ${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
-        // A group whose children the source hid would otherwise be a bare heading with
-        // nothing under it, which reads as broken rather than as healthy. State its own
-        // status instead — the same thing the field layouts do, and without a count.
-        if (group.services.length === 0 && !groupCounts(group).disclose) {
+        // ANY group with nothing under it, not just a hiding one. A bare heading reads as
+        // broken rather than as healthy, and the earlier version only covered the Cloud's
+        // hiding groups: an ordinary empty category — a self-hosted one with no monitors yet,
+        // or a Cloud group whose children are all invisible — has no `childrenTotal`, so
+        // `disclose` is true, the guard was skipped and the heading was emitted alone. If it
+        // is the only category, the whole description is one bold word.
+        if (group.services.length === 0) {
             description += `    ${describeStatus(group.status)}\n`;
         }
 
@@ -481,8 +484,8 @@ export const renderMinimalLayout = (snapshot, locale = 'de') => {
             description += `${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
-        // See the tree layout: a hiding group must not render as an empty heading.
-        if (group.services.length === 0 && !groupCounts(group).disclose) {
+        // See the tree layout: no group may render as an empty heading, hiding or not.
+        if (group.services.length === 0) {
             description += `${getStatusDot(group.status)} ${describeStatus(group.status)}\n`;
         }
 

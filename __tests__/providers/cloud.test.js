@@ -35,6 +35,53 @@ describe('normalizeStatus', () => {
     });
 });
 
+describe('a hiding group one level down', () => {
+    // Only TOP-LEVEL hiding groups were handled. When a group hides its healthy children the
+    // server prunes them, so `children` comes back empty — and recursing past the node left
+    // nothing at all behind: the group, its name and its status all vanished. A page laid out
+    // as `Region EU > Gameserver (hides 66 healthy children)` rendered as "Region EU — Keine
+    // Dienste vorhanden." while the customer's own page showed "Gameserver — operational".
+    const nested = () => ([{
+        id: 'g-eu', name: { de: 'Region EU' }, is_group: true, status: 'operational', is_visible: true,
+        children: [{
+            id: 'g-gs', name: { de: 'Gameserver' }, is_group: true, status: 'operational', is_visible: true,
+            children: [], children_total: 66, children_hidden: 66,
+        }],
+    }]);
+
+    test('survives as one line carrying its own status', () => {
+        const [group] = flattenTree(nested());
+
+        expect(group.services).toHaveLength(1);
+        expect(group.services[0].name.de).toBe('Gameserver');
+        expect(group.services[0].status).toBe(STATUS.OPERATIONAL);
+    });
+
+    test('never says how many services it is hiding', () => {
+        // That number is precisely what the group exists to hide.
+        const [group] = flattenTree(nested());
+
+        expect(JSON.stringify(group.services)).not.toContain('66');
+        expect(group.services[0].childrenTotal).toBeUndefined();
+    });
+
+    test('its affected children are listed instead of a summary line', () => {
+        // When something under it IS broken, the individual services are the more useful
+        // answer — and they come through the tree already, so no summary line is added.
+        const tree = nested();
+        tree[0].children[0].children = [
+            { id: 's1', name: { de: 'Node 4' }, is_group: false, status: 'major_outage', is_visible: true },
+        ];
+
+        const [group] = flattenTree(tree);
+
+        expect(group.services).toHaveLength(1);
+        expect(group.services[0].name.de).toBe('Node 4');
+        // The path keeps the raw locale map, like every other translatable field in the DTO.
+        expect(group.services[0].path).toEqual([{ de: 'Gameserver' }]);
+    });
+});
+
 describe('flattenTree', () => {
     test('a top-level group becomes one group with its direct leaves', () => {
         const groups = flattenTree([group('g1', 'Web', [leaf('s1', 'Website'), leaf('s2', 'API')])]);

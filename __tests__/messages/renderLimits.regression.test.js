@@ -95,6 +95,51 @@ describe('the cosmetic padding of inline rows', () => {
     }, 60000);
 });
 
+describe('a sub-group heading at the overflow cut', () => {
+    // The detailed layout writes a sub-group's name as its own bold line and its services
+    // underneath. A cut landing right after such a line left the heading standing over
+    // nothing, followed by "+4 weitere" — which reads as though that whole group were what
+    // got dropped. About one cut in nine landed there.
+    const nested = (perSub, nameLength) => makeSnapshot({
+        source: SOURCE.CLOUD, url: 'https://status.example.com', name: { de: 'X' },
+        overall: STATUS.OPERATIONAL, defaultLocale: 'de', locales: ['de'],
+        groups: [makeGroup({
+            id: 'g', name: { de: 'Infrastruktur' }, status: STATUS.OPERATIONAL,
+            services: Array.from({ length: 4 * perSub }, (_, i) => makeService({
+                id: `s${i}`,
+                name: { de: `Dienst ${'x'.repeat(nameLength)}${i}` },
+                status: STATUS.OPERATIONAL,
+                path: [{ de: `Rechenzentrum ${Math.floor(i / perSub) + 1}` }],
+            })),
+        })],
+        alerts: [],
+    });
+
+    const isHeading = (line) => /^\s*\*\*[^*]+\*\*\s*$/.test(line);
+
+    test('never ends a field, for any shape', () => {
+        const render = getLayoutRenderer('DETAILED');
+
+        for (let perSub = 1; perSub <= 18; perSub += 1) {
+            for (let nameLength = 0; nameLength <= 33; nameLength += 3) {
+                for (const { embed } of render(nested(perSub, nameLength), 'de')) {
+                    for (const field of embed.toJSON().fields ?? []) {
+                        const lines = field.value.split('\n').filter(Boolean);
+
+                        lines.forEach((line, index) => {
+                            if (!isHeading(line)) return;
+                            const next = lines[index + 1];
+                            expect(next).toBeDefined();
+                            expect(isHeading(next)).toBe(false);
+                            expect(next).not.toMatch(/weitere|more/i);
+                        });
+                    }
+                }
+            }
+        }
+    }, 60000);
+});
+
 describe('stripping HTML out of a markdown body', () => {
     // The old pattern was "anything between angle brackets", which treats ordinary prose as
     // markup — and Discord's own syntax is written the same way.
@@ -117,6 +162,16 @@ describe('stripping HTML out of a markdown body', () => {
         ['<div class="a"><span>tief</span></div>', 'tief'],
     ])('but real markup is still removed: %s', (input, expected) => {
         expect(markdownToDiscord(input)).toBe(expected);
+    });
+
+    test('a table keeps its header on its own line', () => {
+        // `\s` matches a newline, so the alignment-row pattern swallowed the line breaks
+        // around `|---|---|` as well as the row — and the leading `\s*` on the data rows ate
+        // the next one. The header ended up glued to the first row.
+        const table = 'Regionen:\n\n| Region | Status |\n|--------|--------|\n| EU | weg |\n| US | ok |';
+
+        expect(markdownToDiscord(table)).toContain('Region · Status\n');
+        expect(markdownToDiscord(table)).not.toContain('StatusEU');
     });
 
     test('a code fence keeps its tags', () => {

@@ -58,6 +58,9 @@ export const truncate = (text, max) => {
  * @param {string} [options.separator]
  * @returns {string}
  */
+/** A bold line with nothing else on it: the layouts use this shape for a sub-group heading. */
+const isHeadingLine = (line) => /^\s*\*\*[^*]+\*\*\s*$/.test(line ?? '');
+
 export const joinWithinLimit = (lines, { max, more = null, separator = '\n' } = {}) => {
     const items = (lines || []).filter((line) => line !== null && line !== undefined && line !== '');
     if (items.length === 0) return '';
@@ -79,6 +82,18 @@ export const joinWithinLimit = (lines, { max, more = null, separator = '\n' } = 
 
         kept.push(items[i]);
         length += cost;
+    }
+
+    // A HEADING IS NOT A LINE THAT CAN END A LIST.
+    //
+    // The detailed layout writes a sub-group's name as its own `**Rechenzentrum 4**` line and
+    // then its services underneath. A cut landing right after such a line leaves the heading
+    // standing over nothing, followed by "+4 more" — which reads as if that whole group were
+    // the thing that was dropped. Across realistic shapes (services per sub-group × name
+    // length) about one cut in nine landed there. Give the heading back and let its services
+    // count towards the overflow instead.
+    while (kept.length > 0 && isHeadingLine(kept.at(-1))) {
+        kept.pop();
     }
 
     const dropped = items.length - kept.length;
