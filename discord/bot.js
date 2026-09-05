@@ -14,9 +14,17 @@ const registerCommands = async (commandsFolder, models) => {
 
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
 
-    await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), { body: commands })
-        .then(() => console.log(`Successfully reloaded application (/) commands: ${commands.map(command => command.name).join(', ')}`))
-        .catch(error => console.error(`Failed to register commands: ${error}`));
+    try {
+        await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), { body: commands });
+        console.log(`Successfully reloaded application (/) commands: ${commands.map((command) => command.name).join(', ')}`);
+    } catch (error) {
+        // Discord rejects the command set as a WHOLE — one oversized localized description and
+        // every command is gone. This used to be logged and shrugged off, so the bot came up
+        // looking healthy with no slash commands at all and nothing said why. It is fatal
+        // instead: the process supervisor restarts, and somebody sees it.
+        console.error('Failed to register commands:', error?.rawError ? JSON.stringify(error.rawError) : error);
+        process.exit(1);
+    }
 
     return commands;
 };

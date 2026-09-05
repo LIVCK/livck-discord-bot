@@ -26,6 +26,9 @@ import { AsyncLocalStorage } from 'async_hooks';
  */
 const localeScope = new AsyncLocalStorage();
 
+/** Discord's cap on a command or option description, localizations included. */
+const DISCORD_DESCRIPTION_LIMIT = 100;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -287,6 +290,17 @@ class Translation {
         // Remove default locale
         delete localizations[defaultLocale];
         delete localizations[shortLocale];
+
+        // CLAMPED, because these go into the slash-command registration and Discord rejects
+        // the WHOLE command set over one oversized string — leaving a bot with no commands at
+        // all. Community translations arrive from Crowdin without anyone here reading them,
+        // and a language that needs more words than English is the normal case, not the
+        // exception. One truncated description beats no commands.
+        for (const [locale, text] of Object.entries(localizations)) {
+            if (typeof text === 'string' && text.length > DISCORD_DESCRIPTION_LIMIT) {
+                localizations[locale] = `${text.slice(0, DISCORD_DESCRIPTION_LIMIT - 1)}…`;
+            }
+        }
 
         return localizations;
     }
