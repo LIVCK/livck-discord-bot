@@ -73,7 +73,12 @@ const needsHeartbeat = (record, now) => {
  * Create or update the Discord message tracked by a `Message` row.
  *
  * @param {object} options
- * @param {import('discord.js').TextBasedChannel} options.channel
+ * @param {import('discord.js').TextBasedChannel|(() => Promise<import('discord.js').TextBasedChannel|null>)} options.channel
+ *   The channel, or a function returning it. A THUNK is what keeps a skipped update free: the
+ *   channel is only resolved once something is actually going to be sent. discord.js serves
+ *   `channels.fetch` from its gateway cache in steady state, but that cache is cold right after
+ *   a restart — and resolving it eagerly would mean one REST call per subscription in the very
+ *   first cycle, which is exactly when the bot can least afford them.
  * @param {object|null} options.record - the Message model row, or null to create one
  * @param {object} options.payload - `{embeds, components, content}` for Discord
  * @param {object} options.models
@@ -96,22 +101,30 @@ export const syncMessage = async ({
 }) => {
     const hash = hashPayload(payload);
 
+    // Decided BEFORE the channel is touched, so an unchanged message costs nothing at all.
+    if (record) {
+        const unchanged = record.contentHash === hash;
+        const stale = heartbeat && needsHeartbeat(record, Date.now());
+
+        if (unchanged && !stale) {
+            return 'skipped';
+        }
+    }
+
+    const resolved = typeof channel === 'function' ? await channel() : channel;
+    if (!resolved) {
+        return 'skipped';
+    }
+
     if (!record) {
-        const sent = await (send ? send(payload) : channel.send(payload));
+        const sent = await (send ? send(payload, resolved) : resolved.send(payload));
         await models.Message.create({ ...create, messageId: sent.id, contentHash: hash });
         return 'created';
     }
 
-    const unchanged = record.contentHash === hash;
-    const stale = heartbeat && needsHeartbeat(record, Date.now());
-
-    if (unchanged && !stale) {
-        return 'skipped';
-    }
-
     try {
         // One PATCH. No preceding fetch — the message ID is all Discord needs.
-        await channel.messages.edit(record.messageId, payload);
+        await resolved.messages.edit(record.messageId, payload);
         await record.update({ contentHash: hash });
         return 'updated';
     } catch (error) {

@@ -35,6 +35,11 @@ jest.unstable_mockModule('../../models/index.js', () => ({
         Subscription: { destroy: async ({ where }) => { db.destroyed.push(where.id); } },
         RoleMention: { findAll: async () => db.roleMentions },
         Message: {
+            // Used by the close-out reconciliation; without it that path throws into its own
+            // catch and the tests would pass while the feature silently did nothing.
+            findAll: async ({ where }) => db.messages.filter(
+                (m) => m.subscriptionId === where.subscriptionId && m.category === where.category
+            ),
             findOne: async ({ where }) => db.messages.find(
                 (m) => m.subscriptionId === where.subscriptionId
                     && m.category === where.category

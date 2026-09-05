@@ -14,7 +14,14 @@ status pages just as much.
 
 - **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
   first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
-  Gated behind `CLOUD_ENABLED` (off by default) while Cloud news handling is still incomplete.
+  Gated behind `CLOUD_ENABLED` (off by default) for the rollout.
+- **Threads are finished when their alert ends.** The Cloud drops an incident from
+  `active_incidents` the moment it resolves, so a Discord thread used to keep "we are
+  monitoring" for ever. The closing update is now fetched from the detail endpoint and posted
+  as one more reply. Needs no backend change — the endpoints already exist. When the page
+  will not confirm the ending (`show_incident_history` off → 404) the thread is left on its
+  last legitimate state rather than being given an invented one, and it is never re-queried
+  beyond the reporting window.
 - Cloud component trees nest up to five levels; Discord offers two. The tree is folded onto
   top-level groups and the remaining depth becomes typography inside the field — a sub-heading,
   or a breadcrumb once indentation stops being readable.
@@ -74,6 +81,10 @@ status pages just as much.
   it byte for byte.
 - `handleStatusPage` and `handleAlerts` share one fetch per cycle instead of each making their
   own, which also removes a redundant alerts request self-hosted pages were already paying.
+- The Discord channel is resolved only when a message is actually going to be sent. discord.js
+  serves it from the gateway cache in steady state, but that cache is cold right after a
+  restart — resolving it eagerly meant one REST call per subscription in the very first cycle,
+  which is when the bot can least afford them.
 - `Statuspage.pauseReason` is a `VARCHAR(32)` rather than an `ENUM`, and covers the full failure
   vocabulary (`TIMEOUT`, `DNS`, `REFUSED`, `TLS`, `HTTP_4XX`, `HTTP_5XX`, `RATE_LIMITED`,
   `NOT_LIVCK`, `NETWORK`, `UNKNOWN`).
@@ -83,6 +94,19 @@ status pages just as much.
   dead domain went from ~5760 log entries a day to roughly ten.
 - Discord rate limiting is now reported through a `rateLimited` listener; previously discord.js
   queued silently and the only symptom was updates arriving later and later.
+
+### Security
+
+- **Component and modal interactions did not check guild ownership.** Twenty-nine lookups
+  resolved a subscription, custom link or role mention straight from the id carried in a
+  `custom_id` — a value the bot put there, not a claim to act on unchecked. `delete_sub_`
+  destroyed a subscription and `edit_api_token_` read and wrote a status page API token that
+  way. Every id-driven path is now scoped to `interaction.guildId`, matching what the
+  slash-command paths already did.
+- Discord's `invalidRequestWarning` is now armed (`invalidRequestWarningInterval: 250`). It was
+  disabled by default, and it is the only advance warning before Discord blocks a bot's IP at
+  the Cloudflare layer for accumulating 401/403/429 responses — which the bot produces whenever
+  a channel is deleted or its permissions are withdrawn.
 
 ### Removed
 

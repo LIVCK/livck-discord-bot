@@ -1,6 +1,6 @@
 import models from '../models/index.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from 'discord.js'
-import { fetchSnapshot } from '../providers/index.js'
+import { fetchSnapshot, fetchClosedAlert } from '../providers/index.js'
 import { truncate } from '../util/String.js'
 import { bodyToDiscord } from '../util/markdown.js'
 import { buildRoleMentions } from '../util/roleMentions.js'
@@ -59,8 +59,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
     // Do not backfill a channel with alerts that predate its subscription.
     if (new Date(subscription.createdAt).getTime() > new Date(alert.startedAt).getTime()) return
 
-    const channel = await client.channels.fetch(subscription.channelId)
-    if (!channel) return
+    const getChannel = () => client.channels.fetch(subscription.channelId)
 
     const embed = buildAlertEmbed(alert, alert, snapshot, locale, footer, alert.startedAt)
     const row = linkRow(alert.url, translation.trans('messages.alerts.view_button'))
@@ -77,7 +76,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
         : await buildRoleMentions(subscription.id, 'NEWS')
 
     const parentResult = await syncMessage({
-        channel,
+        channel: getChannel,
         record: parentRecord,
         payload: {
             content: mentions.content || undefined,
@@ -109,7 +108,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
         })
 
         await syncMessage({
-            channel,
+            channel: getChannel,
             record,
             payload: {
                 embeds: [buildAlertEmbed(
@@ -120,11 +119,56 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
             },
             models,
             create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id },
-            send: (payload) => channel.send({
+            send: (payload, channel) => channel.send({
                 ...payload,
                 reply: { messageReference: parentId, failIfNotExists: false },
             }),
         })
+    }
+}
+
+/**
+ * Finish the threads of alerts that have left the live payload.
+ *
+ * The Cloud removes an incident from `active_incidents` the moment it resolves, so without
+ * this a Discord thread keeps its last seen update forever — usually "we are monitoring",
+ * which reads as an ongoing outage long after everything is fine.
+ *
+ * THREE RULES THIS FOLLOWS
+ *
+ *  1. Only reconcile what is still in the reporting window. Beyond it a thread is left alone
+ *     for good, which is also what stops this re-querying a thread that can never be closed.
+ *  2. Never claim an ending it cannot see. When the page makes the resolved incident
+ *     unreachable (`show_incident_history` off → 404), the thread simply keeps its last
+ *     legitimate state. Silence is the honest answer, not a guess.
+ *  3. Post only what is missing. The closing update is delivered as one more reply in the same
+ *     thread, through the same syncMessage path — so a second pass adds nothing.
+ *
+ * Costs nothing in steady state: the lookup happens only for an alert that actually vanished,
+ * and the result is shared across every subscription watching the same page.
+ */
+const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, locale, footer, client) => {
+    const stillLive = new Set(snapshot.alerts.map((alert) => alert.id))
+    const cutoff = Date.now() - ALERT_WINDOW_MS
+
+    for (const subscription of subscriptions) {
+        if (!subscription.eventTypes.NEWS) continue
+
+        const posted = await models.Message.findAll({
+            where: { subscriptionId: subscription.id, category: 'NEWS' },
+        })
+
+        for (const record of posted) {
+            if (!record.serviceId || stillLive.has(record.serviceId)) continue
+            // Outside the window the thread stays as it is, permanently. This is the bound
+            // that keeps an unconfirmable alert from being re-checked every cycle forever.
+            if (new Date(record.createdAt).getTime() < cutoff) continue
+
+            const closed = await fetchClosedAlert(statuspageRecord, record.serviceId)
+            if (!closed) continue
+
+            await deliverAlert(subscription, closed, snapshot, locale, footer, client)
+        }
     }
 }
 
@@ -159,11 +203,12 @@ export const handleAlerts = async (statuspageId, client) => {
             (alert) => now - new Date(alert.startedAt).getTime() <= ALERT_WINDOW_MS
         )
 
-        if (recentAlerts.length === 0) continue
-
         translation.setLocale(locale)
         const footer = resolveText(snapshot.name, locale, snapshot.defaultLocale) || statuspageRecord.name
 
+        // No early exit on an empty list: an EMPTY alert list is the normal shape of a page
+        // whose incident has just been resolved, and that is precisely when the threads below
+        // still need finishing.
         for (const alert of recentAlerts) {
             for (const subscription of subscriptions) {
                 try {
@@ -179,6 +224,14 @@ export const handleAlerts = async (statuspageId, client) => {
                     throw error
                 }
             }
+        }
+
+        try {
+            await reconcileClosedAlerts(subscriptions, snapshot, statuspageRecord, locale, footer, client)
+        } catch (error) {
+            // Closing out is best-effort: a page that cannot be reached for the lookup must not
+            // fail the whole cycle, because the live part already succeeded.
+            logger.failure('[handleAlerts] close-out', statuspageRecord.url, error, `closeout:${statuspageRecord.id}`)
         }
     }
 

@@ -26,7 +26,15 @@ const initializeBot = async (commandsFolder, models) => {
         process.exit(1);
     }
 
-    const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds],
+        rest: {
+            // Emit invalidRequestWarning every N invalid responses instead of never (the
+            // default of 0 disables the warning entirely). 250 gives ~40 warnings before the
+            // 10,000 ban threshold, which is early enough to react and rare enough to read.
+            invalidRequestWarningInterval: 250,
+        },
+    });
 
     // Load commands into client
     client.commands = new Collection();
@@ -51,6 +59,26 @@ const initializeBot = async (commandsFolder, models) => {
         console.warn(
             `[Discord] Rate limited: ${info.global ? 'global' : info.route} — waiting ${info.timeToReset}ms ` +
             `(limit ${info.limit}, method ${info.method})`
+        );
+    });
+
+    /**
+     * The one that actually gets a bot banned.
+     *
+     * Discord counts 401, 403 and 429 responses as INVALID REQUESTS and blocks the bot's IP at
+     * the Cloudflare layer once ~10,000 of them accumulate inside 10 minutes — a ban that
+     * outlives a restart. The bot produces exactly those codes in normal operation whenever a
+     * channel was deleted or its permissions were withdrawn (10003 / 50001), and it removes the
+     * subscription when that happens, so it self-heals. But a mass event — a large guild wiping
+     * a category, a permission change across many servers — can spike the count.
+     *
+     * discord.js emits this once per `invalidRequestWarningInterval` requests. It is the only
+     * advance warning there is.
+     */
+    client.rest.on('invalidRequestWarning', (info) => {
+        console.error(
+            `[Discord] INVALID REQUEST WARNING: ${info.count} invalid requests, ` +
+            `${info.remainingTime}ms left in the window. Approaching the Cloudflare ban threshold.`
         );
     });
 

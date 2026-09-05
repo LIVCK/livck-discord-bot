@@ -89,6 +89,34 @@ export default class LIVCKCloud {
     }
 
     /**
+     * One incident by id, in ANY status.
+     *
+     * This is how a closed-out incident is recovered: the Cloud drops it from
+     * `active_incidents` the moment it resolves, but the detail endpoint still serves it with
+     * its full timeline — including the "resolved" update that never reached `full`.
+     *
+     * 404 is a legitimate answer, not a failure: with `show_incident_history` disabled the
+     * page deliberately makes a RESOLVED incident unreachable here too. The caller must treat
+     * that as "cannot confirm" and claim nothing.
+     */
+    async fetchIncident(incidentId) {
+        const id = await this.resolvePageId();
+        return this.request(`/api/statuspage/${id}/incidents/${incidentId}`);
+    }
+
+    /**
+     * One maintenance window by id, in ANY status.
+     *
+     * Unlike the incident endpoint this is NOT gated on `show_incident_history` — the
+     * "maintenance completed" subscriber mail links straight here, so the link has to keep
+     * working. A finished window is therefore always recoverable.
+     */
+    async fetchMaintenance(maintenanceId) {
+        const id = await this.resolvePageId();
+        return this.request(`/api/statuspage/${id}/maintenances/${maintenanceId}`);
+    }
+
+    /**
      * Resolved incidents and terminal maintenance windows, newest first, paginated.
      *
      * Needed because the Cloud drops an incident from `active_incidents` the moment it is

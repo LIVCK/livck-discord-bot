@@ -10,6 +10,24 @@ import { CLOUD_ENABLED } from "../../config/features.js";
 import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
 
+/**
+ * Resolve a custom link, but only inside the guild that asked for it.
+ *
+ * Component and modal interactions carry their target's row id in the `custom_id`, which is a
+ * value the bot put there — not a claim the handler may take at face value. Every lookup driven
+ * by such an id is scoped to `interaction.guildId`, so a subscription, link or role mention can
+ * only ever be read or destroyed from the guild that owns it. The slash-command paths in this
+ * file already did this; the component paths did not.
+ */
+const findGuildCustomLink = (models, linkId, interaction) => models.CustomLink.findOne({
+    where: { id: linkId },
+    include: [{
+        model: models.Subscription,
+        where: { guildId: interaction.guildId },
+        required: true,
+    }],
+});
+
 export default (models) => ({
     data: {
         name: 'livck',
@@ -623,7 +641,7 @@ export default (models) => ({
         if (interaction.customId === 'subscription_select') {
             const subscriptionId = interaction.values[0].replace('sub_', '');
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -709,7 +727,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('delete_sub_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -722,7 +740,7 @@ export default (models) => ({
                 return;
             }
 
-            await models.Subscription.destroy({ where: { id: subscriptionId } });
+            await models.Subscription.destroy({ where: { id: subscriptionId, guildId: interaction.guildId } });
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
@@ -737,7 +755,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('edit_sub_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -806,12 +824,12 @@ export default (models) => ({
 
             await models.Subscription.update(
                 { locale: newLocale },
-                { where: { id: subscriptionId } }
+                { where: { id: subscriptionId, guildId: interaction.guildId } }
             );
 
             // Reload the edit interface with updated values
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -918,12 +936,12 @@ export default (models) => ({
 
             await models.Subscription.update(
                 { layout: newLayout },
-                { where: { id: subscriptionId } }
+                { where: { id: subscriptionId, guildId: interaction.guildId } }
             );
 
             // Reload the edit interface with updated values
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1029,7 +1047,7 @@ export default (models) => ({
             await interaction.deferUpdate();
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1102,7 +1120,7 @@ export default (models) => ({
 
             // Reload edit menu - basically same as /livck edit
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1222,7 +1240,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1232,7 +1250,7 @@ export default (models) => ({
             }
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1348,7 +1366,7 @@ export default (models) => ({
         if (interaction.customId.startsWith('edit_link_')) {
             const linkId = interaction.customId.replace('edit_link_', '');
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1413,7 +1431,7 @@ export default (models) => ({
         if (interaction.customId.startsWith('delete_link_')) {
             const linkId = interaction.customId.replace('delete_link_', '');
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1430,7 +1448,7 @@ export default (models) => ({
 
             // Trigger status page refresh asynchronously
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1452,7 +1470,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1476,7 +1494,7 @@ export default (models) => ({
 
                 // Trigger status page refresh
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -1494,7 +1512,7 @@ export default (models) => ({
             });
 
             const subscription = await models.Subscription.findOne({
-                where: { id: link.subscriptionId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1550,7 +1568,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1574,7 +1592,7 @@ export default (models) => ({
 
                 // Trigger status page refresh
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -1592,7 +1610,7 @@ export default (models) => ({
             });
 
             const subscription = await models.Subscription.findOne({
-                where: { id: link.subscriptionId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1651,7 +1669,7 @@ export default (models) => ({
             }
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1765,6 +1783,15 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
+            // Ownership is decided on the subscription these role mentions hang off — the id
+            // came out of a custom_id and is not a claim this handler may act on unchecked.
+            const roleTarget = await models.Subscription.findOne({
+                where: { id: subscriptionId, guildId: interaction.guildId },
+            });
+            if (!roleTarget) {
+                return;
+            }
+
             // Get event type from Redis (default: 'ALL')
             const eventTypeKey = `role_event_type:${interaction.user.id}:${subscriptionId}`;
             const eventType = await cache.get(eventTypeKey) || 'ALL';
@@ -1815,6 +1842,14 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
+            // The role mentions hang off a subscription, so ownership is decided there.
+            const roleOwner = await models.Subscription.findOne({
+                where: { id: subscriptionId, guildId: interaction.guildId },
+            });
+            if (!roleOwner) {
+                return;
+            }
+
             await models.RoleMention.destroy({
                 where: {
                     id: { [Op.in]: roleMentionIds },
@@ -1832,7 +1867,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('edit_api_token_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId }
+                where: { id: subscriptionId, guildId: interaction.guildId }
             });
 
             if (!subscription) {
@@ -1889,7 +1924,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('unsub_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1901,7 +1936,7 @@ export default (models) => ({
                 return;
             }
 
-            await models.Subscription.destroy({ where: { id: subscriptionId } });
+            await models.Subscription.destroy({ where: { id: subscriptionId, guildId: interaction.guildId } });
 
             await interaction.update({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
@@ -2163,6 +2198,19 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('add_link_submit_', '');
 
             try {
+                // The modal carried the id here from a component custom_id; verify it belongs
+                // to this guild before writing anything against it.
+                const linkTarget = await models.Subscription.findOne({
+                    where: { id: subscriptionId, guildId: interaction.guildId },
+                });
+                if (!linkTarget) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.list.subscription_not_found'),
+                        flags: 64 // EPHEMERAL
+                    });
+                    return;
+                }
+
                 // Extract form values
                 const label = interaction.fields.getTextInputValue('label');
                 const url = interaction.fields.getTextInputValue('url');
@@ -2207,7 +2255,7 @@ export default (models) => ({
 
                 // Trigger status page refresh asynchronously (don't await)
                 const subscription = await models.Subscription.findOne({
-                    where: { id: subscriptionId },
+                    where: { id: subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -2235,7 +2283,7 @@ export default (models) => ({
             const linkId = interaction.customId.replace('edit_link_submit_', '');
 
             try {
-                const link = await models.CustomLink.findByPk(linkId);
+                const link = await findGuildCustomLink(models, linkId, interaction);
                 if (!link) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
@@ -2273,7 +2321,7 @@ export default (models) => ({
 
                 // Trigger status page refresh asynchronously
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -2300,7 +2348,7 @@ export default (models) => ({
 
             try {
                 const subscription = await models.Subscription.findOne({
-                    where: { id: subscriptionId },
+                    where: { id: subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 

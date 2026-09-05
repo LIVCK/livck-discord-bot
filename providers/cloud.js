@@ -263,6 +263,54 @@ export const toSnapshot = (payload, statuspage) => {
 };
 
 /**
+ * Recover ONE alert that has dropped out of the live payload, by id.
+ *
+ * WHY THIS EXISTS
+ *
+ * The Cloud removes an incident from `active_incidents` the instant it is resolved, and a
+ * finished maintenance window leaves `maintenances.active` the same way. For the page that is
+ * correct. For anything that has been reporting the alert it leaves a hole: the last thing it
+ * saw was "we are monitoring", and the update that matters most — "resolved" — never arrives.
+ *
+ * The detail endpoints still serve those rows in full, so one targeted request closes the gap.
+ * The kind is not known from an id alone, so incidents are tried first and maintenances
+ * second; each alert is looked up at most once, and only when it has actually disappeared.
+ *
+ * A 404 is an ANSWER, not an error: with `show_incident_history` disabled the page makes a
+ * resolved incident deliberately unreachable. `null` then means "cannot confirm" and the
+ * caller must leave its thread on the last state it legitimately saw rather than invent an
+ * ending. (Maintenance windows are not gated that way and stay recoverable either way.)
+ *
+ * @param {object} statuspage - Statuspage row (needs `url`; `externalId` skips a request)
+ * @param {string} alertId
+ * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
+ */
+export const fetchClosedAlert = async (statuspage, alertId) => {
+    const base = statuspage.url.replace(/\/+$/, '');
+    const client = new LIVCKCloud(statuspage.url, statuspage.externalId || null);
+
+    const notFound = (error) => error?.status === 404;
+
+    try {
+        const payload = await client.fetchIncident(alertId);
+        const incident = payload?.data ?? payload;
+        if (incident?.id) return incidentToAlert(incident, base);
+    } catch (error) {
+        if (!notFound(error)) throw error;
+    }
+
+    try {
+        const payload = await client.fetchMaintenance(alertId);
+        const maintenance = payload?.data ?? payload;
+        if (maintenance?.id) return maintenanceToAlert(maintenance, base);
+    } catch (error) {
+        if (!notFound(error)) throw error;
+    }
+
+    return null;
+};
+
+/**
  * Provider interface: fetch and normalize.
  *
  * @param {object} statuspage - Statuspage row (needs `url`; `externalId` skips a request)
@@ -279,4 +327,4 @@ export const fetchSnapshot = async (statuspage) => {
     };
 };
 
-export default { fetchSnapshot, toSnapshot, flattenTree, splitUpdates, normalizeStatus };
+export default { fetchSnapshot, fetchClosedAlert, toSnapshot, flattenTree, splitUpdates, normalizeStatus };

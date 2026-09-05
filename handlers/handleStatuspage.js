@@ -65,15 +65,13 @@ const deliverStatus = async (subscription, snapshot, client) => {
 
     const payload = { embeds, components: buildLinkButtons(customLinks) }
 
-    const channel = await client.channels.fetch(subscription.channelId)
-    if (!channel) return 'ignored'
-
     const record = await models.Message.findOne({
         where: { subscriptionId: subscription.id, category: 'STATUS' },
     })
 
     return syncMessage({
-        channel,
+        // Resolved only if something is actually going to be sent — see util/messageSync.js.
+        channel: () => client.channels.fetch(subscription.channelId),
         record,
         payload,
         models,

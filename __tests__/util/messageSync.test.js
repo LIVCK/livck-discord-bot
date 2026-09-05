@@ -182,6 +182,64 @@ describe('syncMessage', () => {
         })).rejects.toMatchObject({ code: 50001 });
     });
 
+    test('an unchanged message never resolves the channel at all', async () => {
+        // The channel comes from discord.js's gateway cache in steady state, but that cache is
+        // cold right after a restart — resolving it eagerly would mean one REST call per
+        // subscription in the very first cycle.
+        let resolved = 0;
+        const record = makeRecord(hashPayload(payload));
+
+        const result = await syncMessage({
+            channel: () => { resolved += 1; return makeChannel(); },
+            record,
+            payload,
+            models: makeModels(),
+            create: {},
+        });
+
+        expect(result).toBe('skipped');
+        expect(resolved).toBe(0);
+    });
+
+    test('a changed message resolves the channel once', async () => {
+        let resolved = 0;
+        const channel = makeChannel();
+
+        await syncMessage({
+            channel: () => { resolved += 1; return channel; },
+            record: makeRecord('stale'),
+            payload,
+            models: makeModels(),
+            create: {},
+        });
+
+        expect(resolved).toBe(1);
+        expect(channel.calls.edit).toBe(1);
+    });
+
+    test('a channel that cannot be resolved is skipped, not crashed on', async () => {
+        const result = await syncMessage({
+            channel: () => null,
+            record: null,
+            payload,
+            models: makeModels(),
+            create: {},
+        });
+
+        expect(result).toBe('skipped');
+    });
+
+    test('a plain channel object still works', async () => {
+        // Both call styles are in use; the thunk is an optimisation, not a new contract.
+        const channel = makeChannel();
+
+        await syncMessage({
+            channel, record: makeRecord('stale'), payload, models: makeModels(), create: {},
+        });
+
+        expect(channel.calls.edit).toBe(1);
+    });
+
     test('a custom send hook is used for new messages', async () => {
         let usedHook = false;
         const channel = makeChannel();
@@ -192,7 +250,11 @@ describe('syncMessage', () => {
             payload,
             models: makeModels(),
             create: {},
-            send: async () => { usedHook = true; return { id: 'reply-id' }; },
+            send: async (_payload, resolvedChannel) => {
+                usedHook = true;
+                expect(resolvedChannel).toBeDefined();
+                return { id: 'reply-id' };
+            },
         });
 
         expect(usedHook).toBe(true);

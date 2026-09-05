@@ -48,7 +48,49 @@ const rememberSnapshot = (key, promise) => {
 };
 
 /** Forget every memoized snapshot. Exposed for tests. */
-export const clearSnapshotCache = () => inFlight.clear();
+export const clearSnapshotCache = () => {
+    inFlight.clear();
+    closedAlerts.clear();
+};
+
+/**
+ * Alerts recovered after they left the live payload, memoized per (page, alert) for the same
+ * window as a snapshot.
+ *
+ * Several subscriptions usually watch the same status page, and every one of them notices the
+ * same alert vanish in the same cycle. Without this they would each pay for the lookup.
+ */
+const closedAlerts = new Map();
+
+/**
+ * Recover an alert the live payload no longer contains — see providers/cloud.js.
+ *
+ * Self-hosted pages never need this: their `/api/v1/alerts` keeps a resolved alert in the list
+ * (it is filtered by age, not by state), so nothing ever disappears mid-timeline. The call is
+ * therefore Cloud-only and returns null everywhere else.
+ *
+ * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
+ */
+export const fetchClosedAlert = async (statuspage, alertId) => {
+    if (statuspage.kind !== SOURCE.CLOUD) return null;
+
+    const key = `${statuspage.url}::${alertId}`;
+    const cached = closedAlerts.get(key);
+    if (cached && Date.now() - cached.at < SNAPSHOT_TTL_MS) {
+        return cached.promise;
+    }
+
+    if (closedAlerts.size >= MAX_CACHE_ENTRIES) {
+        const oldest = closedAlerts.keys().next().value;
+        if (oldest !== undefined) closedAlerts.delete(oldest);
+    }
+
+    const promise = cloudProvider.fetchClosedAlert(statuspage, alertId);
+    closedAlerts.set(key, { at: Date.now(), promise });
+    promise.catch(() => closedAlerts.delete(key));
+
+    return promise;
+};
 
 /**
  * Determine which product a page runs, probing once and remembering the answer.
@@ -126,4 +168,4 @@ export const fetchSnapshot = async (statuspage, { token = null, locale = 'de' } 
     return promise;
 };
 
-export default { fetchSnapshot, resolveSource, clearSnapshotCache, NotLivckError };
+export default { fetchSnapshot, fetchClosedAlert, resolveSource, clearSnapshotCache, NotLivckError };
