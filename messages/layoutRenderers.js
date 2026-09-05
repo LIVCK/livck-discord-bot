@@ -9,6 +9,7 @@ import {
     enforceMessageBudget,
     joinWithinLimit,
     padInlineRows,
+    truncate,
 } from "../util/discordLimits.js";
 
 /**
@@ -90,7 +91,11 @@ const finalizeEmbed = (embed, fields, { inline = false } = {}) => {
         if (fits()) embed.setFields([...current, marker]);
     }
 
-    if (inline) embed.setFields(padInlineRows(embed.toJSON().fields || []));
+    if (inline) {
+        // The budget is passed in: padding must not be what pushes the message over 6000.
+        const json = embed.toJSON();
+        embed.setFields(padInlineRows(json.fields || [], { used: embedLength(json) }));
+    }
 
     return embed;
 };
@@ -247,25 +252,46 @@ const groupBody = (group, snapshot, locale) => {
 };
 
 /** The embed every layout falls back to when a page lists nothing. */
-const emptyEmbed = (snapshot, locale) => [{
-    embed: new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: nameOf(snapshot.name, snapshot, locale, 'messages.status.error') }))
-        .setDescription(translation.trans('messages.status.no_categories'))
-        .setURL(snapshot.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: nameOf(snapshot.name, snapshot, locale, 'messages.status.error') }),
-    type: 'single'
-}];
+/**
+ * The page's own name, in this embed's title and footer.
+ *
+ * CLAMPED, because EmbedBuilder validates on construction and throws — and this was the one
+ * string in the module that reached `setTitle` unclamped. `Statuspage.name` is a VARCHAR(255)
+ * while the title breaks at 245, and a Cloud page's name is not length-bounded by the bot at
+ * all, so a long enough name made every layout throw. The handler catches it per subscription,
+ * which means the status message would simply freeze on its last content for ever, for every
+ * subscriber of that page, with one log line and nothing a reader could see.
+ */
+const titleFor = (snapshot, locale) => {
+    const pageName = nameOf(snapshot.name, snapshot, locale, 'messages.status.error');
+    return {
+        title: truncate(translation.trans('messages.status.title', { name: pageName }), DISCORD_LIMITS.EMBED_TITLE),
+        footer: truncate(pageName, DISCORD_LIMITS.EMBED_FOOTER_TEXT),
+    };
+};
+
+const emptyEmbed = (snapshot, locale) => {
+    const { title, footer } = titleFor(snapshot, locale);
+    return [{
+        embed: new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(translation.trans('messages.status.no_categories'))
+            .setURL(snapshot.url)
+            .setTimestamp(new Date())
+            .setFooter({ text: footer }),
+        type: 'single'
+    }];
+};
 
 /** Title/URL/footer/timestamp — identical across every layout. */
 const baseEmbed = (snapshot, locale, color) => {
-    const pageName = nameOf(snapshot.name, snapshot, locale, 'messages.status.error');
+    const { title, footer } = titleFor(snapshot, locale);
     return new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: pageName }))
+        .setTitle(title)
         .setColor(color)
         .setURL(snapshot.url)
         .setTimestamp(new Date())
-        .setFooter({ text: pageName });
+        .setFooter({ text: footer });
 };
 
 /**

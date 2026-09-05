@@ -127,16 +127,27 @@ export const capFields = (fields, { max = DISCORD_LIMITS.EMBED_FIELDS, more = nu
  * zero-width fields. Padding after a cap could push the count past 25, so the pad is only
  * applied when it still fits.
  */
-export const padInlineRows = (fields, { perRow = 3, max = DISCORD_LIMITS.EMBED_FIELDS } = {}) => {
+/** Zero-width space: invisible to the reader, one character to Discord's budget. */
+const PAD_CHARACTER = '​';
+/** What one filler field costs: a name and a value. */
+const PAD_FIELD_COST = PAD_CHARACTER.length * 2;
+
+export const padInlineRows = (fields, { perRow = 3, max = DISCORD_LIMITS.EMBED_FIELDS, used = 0 } = {}) => {
     const remainder = fields.length % perRow;
     if (remainder === 0) return fields;
 
     const needed = perRow - remainder;
     if (fields.length + needed > max) return fields;
 
+    // A zero-width space is still a character to Discord, and padding runs AFTER the budget
+    // has been enforced — so without this the cosmetic filler could be what pushes a message
+    // from 5998 to 6002 and Discord rejects the whole thing. Cosmetics never win over
+    // delivering the message: `used` is the embed's current cost, which the caller knows.
+    if (used + needed * PAD_FIELD_COST > DISCORD_LIMITS.MESSAGE_EMBED_TOTAL) return fields;
+
     const padded = [...fields];
     for (let i = 0; i < needed; i += 1) {
-        padded.push({ name: '​', value: '​', inline: true });
+        padded.push({ name: PAD_CHARACTER, value: PAD_CHARACTER, inline: true });
     }
     return padded;
 };
