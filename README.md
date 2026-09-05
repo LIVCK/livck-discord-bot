@@ -288,6 +288,12 @@ While we provide a hosted version, you're free to self-host the bot.
    node migrate.js
    ```
 
+   This is not optional and not idempotent-by-luck: the update loop selects columns that only
+   exist after migrating, and a bot started against an un-migrated database fails every query,
+   logs one error per cycle and delivers nothing — without exiting, so a process supervisor
+   never notices. `migrate.js` exits non-zero on failure, so `node migrate.js && node server.js`
+   is safe to chain. The Docker image runs it for you (`docker/entrypoint.sh`).
+
 5. **Start the bot:**
    ```bash
    node server.js

@@ -14,13 +14,15 @@
 
 import { jest } from '@jest/globals';
 
-const redis = { calls: [], behaviour: 'ok' };
+const redis = { calls: [], behaviour: 'ok', release: null };
 
 jest.unstable_mockModule('../../database/redis.js', () => ({
     default: {
         set: async (key, _value, options) => {
             redis.calls.push({ key, options });
-            if (redis.behaviour === 'hangs') return new Promise(() => {});
+            // Kept resolvable so the suite can let it go at the end; a promise that truly
+            // never settles keeps a Jest worker alive and it has to be force-killed.
+            if (redis.behaviour === 'hangs') return new Promise((resolve) => { redis.release = resolve; });
             if (redis.behaviour === 'throws') throw new Error('connection refused');
             if (redis.behaviour === 'taken') return null;
             return 'OK';
@@ -49,6 +51,11 @@ jest.unstable_mockModule('../../services/statuspagePauseManager.js', () => ({
 const { processStatuspage } = await import('../../services/updateLoop.js');
 
 const page = () => ({ id: 42, url: 'https://status.example.com', name: 'Example' });
+
+afterEach(() => {
+    redis.release?.();
+    redis.release = null;
+});
 
 beforeEach(() => {
     redis.calls = [];
@@ -85,10 +92,14 @@ describe('claiming a status page', () => {
         // The actual production failure: the promise simply never settles.
         redis.behaviour = 'hangs';
 
+        // `.unref()`, or this watchdog outlives the assertion and keeps the Jest worker alive
+        // long enough to be force-killed — which is exactly the class of leak it is testing for.
+        let watchdog;
         const result = await Promise.race([
             processStatuspage(page(), {}),
-            new Promise((resolve) => setTimeout(() => resolve('HUNG'), 6000)),
+            new Promise((resolve) => { watchdog = setTimeout(() => resolve('HUNG'), 6000).unref(); }),
         ]);
+        clearTimeout(watchdog);
 
         expect(result).not.toBe('HUNG');
         expect(handled.status).toBe(1);

@@ -47,8 +47,9 @@ fetch instead of two.
   when their content actually changed (`Message.contentHash`), with a heartbeat refresh every
   `STATUS_REFRESH_MINUTES`.
 - **Unreachable pages** climb a backoff ladder (30s → 6h) rather than being retried every
-  cycle. Subscribers are told once, and the page resumes by itself. See
-  `services/statuspagePauseManager.js`.
+  cycle. Nothing is posted about it: the status message that is already in the channel has
+  the one word in its footer replaced by "inaktiv", and the page resumes by itself with no
+  announcement at all. See `services/statuspagePauseManager.js`.
 - **Embed limits** are enforced in `util/discordLimits.js`; Discord rejects an over-limit
   message whole, so an unguarded layout means the page posts nothing.
 
@@ -76,6 +77,10 @@ node server.js
 ```bash
 node migrate.js
 ```
+
+The Docker image does this itself (`docker/entrypoint.sh`) and refuses to start the bot if it
+fails — the update loop selects columns that only exist after migrating, and a bot running
+against an un-migrated database fails every query silently for ever.
 
 **End-to-end run against the real status pages** (needs a throwaway database — it truncates
 every table it uses, so never point it at one you care about):
