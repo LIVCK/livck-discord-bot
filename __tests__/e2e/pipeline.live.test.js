@@ -16,6 +16,10 @@
  *     npm test -- __tests__/e2e/pipeline.live.test.js
  *
  * Never point it at a database you care about: it truncates every table it uses.
+ *
+ * The two e2e suites share one database, so run them WITH `--runInBand` when running both.
+ * In parallel workers they truncate each other's tables mid-test and the failures look like
+ * real bugs.
  */
 
 const e2e = process.env.LIVCK_E2E === '1' ? describe : describe.skip;
