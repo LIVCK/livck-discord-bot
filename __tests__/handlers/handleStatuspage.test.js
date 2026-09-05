@@ -72,15 +72,23 @@ const { clearSnapshotCache } = await import('../../providers/index.js');
  */
 const nextCycle = () => clearSnapshotCache();
 
-const discord = { sends: 0, edits: 0, fetches: 0, lastPayload: null, channelError: null };
+const discord = {
+    sends: 0, edits: 0, fetches: 0, lastPayload: null, channelError: null,
+    /** Which channels the error applies to; null means all of them. */
+    failChannels: null,
+    /** Channel ids that actually received something. */
+    sentTo: [],
+};
 
 const makeClient = () => ({
     channels: {
         fetch: async (id) => {
-            if (discord.channelError) throw discord.channelError;
+            if (discord.channelError && (!discord.failChannels || discord.failChannels.has(id))) {
+                throw discord.channelError;
+            }
             return {
                 id,
-                send: async (payload) => { discord.sends += 1; discord.lastPayload = payload; return { id: `msg-${discord.sends}` }; },
+                send: async (payload) => { discord.sends += 1; discord.sentTo.push(id); discord.lastPayload = payload; return { id: `msg-${discord.sends}` }; },
                 messages: {
                     edit: async (_id, payload) => { discord.edits += 1; discord.lastPayload = payload; return {}; },
                     fetch: async () => { discord.fetches += 1; return {}; },
@@ -131,6 +139,8 @@ beforeEach(() => {
 
     clearSnapshotCache();
 
+    discord.failChannels = null;
+    discord.sentTo = [];
     discord.sends = 0;
     discord.edits = 0;
     discord.fetches = 0;
@@ -392,14 +402,41 @@ describe('channel problems', () => {
         expect(db.destroyed).toEqual([1]);
     });
 
-    test('any other Discord error propagates rather than deleting data', async () => {
+    test('any other Discord error leaves the subscription alone', async () => {
         // Deleting a customer's subscription because of an unrecognised error would be
         // unrecoverable — they would have to set it up again.
         const error = new Error('Internal Server Error');
         error.code = 50035;
         discord.channelError = error;
 
-        await expect(handleStatusPage(7, makeClient())).rejects.toMatchObject({ code: 50035 });
+        await expect(handleStatusPage(7, makeClient())).resolves.toBeUndefined();
         expect(db.destroyed).toEqual([]);
+    });
+
+    test('a channel the bot may not post in does not fail the status page', async () => {
+        // 50013 is one guild revoking "Send Messages". Letting it out of the handler advanced
+        // the page's BACKOFF, so after four cycles the page was paused and every other guild
+        // watching it was told the status page was unreachable. It was not.
+        const error = new Error('Missing Permissions');
+        error.code = 50013;
+        discord.channelError = error;
+
+        await expect(handleStatusPage(7, makeClient())).resolves.toBeUndefined();
+        expect(db.destroyed).toEqual([]);
+    });
+
+    test('one broken channel does not cost the others their update', async () => {
+        db.statuspage.Subscriptions.push({
+            ...db.statuspage.Subscriptions[0], id: 2, channelId: 'chan-2',
+        });
+
+        const error = new Error('Missing Permissions');
+        error.code = 50013;
+        discord.channelError = error;
+        discord.failChannels = new Set(['chan-1']);
+
+        await handleStatusPage(7, makeClient());
+
+        expect(discord.sentTo).toEqual(['chan-2']);
     });
 });

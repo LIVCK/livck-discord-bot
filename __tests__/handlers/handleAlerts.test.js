@@ -310,9 +310,15 @@ describe('channel problems', () => {
         expect(db.destroyed).toEqual([1]);
     });
 
-    test('an unrecognised Discord error propagates rather than deleting data', async () => {
-        await expect(handleAlerts(7, clientThatFails(channelError(50035))))
-            .rejects.toMatchObject({ code: 50035 });
+    test('an unrecognised Discord error leaves the subscription alone', async () => {
+        await expect(handleAlerts(7, clientThatFails(channelError(50035)))).resolves.toBeUndefined();
+        expect(db.destroyed).toEqual([]);
+    });
+
+    test('a channel the bot may not post in does not fail the status page', async () => {
+        // 50013: one guild revoked "Send Messages". It used to escape the handler and advance
+        // the page's backoff, which paused the page — and announced it — for every other guild.
+        await expect(handleAlerts(7, clientThatFails(channelError(50013)))).resolves.toBeUndefined();
         expect(db.destroyed).toEqual([]);
     });
 });

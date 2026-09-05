@@ -40,13 +40,21 @@ e2e('the update loop', () => {
     /** Everything the bot would have sent, per channel. */
     let sent = [];
 
+    /** Channel ids Discord refuses, mapped to the error code it answers with. */
+    const refused = new Map();
+
     const client = {
         channels: {
-            fetch: async (id) => ({
-                id,
-                send: async (payload) => { sent.push({ channelId: id, payload }); return { id: `msg-${sent.length}` }; },
-                messages: { edit: async (_id, payload) => { sent.push({ channelId: id, edit: true, payload }); return {}; } },
-            }),
+            fetch: async (id) => {
+                if (refused.has(id)) {
+                    throw Object.assign(new Error(`refused ${id}`), { code: refused.get(id) });
+                }
+                return {
+                    id,
+                    send: async (payload) => { sent.push({ channelId: id, payload }); return { id: `msg-${sent.length}` }; },
+                    messages: { edit: async (_id, payload) => { sent.push({ channelId: id, edit: true, payload }); return {}; } },
+                };
+            },
         },
     };
 
@@ -264,6 +272,34 @@ e2e('the update loop', () => {
             // The resume notice, plus the status message this channel never got while dead.
             expect(notices.length).toBeGreaterThanOrEqual(1);
             expect(textOf().join('\n')).not.toMatch(/messages\.(pause|resume)\./);
+        }, 120000);
+    });
+
+    describe('a channel the bot may not post in', () => {
+        test('does not pause the status page for everybody else', async () => {
+            // The failure that is NOT the status page's fault. One guild revoking "Send
+            // Messages" used to escape the handler, advance the page's backoff and — four
+            // cycles later — announce "unreachable" in every OTHER guild watching that page.
+            const page = await seed('https://fc-status.net', 'fc-status.net');
+            await subscribe(page.id, 'loop-refused');
+            await subscribe(page.id, 'loop-allowed');
+            refused.set('loop-refused', 50013);
+
+            try {
+                await dropLock(page.id);
+                await runCycle(client);
+                await page.reload();
+
+                expect(page.backoffLevel).toBe(0);
+                expect(page.failureCount).toBe(0);
+                expect(page.paused).toBe(false);
+                expect(page.nextAttemptAt).toBeNull();
+
+                // And the healthy channel in the same guild still got its update.
+                expect(sent.filter((m) => m.channelId === 'loop-allowed')).toHaveLength(1);
+            } finally {
+                refused.clear();
+            }
         }, 120000);
     });
 

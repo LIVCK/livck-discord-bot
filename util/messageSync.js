@@ -37,6 +37,17 @@ export const UNKNOWN_CHANNEL = 10003;
 export const MISSING_ACCESS = 50001;
 
 /**
+ * The channel is gone for good as far as this bot is concerned — deleted, or no longer
+ * visible to it. The subscription can never be delivered again, so the handlers drop it.
+ *
+ * Deliberately NOT in here: 50013 (Missing Permissions), which is what a channel where the
+ * bot may look but not post returns. That is a server setting an admin can fix in seconds,
+ * and deleting the subscription over it would be unrecoverable.
+ */
+export const isChannelGone = (error) =>
+    error?.code === UNKNOWN_CHANNEL || error?.code === MISSING_ACCESS;
+
+/**
  * Stable fingerprint of what would be sent to Discord.
  *
  * Builders are serialized through `toJSON()` so two structurally identical payloads hash
@@ -138,4 +149,4 @@ export const syncMessage = async ({
     }
 };
 
-export default { hashPayload, syncMessage, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };
+export default { hashPayload, syncMessage, isChannelGone, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };

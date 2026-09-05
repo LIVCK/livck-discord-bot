@@ -7,7 +7,7 @@ import { buildRoleMentions } from '../util/roleMentions.js'
 import translation from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
-import { syncMessage, UNKNOWN_CHANNEL, MISSING_ACCESS } from '../util/messageSync.js'
+import { syncMessage, isChannelGone } from '../util/messageSync.js'
 import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
 
 /** Alerts older than this are no longer tracked. */
@@ -239,15 +239,23 @@ export const handleAlerts = async (statuspageId, client) => {
             for (const subscription of subscriptions) {
                 try {
                     await deliverAlert(subscription, alert, snapshot, locale, footer, client)
+                    logger.resetOnce(`deliver:${subscription.id}`)
                 } catch (error) {
-                    if (error.code === UNKNOWN_CHANNEL || error.code === MISSING_ACCESS) {
+                    if (isChannelGone(error)) {
                         logger.info(
                             `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
                         )
                         await models.Subscription.destroy({ where: { id: subscription.id } })
                         continue
                     }
-                    throw error
+
+                    // See handleStatusPage: a channel-level failure must not advance the
+                    // status page's backoff or pause it for everyone else.
+                    logger.once(
+                        `deliver:${subscription.id}`, 'error',
+                        `[handleAlerts] Could not deliver to channel ${subscription.channelId} ` +
+                        `(${error.code ?? error.name}): ${error.message}`
+                    )
                 }
             }
         }

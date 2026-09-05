@@ -4,7 +4,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
-import { syncMessage, UNKNOWN_CHANNEL, MISSING_ACCESS } from '../util/messageSync.js'
+import { syncMessage, isChannelGone } from '../util/messageSync.js'
 
 /** Discord allows 5 buttons per row and 5 rows. */
 const MAX_BUTTONS = 25
@@ -116,15 +116,27 @@ export const handleStatusPage = async (statuspageId, client) => {
         for (const subscription of subscriptions) {
             try {
                 await deliverStatus(subscription, snapshot, client)
+                logger.resetOnce(`deliver:${subscription.id}`)
             } catch (error) {
-                if (error.code === UNKNOWN_CHANNEL || error.code === MISSING_ACCESS) {
+                if (isChannelGone(error)) {
                     logger.info(
                         `[handleStatusPage] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
                     )
                     await models.Subscription.destroy({ where: { id: subscription.id } })
                     continue
                 }
-                throw error
+
+                // A delivery failure belongs to THIS channel, not to the status page, and it
+                // must not travel any further. Letting it out of the handler advanced the
+                // page's backoff, so a single guild that revoked "Send Messages" (50013) could
+                // pause the page and announce "unreachable" to every OTHER guild watching it.
+                // Logged once per subscription until the message changes, and cleared above on
+                // the first delivery that succeeds again.
+                logger.once(
+                    `deliver:${subscription.id}`, 'error',
+                    `[handleStatusPage] Could not deliver to channel ${subscription.channelId} ` +
+                    `(${error.code ?? error.name}): ${error.message}`
+                )
             }
         }
     }
