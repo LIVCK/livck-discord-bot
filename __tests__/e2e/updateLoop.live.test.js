@@ -279,6 +279,58 @@ e2e('the update loop', () => {
         }, 120000);
     });
 
+    describe('the heartbeat', () => {
+        test('advances the row, so it fires again in fifteen minutes and not in fifteen seconds', async () => {
+            // The bug only exists against a real database. `record.update({contentHash})` with
+            // an UNCHANGED hash — which is exactly what a heartbeat on unchanged content is —
+            // makes Sequelize find nothing dirty and issue no SQL at all, so `updatedAt` never
+            // moves, the row stays past the staleness threshold, and the heartbeat re-fires on
+            // every single cycle. Every green status subscription would then be edited every
+            // 15 SECONDS instead of every 15 minutes, for ever: sixty times the intended
+            // traffic against a 50 requests/second budget. Every unit test mocked it away.
+            const page = await models.Statuspage.findOne({ where: { url: LIVE_URL } });
+            const record = await models.Message.findOne({
+                where: { category: 'STATUS' },
+                include: [{ model: models.Subscription, where: { statuspageId: page.id }, required: true }],
+            });
+            expect(record).not.toBeNull();
+
+            // Age the row past the heartbeat threshold, the way fifteen quiet minutes would.
+            await models.database.query(
+                'UPDATE Messages SET updatedAt = DATE_SUB(NOW(), INTERVAL 60 MINUTE) WHERE id = ?',
+                { replacements: [record.id] }
+            );
+            await record.reload();
+            const stale = new Date(record.updatedAt).getTime();
+
+            const { syncMessage } = await import('../../util/messageSync.js');
+            const payload = { embeds: [], content: 'unchanged' };
+
+            const channel = {
+                edits: 0,
+                send: async () => ({ id: 'x' }),
+                messages: { edit: async () => { channel.edits += 1; return {}; } },
+            };
+
+            // The heartbeat cycle: content identical, but the row is stale, so it refreshes.
+            const first = await syncMessage({
+                channel, record, payload, models, create: {}, heartbeat: true,
+            });
+            expect(first).toBe('updated');
+
+            await record.reload();
+            expect(new Date(record.updatedAt).getTime()).toBeGreaterThan(stale);
+
+            // The cycle right after: still identical, and now no longer stale — so silent.
+            const second = await syncMessage({
+                channel, record, payload, models, create: {}, heartbeat: true,
+            });
+
+            expect(second).toBe('skipped');
+            expect(channel.edits).toBe(1);
+        }, 60000);
+    });
+
     describe('a status page nobody subscribes to', () => {
         // A real, reachable Cloud page, so "was it fetched?" is answered by whether the bot
         // detected its product — not by whether it happened to fail.

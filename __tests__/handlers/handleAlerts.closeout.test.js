@@ -43,6 +43,14 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                     && m.category === where.category
                     && m.serviceId === where.serviceId
             ) ?? null,
+            // Query-level update: the production code cannot use record.update() for the
+            // heartbeat, because Sequelize issues no SQL when nothing changed and updatedAt
+            // would never move.
+            update: async (values, { where }) => {
+                const row = db.messages.find((m) => m.id === where.id);
+                if (row) { Object.assign(row, values); row.updatedAt = new Date(); }
+                return [row ? 1 : 0];
+            },
             create: async (row) => {
                 const record = {
                     ...row,

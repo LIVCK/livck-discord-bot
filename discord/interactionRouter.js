@@ -19,6 +19,7 @@
  */
 
 import logger from '../util/logger.js';
+import { withLocale } from '../util/Translation.js';
 
 /** Discord: this interaction's token is no longer valid (15-minute lifetime). */
 const UNKNOWN_INTERACTION = 10062;
@@ -53,7 +54,14 @@ export const respondWithError = async (interaction, message) => {
  * @param {import('discord.js').Interaction} interaction
  * @param {import('discord.js').Client} client - carries `client.commands`
  */
-export const routeInteraction = async (interaction, client) => {
+export const routeInteraction = (interaction, client) =>
+    // Every interaction gets its own locale slot. The command handlers select a language and
+    // then await — a database read, a detection request — so two admins in two guilds
+    // answering at the same time used to end up with each other's language.
+    // See util/Translation.js.
+    withLocale(null, () => dispatch(interaction, client));
+
+const dispatch = async (interaction, client) => {
     if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
         if (!command || typeof command.autocomplete !== 'function') return;

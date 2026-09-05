@@ -5,6 +5,7 @@ import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
+import { withLocale } from '../util/Translation.js'
 
 /** Discord allows 5 buttons per row and 5 rows. */
 const MAX_BUTTONS = 25
@@ -115,7 +116,10 @@ export const handleStatusPage = async (statuspageId, client) => {
 
         for (const subscription of subscriptions) {
             try {
-                await deliverStatus(subscription, snapshot, client)
+                // Its own locale slot: the renderer selects a language and the delivery that
+                // follows awaits, and the loop runs 100 pages and both handlers concurrently.
+                // Without this the last flow to resume decides the language for all of them.
+                await withLocale(subscription.locale || 'de', () => deliverStatus(subscription, snapshot, client))
                 logger.resetOnce(`deliver:${subscription.id}`)
             } catch (error) {
                 if (isChannelGone(error)) {

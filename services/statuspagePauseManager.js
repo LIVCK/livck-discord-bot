@@ -23,7 +23,7 @@
 import { EmbedBuilder, Colors } from 'discord.js';
 import { classifyError, FAILURE_KINDS } from '../util/errors.js';
 import logger from '../util/logger.js';
-import translation from '../util/Translation.js';
+import translation, { withLocale } from '../util/Translation.js';
 import cache from '../database/redis.js';
 
 /**
@@ -158,7 +158,10 @@ export class StatuspagePauseManager {
                     const channel = await client.channels.fetch(subscription.channelId);
                     if (!channel) continue;
 
-                    await channel.send({ embeds: [buildEmbed(subscription.locale || 'de')] });
+                    // Own locale slot per recipient — see util/Translation.js.
+                    const locale = subscription.locale || 'de';
+                    const embed = withLocale(locale, () => buildEmbed(locale));
+                    await channel.send({ embeds: [embed] });
                     delivered += 1;
                 } catch (error) {
                     // A channel we can no longer reach is not worth a stack trace here; the

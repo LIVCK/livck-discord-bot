@@ -81,6 +81,32 @@ const needsHeartbeat = (record, now) => {
 };
 
 /**
+ * Record that the message was just written, and make sure `updatedAt` actually moves.
+ *
+ * `record.update({contentHash})` looks right and is not. When the HEARTBEAT fires the content
+ * is by definition unchanged, so the hash is identical, so Sequelize finds nothing dirty and
+ * issues NO SQL AT ALL (`model.js`: `if (!this.changed() && !this.isNewRecord) return this;`).
+ * `updatedAt` therefore never moves, the row stays past the staleness threshold, and the
+ * heartbeat fires again on the very next cycle — and every cycle after that.
+ *
+ * The effect is the exact opposite of what this whole file exists for: a page that has been
+ * green for STATUS_REFRESH_MINUTES crosses the threshold once and from then on every status
+ * subscription is edited every 15 SECONDS instead of every 15 minutes, for ever. Sixty times
+ * the intended traffic against a 50 requests/second budget.
+ *
+ * A query-level update always executes, so the timestamp always advances. (Passing an explicit
+ * `updatedAt`, or naming it in `fields`, does NOT help — both still no-op.)
+ */
+const touch = async (models, record, hash) => {
+    await models.Message.update({ contentHash: hash }, { where: { id: record.id } });
+
+    // Keep the in-memory row consistent with what was just written, so a caller that reads
+    // it back in the same cycle does not see the old values.
+    record.contentHash = hash;
+    record.updatedAt = new Date();
+};
+
+/**
  * Create or update the Discord message tracked by a `Message` row.
  *
  * @param {object} options
@@ -136,7 +162,7 @@ export const syncMessage = async ({
     try {
         // One PATCH. No preceding fetch — the message ID is all Discord needs.
         await resolved.messages.edit(record.messageId, payload);
-        await record.update({ contentHash: hash });
+        await touch(models, record, hash);
         return 'updated';
     } catch (error) {
         if (error.code === UNKNOWN_MESSAGE) {

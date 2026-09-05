@@ -4,7 +4,7 @@ import { fetchSnapshot, fetchClosedAlert } from '../providers/index.js'
 import { truncate } from '../util/String.js'
 import { bodyToDiscord } from '../util/markdown.js'
 import { buildRoleMentions } from '../util/roleMentions.js'
-import translation from '../util/Translation.js'
+import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
@@ -193,7 +193,7 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
             const closed = await fetchClosedAlert(statuspageRecord, record.serviceId)
             if (!closed) continue
 
-            await deliverAlert(subscription, closed, snapshot, locale, footer, client)
+            await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
         }
     }
 }
@@ -229,6 +229,8 @@ export const handleAlerts = async (statuspageId, client) => {
             (alert) => now - new Date(alert.startedAt).getTime() <= ALERT_WINDOW_MS
         )
 
+        // Set for the synchronous work below; every delivery opens its own scope, because
+        // this is a singleton the concurrently running status renderer also writes to.
         translation.setLocale(locale)
         const footer = resolveText(snapshot.name, locale, snapshot.defaultLocale) || statuspageRecord.name
 
@@ -238,7 +240,7 @@ export const handleAlerts = async (statuspageId, client) => {
         for (const alert of recentAlerts) {
             for (const subscription of subscriptions) {
                 try {
-                    await deliverAlert(subscription, alert, snapshot, locale, footer, client)
+                    await withLocale(locale, () => deliverAlert(subscription, alert, snapshot, locale, footer, client))
                     logger.resetOnce(`deliver:${subscription.id}`)
                 } catch (error) {
                     if (isChannelGone(error)) {

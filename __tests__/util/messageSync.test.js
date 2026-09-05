@@ -70,7 +70,18 @@ const makeRecord = (hash, updatedAt = new Date()) => {
 
 const makeModels = () => {
     const created = [];
-    return { created, Message: { create: async (row) => { created.push(row); return row; } } };
+    const updated = [];
+    return {
+        created,
+        updated,
+        Message: {
+            create: async (row) => { created.push(row); return row; },
+            // A QUERY-level update, which is what the production code has to use: an
+            // instance-level `record.update()` with an unchanged value issues no SQL at all,
+            // so `updatedAt` never moves and the heartbeat re-fires every single cycle.
+            update: async (values, options) => { updated.push({ values, options }); return [1]; },
+        },
+    };
 };
 
 describe('syncMessage', () => {
