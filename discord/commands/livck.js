@@ -6,7 +6,6 @@ import { handleStatusPage } from "../../handlers/handleStatuspage.js";
 import LIVCKCloud from "../../api/livckCloud.js";
 import { detectSource } from "../../api/detect.js";
 import { SOURCE } from "../../dto/statuspage.js";
-import { CLOUD_ENABLED } from "../../config/features.js";
 import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
 
@@ -2046,14 +2045,6 @@ export default (models) => ({
                 logger.info(`[Subscribe] ${url} is not a LIVCK statuspage`);
                 await interaction[replyMethod]({
                     content: translation.trans('commands.livck.subscribe.invalid_livck_url', { url }),
-                    flags: 64 // EPHEMERAL flag
-                });
-                return;
-            }
-
-            if (source === SOURCE.CLOUD && !CLOUD_ENABLED()) {
-                await interaction[replyMethod]({
-                    content: translation.trans('commands.livck.subscribe.cloud_disabled', { url }),
                     flags: 64 // EPHEMERAL flag
                 });
                 return;

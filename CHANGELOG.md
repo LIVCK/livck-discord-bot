@@ -14,7 +14,6 @@ status pages just as much.
 
 - **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
   first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
-  Gated behind `CLOUD_ENABLED` (off by default) for the rollout.
 - **Threads are finished when their alert ends.** The Cloud drops an incident from
   `active_incidents` the moment it resolves, so a Discord thread used to keep "we are
   monitoring" for ever. The closing update is now fetched from the detail endpoint and posted

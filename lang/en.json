@@ -88,8 +88,7 @@
         "select_locale": "Select language",
         "select_layout": "Select layout",
         "select_channel_final": "Now select the channel for **:url**",
-        "protected_page": "The status page **:url** is password- or access-protected. The bot can only read public pages.",
-        "cloud_disabled": "The status page **:url** runs on LIVCK Cloud. This bot instance currently supports self-hosted status pages only."
+        "protected_page": "The status page **:url** is password- or access-protected. The bot can only read public pages."
       },
       "unsubscribe": {
         "success": "Subscription for **:url** successfully removed.",
