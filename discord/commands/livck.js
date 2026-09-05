@@ -20,6 +20,46 @@ import translation from "../../util/Translation.js";
  * only ever be read or destroyed from the guild that owns it. The slash-command paths in this
  * file already did this; the component paths did not.
  */
+/**
+ * The languages a subscription can actually be delivered in.
+ *
+ * Built from the locale files that are LOADED, not from a hardcoded pair. Crowdin translates
+ * the whole of `lang/en.json` — including `messages.*`, which is what the status embeds and
+ * the incident threads are written from — into thirteen languages, and the sync workflow
+ * commits them into `lang/`. Every layer below this is already locale-agnostic: the column is
+ * a string, the renderer takes the locale as an argument, the fallback covers whatever a
+ * community translation has not reached yet.
+ *
+ * Only these select menus were not: they offered German and English and nothing else, so the
+ * other eleven languages could be translated, shipped and never chosen by anybody. With just
+ * `de` and `en` present — which is the state of this branch — the menu is byte-identical to
+ * what it was.
+ */
+const LOCALE_LABELS = {
+    de: '🇩🇪 Deutsch',
+    en: '🇬🇧 English',
+    fr: '🇫🇷 Français',
+    es: '🇪🇸 Español',
+    pt: '🇵🇹 Português',
+    nl: '🇳🇱 Nederlands',
+    it: '🇮🇹 Italiano',
+    pl: '🇵🇱 Polski',
+    tr: '🇹🇷 Türkçe',
+    ru: '🇷🇺 Русский',
+    ja: '🇯🇵 日本語',
+    ko: '🇰🇷 한국어',
+    zh: '🇨🇳 中文',
+};
+
+/** Discord allows 25 options in a select menu; thirteen languages sit well inside that. */
+const localeChoices = (current = null) => translation.getAvailableLocales()
+    .sort((a, b) => (a === 'de' ? -1 : b === 'de' ? 1 : a.localeCompare(b)))
+    .map((locale) => ({
+        label: LOCALE_LABELS[locale] || locale.toUpperCase(),
+        value: locale,
+        default: current === locale,
+    }));
+
 /** How much of a link's URL and label the management screen previews. */
 const LINK_URL_PREVIEW = 60;
 const LINK_LABEL_PREVIEW = 60;
@@ -233,18 +273,7 @@ export default (models) => ({
                                         custom_id: 'locale',
                                         placeholder: translation.trans('commands.livck.subscribe.select_locale'),
                                         required: true,
-                                        options: [
-                                            {
-                                                label: '🇩🇪 Deutsch',
-                                                value: 'de',
-                                                default: userLocale === 'de'
-                                            },
-                                            {
-                                                label: '🇬🇧 English',
-                                                value: 'en',
-                                                default: userLocale === 'en'
-                                            }
-                                        ]
+                                        options: localeChoices(userLocale)
                                     }
                                 },
                                 // Layout String Select with Label
@@ -501,16 +530,10 @@ export default (models) => ({
                     const localeSelectMenu = new StringSelectMenuBuilder()
                         .setCustomId(`update_locale_${subscription.id}`)
                         .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                        .addOptions(
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel('🇩🇪 Deutsch')
-                                .setValue('de')
-                                .setDefault(subscription.locale === 'de'),
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel('🇬🇧 English')
-                                .setValue('en')
-                                .setDefault(subscription.locale === 'en')
-                        );
+                        .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
                     const layoutSelectMenu = new StringSelectMenuBuilder()
                         .setCustomId(`update_layout_${subscription.id}`)
@@ -830,16 +853,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`edit_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
@@ -897,16 +914,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
 
@@ -1024,16 +1035,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const layoutSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_layout_${subscription.id}`)
@@ -1246,16 +1251,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const layoutSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_layout_${subscription.id}`)

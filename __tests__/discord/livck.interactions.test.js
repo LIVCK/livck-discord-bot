@@ -194,6 +194,53 @@ describe('the /livck edit autocomplete', () => {
     });
 });
 
+describe('the language a subscription is delivered in', () => {
+    // Crowdin translates the whole of lang/en.json — including `messages.*`, which is what the
+    // status embeds and incident threads are written from — into thirteen languages, and the
+    // sync workflow commits them into lang/. Every layer below the select menu is already
+    // locale-agnostic. Only these menus were not: they offered German and English and nothing
+    // else, so the other eleven could be translated, shipped, and never chosen by anybody.
+    const optionsOf = (payload) => {
+        const json = JSON.stringify(payload);
+        return [...json.matchAll(/"value":"([a-z]{2})"/g)].map((m) => m[1]);
+    };
+
+    test('offers exactly the locales that are loaded', async () => {
+        const interaction = makeInteraction({ customId: 'edit_sub_1' });
+        await command.handleComponentInteraction(interaction, {});
+
+        const offered = new Set(optionsOf(interaction.replies.concat(interaction.edits)));
+        expect(offered.has('de')).toBe(true);
+        expect(offered.has('en')).toBe(true);
+    });
+
+    test('picks up a community language as soon as its file is present', async () => {
+        // With only de and en loaded — the state of this branch — the menu is unchanged; the
+        // moment Crowdin's files land it grows on its own.
+        const translation = (await import('../../util/Translation.js')).default;
+        translation.translations.fr = { commands: { livck: { description: 'x' } } };
+
+        try {
+            const interaction = makeInteraction({ customId: 'edit_sub_1' });
+            await command.handleComponentInteraction(interaction, {});
+
+            expect(new Set(optionsOf(interaction.replies.concat(interaction.edits))).has('fr')).toBe(true);
+        } finally {
+            delete translation.translations.fr;
+        }
+    });
+
+    test('marks the subscription current language as selected', async () => {
+        db.subscriptions[0].locale = 'en';
+
+        const interaction = makeInteraction({ customId: 'edit_sub_1' });
+        await command.handleComponentInteraction(interaction, {});
+
+        const json = JSON.stringify(interaction.replies.concat(interaction.edits));
+        expect(json).toMatch(/"value":"en","default":true|"default":true,"value":"en"/);
+    });
+});
+
 describe('a subscription that is gone by the time the button is pressed', () => {
     test.each(['update_locale_99', 'update_layout_99'])('%s says so instead of throwing', async (customId) => {
         // Open /livck edit twice, delete the subscription in one panel and act in the other.
