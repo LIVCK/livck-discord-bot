@@ -42,6 +42,11 @@ jest.unstable_mockModule('../../models/index.js', () => ({
             findOne: async ({ where }) => db.messages.find(
                 (m) => m.subscriptionId === where.subscriptionId && m.category === where.category
             ) ?? null,
+            // A subscription is meant to have ONE status message, and the handler now reads
+            // them all back so it can clear out duplicates left by the render race.
+            findAll: async ({ where }) => db.messages.filter(
+                (m) => m.subscriptionId === where.subscriptionId && m.category === where.category
+            ),
             // Query-level update: the production code cannot use record.update() for the
             // heartbeat, because Sequelize issues no SQL when nothing changed and updatedAt
             // would never move.
@@ -54,6 +59,7 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                 // Behaves like a Sequelize instance: update() persists and bumps updatedAt,
                 // which is what the dirty check and the heartbeat both read back.
                 const record = {
+                    id: db.messages.length + 1,
                     ...row,
                     updatedAt: new Date(),
                     update: async (fields) => { Object.assign(record, fields); record.updatedAt = new Date(); },
@@ -86,6 +92,8 @@ const discord = {
     failChannels: null,
     /** Channel ids that actually received something. */
     sentTo: [],
+    /** Message ids the bot deleted. */
+    deleted: [],
 };
 
 const makeClient = () => ({
@@ -98,6 +106,7 @@ const makeClient = () => ({
                 id,
                 send: async (payload) => { discord.sends += 1; discord.sentTo.push(id); discord.lastPayload = payload; return { id: `msg-${discord.sends}` }; },
                 messages: {
+                    delete: async (messageId) => { discord.deleted.push(messageId); },
                     edit: async (_id, payload) => { discord.edits += 1; discord.lastPayload = payload; return {}; },
                     fetch: async () => { discord.fetches += 1; return {}; },
                 },
@@ -149,6 +158,7 @@ beforeEach(() => {
 
     discord.failChannels = null;
     discord.sentTo = [];
+    discord.deleted = [];
     discord.sends = 0;
     discord.edits = 0;
     discord.fetches = 0;
@@ -386,6 +396,56 @@ describe('custom link buttons', () => {
         await handleStatusPage(7, client);
 
         expect(discord.edits).toBe(1);
+    });
+});
+
+describe('two renders of the same page at the same time', () => {
+    // `/livck` triggers an immediate refresh from seven places — on subscribe, on a layout or
+    // language change, on every custom-link edit — fire-and-forget, without the update loop's
+    // Redis claim. Subscribe is the worst of them: it runs at the moment the loop is most
+    // likely to be working on that page anyway, because the page was just added.
+    //
+    // Both then find no Message row and both post. The channel gets two identical status
+    // messages and the database two rows with the same hash — and since the handler only ever
+    // read the FIRST one back, the second was orphaned on the spot: never edited, never
+    // removed, still showing the layout it was born with while the first followed every change
+    // the user made. Seen in production within minutes of adding a subscription.
+    test('post one message, not two', async () => {
+        const client = makeClient();
+
+        await Promise.all([handleStatusPage(7, client), handleStatusPage(7, client)]);
+
+        expect(discord.sends).toBe(1);
+        expect(db.messages.filter((m) => m.category === 'STATUS')).toHaveLength(1);
+    });
+
+    test('and the second one edits rather than posts', async () => {
+        const client = makeClient();
+        await handleStatusPage(7, client);
+        nextCycle();
+
+        api.responses['category/cat-1/monitors'] = { data: [{ id: 'm1', name: 'API', state: 'DOWN' }] };
+        await Promise.all([handleStatusPage(7, client), handleStatusPage(7, client)]);
+
+        expect(discord.sends).toBe(1);
+        expect(discord.edits).toBe(1); // the second call finds nothing left to change
+    });
+});
+
+describe('a duplicate left behind by an older version', () => {
+    test('is deleted from the channel and from the database', async () => {
+        // Serializing stops new ones appearing; this is what heals a bot that has been running
+        // with the bug, without anyone tidying up by hand.
+        db.messages.push(
+            { id: 1, subscriptionId: 1, category: 'STATUS', messageId: 'msg-keep', contentHash: 'x', updatedAt: new Date(0), update: async function (f) { Object.assign(this, f); }, destroy: async () => {} },
+            { id: 2, subscriptionId: 1, category: 'STATUS', messageId: 'msg-orphan', contentHash: 'x', updatedAt: new Date(0), update: async function (f) { Object.assign(this, f); }, destroy: async function () { db.messages = db.messages.filter((m) => m !== this); } },
+        );
+
+        await handleStatusPage(7, makeClient());
+
+        expect(db.messages.filter((m) => m.category === 'STATUS')).toHaveLength(1);
+        expect(db.messages[0].messageId).toBe('msg-keep');
+        expect(discord.deleted).toContain('msg-orphan');
     });
 });
 

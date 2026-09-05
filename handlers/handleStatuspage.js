@@ -7,6 +7,7 @@ import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
 import { mayReap, recordReap } from '../util/subscriptionReaper.js'
 import { withLocale } from '../util/Translation.js'
+import { withPageLock } from '../util/pageLock.js'
 
 /** Discord allows 5 buttons per row and 5 rows. */
 const MAX_BUTTONS = 25
@@ -67,9 +68,39 @@ const deliverStatus = async (subscription, snapshot, client) => {
 
     const payload = { embeds, components: buildLinkButtons(customLinks) }
 
-    const record = await models.Message.findOne({
+    // ALL of them, not the first.
+    //
+    // A subscription is meant to have exactly one status message, and the code that reads it
+    // back has always assumed so. Before the render was serialized, two concurrent calls could
+    // each find none and each post one — and from that moment the second row was invisible:
+    // never edited, never removed, still showing whatever layout it was born with while the
+    // first one followed every change the user made. That is what a customer sees as "the
+    // extra message is not updated when I switch the layout".
+    //
+    // Serializing stops new ones appearing. This clears out the ones already there, in the
+    // channel as well as in the database, so a bot that has been running with the bug heals
+    // itself on the next cycle instead of needing someone to tidy up by hand.
+    const records = await models.Message.findAll({
         where: { subscriptionId: subscription.id, category: 'STATUS' },
+        order: [['id', 'ASC']],
     })
+
+    const [record, ...duplicates] = records
+
+    for (const extra of duplicates) {
+        logger.warn(
+            `[handleStatusPage] Removing a duplicate status message for subscription ${subscription.id} ` +
+            `(${extra.messageId})`
+        )
+        try {
+            const channel = await client.channels.fetch(subscription.channelId)
+            await channel?.messages?.delete(extra.messageId)
+        } catch (error) {
+            // Already gone from the channel, or unreachable. The row goes either way.
+            logger.debug(`[handleStatusPage] Could not delete ${extra.messageId}: ${error.message}`)
+        }
+        await extra.destroy()
+    }
 
     return syncMessage({
         // Resolved only if something is actually going to be sent — see util/messageSync.js.
@@ -84,7 +115,15 @@ const deliverStatus = async (subscription, snapshot, client) => {
     })
 }
 
-export const handleStatusPage = async (statuspageId, client) => {
+/**
+ * Serialized per page — see util/pageLock.js. `/livck` triggers an immediate refresh from
+ * seven places without taking the update loop's claim, and two concurrent renders both find no
+ * Message row and both post.
+ */
+export const handleStatusPage = (statuspageId, client) =>
+    withPageLock(statuspageId, () => renderStatusPage(statuspageId, client))
+
+const renderStatusPage = async (statuspageId, client) => {
     const statuspageRecord = await models.Statuspage.findOne({
         where: { id: statuspageId },
         include: [models.Subscription],
