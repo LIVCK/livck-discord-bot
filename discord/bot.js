@@ -3,6 +3,7 @@ import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { routeInteraction } from './interactionRouter.js';
+import { requireModalSupport } from '../util/discordPatch.js';
 
 const registerCommands = async (commandsFolder, models) => {
     const commands = [];
@@ -34,6 +35,11 @@ const initializeBot = async (commandsFolder, models) => {
         console.error('Missing environment variables: DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID.');
         process.exit(1);
     }
+
+    // Asked of the library, not of its source: node_modules restored from a build cache never
+    // runs postinstall, and the bot would come up healthy and missing the only way to add a
+    // status page. See util/discordPatch.js.
+    requireModalSupport();
 
     const client = new Client({
         intents: [GatewayIntentBits.Guilds],
