@@ -1,3 +1,4 @@
+import { Op } from 'sequelize'
 import models from '../models/index.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors, EmbedBuilder } from 'discord.js'
 import { fetchSnapshot, fetchClosedAlert } from '../providers/index.js'
@@ -227,8 +228,20 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
     for (const subscription of subscriptions) {
         if (!subscription.eventTypes.NEWS) continue
 
+        // BOUNDED BY THE WINDOW, and not by anything else.
+        //
+        // NEWS and ALERT rows are never deleted — one per alert per subscription, plus one per
+        // update — so this table only grows, for the life of the installation. The query ran
+        // once per subscription per cycle with no bound at all, so a page that has been
+        // watched for two years reads two years of rows every fifteen seconds to find the
+        // handful that are still inside the three-day window. The loop below discards
+        // everything older on the very next line; the database may as well not send it.
         const posted = await models.Message.findAll({
-            where: { subscriptionId: subscription.id, category: 'NEWS' },
+            where: {
+                subscriptionId: subscription.id,
+                category: 'NEWS',
+                createdAt: { [Op.gte]: new Date(cutoff) },
+            },
         })
 
         for (const record of posted) {
