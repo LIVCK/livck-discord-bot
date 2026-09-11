@@ -409,8 +409,11 @@ e2e('the update loop', () => {
                 expect(page.paused).toBe(false);
                 expect(page.nextAttemptAt).toBeNull();
 
-                // And the healthy channel in the same guild still got its update.
-                expect(sent.filter((m) => m.channelId === 'loop-allowed')).toHaveLength(1);
+                // And the healthy channel in the same guild was still served. Not an exact
+                // count: these pages are live, and one of them publishing an incident adds a
+                // news parent and a reply per update on top of the status message.
+                expect(sent.filter((m) => m.channelId === 'loop-allowed').length).toBeGreaterThan(0);
+                expect(sent.filter((m) => m.channelId === 'loop-refused')).toHaveLength(0);
             } finally {
                 refused.clear();
             }

@@ -104,6 +104,9 @@ e2e('the whole pipeline against real status pages', () => {
     });
 
     describe.each(PAGES)('$name', (page) => {
+        // Everything sent to this page's channels — status messages AND, when the page has
+        // one, the news parent and its update replies. The limit and leak checks below want
+        // all of them; anything counting subscriptions must go to the tracked rows instead.
         const messagesFor = () => sent.filter((m) => m.channelId.startsWith(`${page.name}#`));
         const embedsFor = () => messagesFor().flatMap((m) => (m.payload.embeds ?? []).map((e) => e.toJSON()));
 
@@ -116,8 +119,22 @@ e2e('the whole pipeline against real status pages', () => {
             }
         });
 
-        test('produces one status message per subscription', () => {
-            expect(messagesFor().filter((m) => m.action === 'send')).toHaveLength(LAYOUTS.length * LOCALES.length);
+        test('produces one status message per subscription', async () => {
+            // Counted from the tracked rows, NOT from the send log. These pages are live: the
+            // moment one of them publishes an incident, every subscription also receives a
+            // news parent and a reply per update, and an assertion on raw sends starts failing
+            // for a reason that has nothing to do with the status path. fc-status.net did
+            // exactly that — it gained an incident with one update, and 10 sends became 30.
+            const rows = await models.Message.findAll({
+                where: { category: 'STATUS' },
+                include: [{
+                    model: models.Subscription,
+                    where: { statuspageId: pages.get(page.name).id },
+                    required: true,
+                }],
+            });
+
+            expect(rows).toHaveLength(LAYOUTS.length * LOCALES.length);
         });
 
         test('every embed stays inside Discord limits', () => {
