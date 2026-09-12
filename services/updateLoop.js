@@ -204,15 +204,39 @@ export const runCycle = async (client) => {
     return summary;
 };
 
+/** The timer for the next cycle, so a shutdown can cancel it instead of being killed. */
+let nextCycle = null;
+let stopping = false;
+
 /** Run forever, one cycle every INTERVAL. A cycle never brings the process down. */
 export const startUpdateLoop = async (client) => {
+    if (stopping) return;
+
     try {
         await runCycle(client);
     } catch (error) {
         logger.error('[UpdateLoop] Critical error in update loop:', error);
     } finally {
-        setTimeout(() => startUpdateLoop(client), INTERVAL);
+        if (!stopping) {
+            nextCycle = setTimeout(() => startUpdateLoop(client), INTERVAL);
+        }
     }
 };
 
-export default { runCycle, processStatuspage, startUpdateLoop, INTERVAL };
+/**
+ * Stop scheduling. The cycle already in flight finishes on its own.
+ *
+ * Without this the timer keeps the event loop alive, so a SIGTERM does nothing and Docker
+ * kills the process ten seconds later — measured: `docker stop` took 10s and exited 137. Every
+ * deploy then cut a cycle in half, somewhere between sending a Discord message and writing the
+ * row that remembers it.
+ */
+export const stopUpdateLoop = () => {
+    stopping = true;
+    if (nextCycle) {
+        clearTimeout(nextCycle);
+        nextCycle = null;
+    }
+};
+
+export default { runCycle, processStatuspage, startUpdateLoop, stopUpdateLoop, INTERVAL };

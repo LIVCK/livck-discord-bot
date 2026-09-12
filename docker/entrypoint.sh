@@ -1,17 +1,23 @@
 #!/bin/sh
 #
-# Migrate, then run.
+# Migrate, then BECOME the bot.
 #
-# The image used to start supervisord directly, and `node migrate.js` existed only as a line
-# in the README. That was survivable while the schema never changed. It stopped being
-# survivable with the Cloud rollout: the update loop now selects backoffLevel, nextAttemptAt,
-# kind and externalId on every cycle, and the alert handler reads Messages.kind — so a
-# container built from this code against an un-migrated database fails every query, logs one
-# critical error every 15 seconds, delivers nothing, and never exits, which means supervisord's
-# autorestart never fires and nothing notices.
+# `exec`, so node is PID 1: it receives SIGTERM directly on `docker stop`, and its exit code is
+# the container's exit code.
 #
-# `set -e` plus migrate.js's exit code is the whole point: a failed or half-applied migration
-# stops the container instead of starting a bot that cannot work.
+# This used to hand off to supervisord, which is one process manager too many for a container
+# running one process — and it actively hid failure. The bot exits non-zero on every condition
+# it cannot work under: no configuration, no database, a rejected command registration, an
+# unpatched discord.js. supervisord retried four times, gave up, marked the program FATAL, and
+# then kept running as PID 1. The container stayed `running` with exit code 0 while doing
+# nothing at all, for ever — indistinguishable from a healthy one in `docker ps`, to a health
+# check, or to an orchestrator. Measured: status "running", exit code 0, four failed starts.
+#
+# Now a container that cannot work stops and says why, and whatever supervises it — Docker's
+# own restart policy, Kubernetes, systemd — sees a non-zero exit and can act.
+#
+# `set -e` plus migrate.js's exit code is the other half: a failed or half-applied migration
+# stops the container instead of starting a bot against a schema it cannot use.
 
 set -e
 
@@ -19,4 +25,4 @@ echo "[entrypoint] Running database migrations…"
 node /opt/app/migrate.js
 
 echo "[entrypoint] Migrations complete, starting the bot."
-exec supervisord -c /etc/supervisord.conf
+exec node /opt/app/server.js

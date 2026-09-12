@@ -15,7 +15,8 @@ LIVCK Discord Bot is a self-hosted Discord bot that monitors LIVCK status pages 
 ## Architecture
 
 ### Core Flow
-1. **server.js**: Entry point — connects Discord, then hands the client to the update loop
+1. **server.js**: Entry point — validates the environment, applies pending migrations,
+   connects Discord, hands the client to the update loop, and shuts all of it down on SIGTERM
 2. **services/updateLoop.js**: The 15-second cycle. Processes status pages that are due (see
    backoff below) in batches of 100, checks Redis cache to prevent duplicate processing. It
    lives outside `server.js` so it can be tested without a Discord token
