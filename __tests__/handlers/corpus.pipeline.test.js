@@ -60,8 +60,16 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                 const record = {
                     id: nextRowId += 1,
                     ...row,
-                    createdAt: new Date('2026-09-12T12:00:00Z'),
-                    updatedAt: new Date('2026-09-12T12:00:00Z'),
+                    // NOW, like a real row.
+                    //
+                    // A fixed date here made the whole file depend on the wall clock: the
+                    // status message carries `heartbeat: true`, so once the stamp was older
+                    // than STATUS_REFRESH_MINUTES the second cycle refreshed instead of
+                    // staying silent, and every assertion about "unchanged costs nothing"
+                    // failed. It passed for the first fifteen minutes after it was written
+                    // and would have failed in CI from then on, at no particular time.
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                     update: async function (fields) { Object.assign(this, fields); this.updatedAt = new Date(); },
                     destroy: async function () { db.messages = db.messages.filter((m) => m !== this); },
                 };
