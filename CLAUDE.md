@@ -117,6 +117,14 @@ that proves Discord ACCEPTS what the bot builds — everything else validates th
 locally and records what would have been sent. It skips itself when `.env.test` is absent, and
 refuses to run against a database whose name does not look like a throwaway.
 
+**An incident's whole life** (same setup as above, `__tests__/e2e/alertLifecycle.live.test.js`):
+a real closed incident from status.emeraldhost.de is replayed one update at a time against the
+real Discord API — parent, reply, reply, resolution, then the alert leaving the payload. Its
+timestamps are moved into the present, because the bot ignores anything outside its three-day
+window and there is no other way to watch an old incident happen again. Everything else about
+alerts is checked at one instant; this is the only thing that checks the PROGRESSION, where
+every step depends on state written by the cycle before.
+
 **Contract checks against the live APIs** (network only, no database):
 
 ```bash
