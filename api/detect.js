@@ -72,8 +72,12 @@ const resolveLocation = (from, location) => {
         const target = new URL(location, from);
         // http and https only: a redirect to any other scheme is not a status page.
         if (target.protocol !== 'http:' && target.protocol !== 'https:') return null;
-        // A self-referencing redirect would just be a second identical request.
-        if (target.href === from) return null;
+        // A self-referencing redirect would just be a second identical request. Compared
+        // NORMALISED, because `https://x.example` and `https://x.example/` are the same
+        // place and only one of them is what `new URL()` hands back — a raw string
+        // comparison let that pair through and made the guard useless for the commonest
+        // shape of self-redirect there is.
+        if (target.href === new URL(from).href) return null;
         return target.href;
     } catch {
         return null;

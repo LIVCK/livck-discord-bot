@@ -75,7 +75,11 @@ export const requireModalSupport = () => {
     for (const problem of problems) console.error(`  - ${problem}`);
     console.error('Run `node scripts/patch-discordjs.js` (npm install does it automatically).');
 
-    if (process.env.NODE_ENV !== 'test') process.exit(1);
+    // Unconditionally, like every other startup gate. It was skipped under NODE_ENV=test,
+    // which made the one thing worth asserting about a gate — that it actually stops the boot
+    // — impossible to assert. Nothing in the suite reaches this: it is called from
+    // initializeBot, which no test invokes.
+    process.exit(1);
 };
 
 export default { checkModalSupport, requireModalSupport };

@@ -103,6 +103,125 @@ describe('detectSource', () => {
         await expect(detectSource('https://invalid.test')).rejects.toThrow('fetch failed');
     });
 
+describe('a redirect', () => {
+    /** Record every request so the second hop can be inspected. */
+    const recording = (responses) => {
+        const calls = [];
+        stubFetch(async (url, options) => {
+            calls.push({ url, options });
+            const next = responses.shift();
+            if (next instanceof Error) throw next;
+            return next;
+        });
+        return calls;
+    };
+
+    test('is followed once when the first answer carries no marker', () => {
+        // The Cloud's own 302 already carries the marker, which is why redirects are not
+        // followed by default. Plenty of real deployments answer with one that does not: an
+        // `http://` origin upgrading to https, an apex sending you to www, HSTS at a proxy.
+        // Both reference pages do exactly that.
+        recording([
+            { status: 301, headers: headers({ location: 'https://status.example.com/' }) },
+            { status: 200, headers: headers({ 'lvk-version': '1.5.0' }) },
+        ]);
+
+        return expect(detectSource('http://status.example.com')).resolves.toBe(SOURCE.SELF_HOSTED);
+    });
+
+    test('is not followed when the first answer already identified the page', async () => {
+        // One request, not two, for the case redirects were disabled for.
+        const calls = recording([
+            { status: 302, headers: headers({ server: 'LIVCK Cloud', location: 'https://x/de' }) },
+        ]);
+
+        await expect(detectSource('https://cloud.example.com')).resolves.toBe(SOURCE.CLOUD);
+        expect(calls).toHaveLength(1);
+    });
+
+    test('carries the API token to the same host', async () => {
+        const calls = recording([
+            { status: 308, headers: headers({ location: 'https://status.example.com/status' }) },
+            { status: 200, headers: headers({ 'lvk-version': '1.5.0' }) },
+        ]);
+
+        await detectSource('https://status.example.com', { token: 'secret' });
+
+        expect(calls).toHaveLength(2);
+        expect(calls[1].options.headers.Authorization).toBe('Bearer secret');
+    });
+
+    test('DROPS the API token when the host changes', async () => {
+        // A redirect can point anywhere. The token belongs to one customer's private status
+        // page, and handing it to whatever is on the other end would turn a convenience into
+        // a credential leak.
+        const calls = recording([
+            { status: 302, headers: headers({ location: 'https://someone-else.example.com/' }) },
+            { status: 200, headers: headers({ 'lvk-version': '1.5.0' }) },
+        ]);
+
+        await detectSource('https://status.example.com', { token: 'secret' });
+
+        expect(calls).toHaveLength(2);
+        expect(calls[1].options.headers.Authorization).toBeUndefined();
+        expect(JSON.stringify(calls[1])).not.toContain('secret');
+    });
+
+    test('is not followed to a scheme that cannot be a status page', async () => {
+        const calls = recording([
+            { status: 302, headers: headers({ location: 'javascript:alert(1)' }) },
+        ]);
+
+        await expect(detectSource('https://status.example.com')).resolves.toBeNull();
+        expect(calls).toHaveLength(1);
+    });
+
+    test('is not followed to itself', async () => {
+        const calls = recording([
+            { status: 302, headers: headers({ location: 'https://status.example.com' }) },
+        ]);
+
+        await expect(detectSource('https://status.example.com')).resolves.toBeNull();
+        expect(calls).toHaveLength(1);
+    });
+
+    test('a redirect with no destination is simply not a LIVCK page', async () => {
+        recording([{ status: 302, headers: headers({}) }]);
+
+        await expect(detectSource('https://status.example.com')).resolves.toBeNull();
+    });
+
+    test('resolves a relative destination against the original', async () => {
+        const calls = recording([
+            { status: 301, headers: headers({ location: '/de/status' }) },
+            { status: 200, headers: headers({ server: 'LIVCK Cloud' }) },
+        ]);
+
+        await expect(detectSource('https://cloud.example.com/page')).resolves.toBe(SOURCE.CLOUD);
+        expect(calls[1].url).toBe('https://cloud.example.com/de/status');
+    });
+
+    test('a second hop that fails throws rather than reading as "not LIVCK"', async () => {
+        recording([
+            { status: 301, headers: headers({ location: 'https://status.example.com/' }) },
+            Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } }),
+        ]);
+
+        await expect(detectSource('http://status.example.com')).rejects.toThrow('fetch failed');
+    });
+
+    test('only one hop, never a chain', async () => {
+        // Two redirects in a row is a misconfiguration, not something to walk.
+        const calls = recording([
+            { status: 301, headers: headers({ location: 'https://a.example.com/' }) },
+            { status: 301, headers: headers({ location: 'https://b.example.com/' }) },
+        ]);
+
+        await expect(detectSource('http://a.example.com')).resolves.toBeNull();
+        expect(calls).toHaveLength(2);
+    });
+});
+
     test('sends the API token when one is configured', async () => {
         let seen;
         stubFetch(async (_url, options) => {

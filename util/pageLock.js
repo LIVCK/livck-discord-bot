@@ -38,11 +38,17 @@ export const withPageLock = (pageId, fn) => {
     // Chained off the settled outcome: one call failing must not cancel the next.
     const next = previous.then(fn, fn);
 
-    // Drop the entry once this is the last one, so the map cannot grow with the fleet.
-    queues.set(key, next.then(
-        () => { if (queues.get(key) === next) queues.delete(key); },
-        () => { if (queues.get(key) === next) queues.delete(key); },
-    ));
+    // Drop the entry once this is the last one, so the map does not keep an entry per page for
+    // the life of the process.
+    //
+    // The comparison is against the promise actually STORED, which is the cleanup one and not
+    // `next` — an earlier version compared against `next` while storing something else, so the
+    // condition was never true and nothing was ever deleted. The map held one settled promise
+    // per status page for ever, silently, and its own comment said otherwise.
+    let stored;
+    const drop = () => { if (queues.get(key) === stored) queues.delete(key); };
+    stored = next.then(drop, drop);
+    queues.set(key, stored);
 
     return next;
 };
