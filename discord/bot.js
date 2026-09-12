@@ -5,7 +5,15 @@ import path from 'path';
 import { routeInteraction } from './interactionRouter.js';
 import { requireModalSupport } from '../util/discordPatch.js';
 
-const registerCommands = async (commandsFolder, models) => {
+/**
+ * Collect every command definition and register the set with Discord.
+ *
+ * Exported so it can be tested: Discord validates the set as a WHOLE, so this either works
+ * completely or leaves the bot with no commands at all, and that is worth holding in place.
+ * `initializeBot` below is not — it opens a gateway connection, and what it does is verified
+ * by the Docker run and the live Discord suite rather than by a double.
+ */
+export const registerCommands = async (commandsFolder, models) => {
     const commands = [];
 
     for (const file of fs.readdirSync(commandsFolder).filter(file => file.endsWith('.js'))) {

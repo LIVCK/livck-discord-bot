@@ -6,7 +6,7 @@
 import { jest } from '@jest/globals';
 
 const detect = { result: null, error: null, calls: 0 };
-const cloud = { calls: 0, pageId: 'cloud-page-id' };
+const cloud = { calls: 0, pageId: 'cloud-page-id', closedCalls: 0, closedThrows: false, lastExpectedKind: undefined };
 const selfHosted = { calls: 0 };
 
 jest.unstable_mockModule('../../api/detect.js', () => ({
@@ -23,6 +23,12 @@ jest.unstable_mockModule('../../providers/cloud.js', () => ({
     fetchSnapshot: async () => {
         cloud.calls += 1;
         return { snapshot: { source: 'CLOUD', groups: [], alerts: [] }, pageId: cloud.pageId };
+    },
+    fetchClosedAlert: async (_page, _id, expectedKind) => {
+        cloud.closedCalls += 1;
+        cloud.lastExpectedKind = expectedKind;
+        if (cloud.closedThrows) throw new Error('lookup failed');
+        return { id: _id, kind: expectedKind ?? 'incident' };
     },
     toSnapshot: () => ({}),
     flattenTree: () => [],
@@ -43,7 +49,7 @@ jest.unstable_mockModule('../../providers/selfHosted.js', () => ({
     default: {},
 }));
 
-const { fetchSnapshot, resolveSource, clearSnapshotCache, NotLivckError } =
+const { fetchSnapshot, fetchClosedAlert, resolveSource, clearSnapshotCache, NotLivckError } =
     await import('../../providers/index.js');
 const { SOURCE } = await import('../../dto/statuspage.js');
 
@@ -67,6 +73,9 @@ beforeEach(() => {
     detect.calls = 0;
     cloud.calls = 0;
     cloud.pageId = 'cloud-page-id';
+    cloud.closedCalls = 0;
+    cloud.closedThrows = false;
+    cloud.lastExpectedKind = undefined;
     selfHosted.calls = 0;
     clearSnapshotCache();
 });
@@ -161,6 +170,87 @@ describe('adapter selection', () => {
 
         expect(page.saves).toBe(0);
     });
+});
+
+describe('recovering a closed alert', () => {
+    // Several subscriptions watch the same page and every one of them notices the same alert
+    // disappear in the same cycle. Without a memo that is one detail request per subscription,
+    // every fifteen seconds, for three days.
+    test('concurrent callers share a single request', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        const [a, b, c] = await Promise.all([
+            fetchClosedAlert(page, 'inc-1'),
+            fetchClosedAlert(page, 'inc-1'),
+            fetchClosedAlert(page, 'inc-1'),
+        ]);
+
+        expect(cloud.closedCalls).toBe(1);
+        expect(a).toBe(b);
+        expect(b).toBe(c);
+    });
+
+    test('a different alert is fetched separately', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await Promise.all([fetchClosedAlert(page, 'inc-1'), fetchClosedAlert(page, 'inc-2')]);
+
+        expect(cloud.closedCalls).toBe(2);
+    });
+
+    test('a self-hosted page is never asked at all', async () => {
+        // There is no such endpoint, and asking would be a 404 per subscription per cycle.
+        await expect(fetchClosedAlert(makePage({ kind: SOURCE.SELF_HOSTED }), 'inc-1')).resolves.toBeNull();
+        expect(cloud.closedCalls).toBe(0);
+    });
+
+    test('the kind the bot remembered is passed through', async () => {
+        // Without it a closed notice comes back shaped like an incident, and a calm advisory
+        // turns red days after it was posted.
+        await fetchClosedAlert(makePage({ kind: SOURCE.CLOUD }), 'inc-1', 'notice');
+
+        expect(cloud.lastExpectedKind).toBe('notice');
+    });
+
+    test('a failed lookup is not remembered', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+        cloud.closedThrows = true;
+
+        await expect(fetchClosedAlert(page, 'inc-1')).rejects.toThrow('lookup failed');
+
+        cloud.closedThrows = false;
+        await fetchClosedAlert(page, 'inc-1');
+
+        expect(cloud.closedCalls).toBe(2);
+    });
+
+    test('clearSnapshotCache forgets them too', async () => {
+        const page = makePage({ kind: SOURCE.CLOUD });
+
+        await fetchClosedAlert(page, 'inc-1');
+        clearSnapshotCache();
+        await fetchClosedAlert(page, 'inc-1');
+
+        expect(cloud.closedCalls).toBe(2);
+    });
+});
+
+describe('the memo cannot grow without bound', () => {
+    test('an old entry is evicted once the cap is reached', async () => {
+        // A fleet of thousands of pages must not turn this into a leak.
+        const { MAX_CACHE_ENTRIES } = await import('../../providers/index.js');
+        const cap = MAX_CACHE_ENTRIES ?? 5000;
+
+        for (let i = 0; i < cap + 10; i += 1) {
+            await fetchSnapshot(makePage({ id: i, url: `https://p${i}.example`, kind: SOURCE.CLOUD }));
+        }
+
+        // The very first page is gone, so asking again is a fresh fetch rather than a hit.
+        const before = cloud.calls;
+        await fetchSnapshot(makePage({ id: 0, url: 'https://p0.example', kind: SOURCE.CLOUD }));
+
+        expect(cloud.calls).toBe(before + 1);
+    }, 60000);
 });
 
 describe('one fetch per cycle', () => {
