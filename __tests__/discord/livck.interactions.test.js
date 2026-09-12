@@ -206,7 +206,7 @@ describe('the language a subscription is delivered in', () => {
     };
 
     test('offers exactly the locales that are loaded', async () => {
-        const interaction = makeInteraction({ customId: 'edit_sub_1' });
+        const interaction = makeInteraction({ customId: 'back_to_edit_1' });
         await command.handleComponentInteraction(interaction, {});
 
         const offered = new Set(optionsOf(interaction.replies.concat(interaction.edits)));
@@ -221,7 +221,7 @@ describe('the language a subscription is delivered in', () => {
         translation.translations.fr = { commands: { livck: { description: 'x' } } };
 
         try {
-            const interaction = makeInteraction({ customId: 'edit_sub_1' });
+            const interaction = makeInteraction({ customId: 'back_to_edit_1' });
             await command.handleComponentInteraction(interaction, {});
 
             expect(new Set(optionsOf(interaction.replies.concat(interaction.edits))).has('fr')).toBe(true);
@@ -233,7 +233,7 @@ describe('the language a subscription is delivered in', () => {
     test('marks the subscription current language as selected', async () => {
         db.subscriptions[0].locale = 'en';
 
-        const interaction = makeInteraction({ customId: 'edit_sub_1' });
+        const interaction = makeInteraction({ customId: 'back_to_edit_1' });
         await command.handleComponentInteraction(interaction, {});
 
         const json = JSON.stringify(interaction.replies.concat(interaction.edits));

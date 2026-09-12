@@ -701,89 +701,6 @@ export default (models) => ({
 
         if (await denyWithoutPermission(interaction)) return;
 
-        // Handle subscription select menu
-        if (interaction.customId === 'subscription_select') {
-            const subscriptionId = interaction.values[0].replace('sub_', '');
-            const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId, guildId: interaction.guildId },
-                include: [{ model: models.Statuspage }]
-            });
-
-            if (!subscription) {
-                await interaction.reply({
-                    content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
-                });
-                return;
-            }
-
-            const langFlag = subscription.locale === 'de' ? '🇩🇪' : '🇬🇧';
-            const events = Object.keys(subscription.eventTypes)
-                .filter(key => subscription.eventTypes[key])
-                .map(e => translation.trans(`commands.livck.choices.${e.toLowerCase()}`))
-                .join(', ');
-
-            // Create detail embed
-            const detailEmbed = {
-                title: subscription.Statuspage.name,
-                url: subscription.Statuspage.url,
-                color: 0x5865F2,
-                thumbnail: {
-                    url: `https://www.google.com/s2/favicons?domain=${new URL(subscription.Statuspage.url).hostname}&sz=128`
-                },
-                fields: [
-                    {
-                        name: translation.trans('commands.livck.list.channel_label'),
-                        value: `<#${subscription.channelId}>`,
-                        inline: true
-                    },
-                    {
-                        name: translation.trans('commands.livck.list.language_label'),
-                        value: `${langFlag} ${subscription.locale.toUpperCase()}`,
-                        inline: true
-                    },
-                    {
-                        name: translation.trans('commands.livck.list.events_label'),
-                        value: events,
-                        inline: true
-                    }
-                ],
-                footer: {
-                    text: `ID: ${subscription.id}`
-                }
-            };
-
-            // Create action buttons
-            const openButton = new ButtonBuilder()
-                .setLabel(translation.trans('commands.livck.list.open_button'))
-                .setStyle(ButtonStyle.Link)
-                .setURL(subscription.Statuspage.url)
-
-            const unsubButton = new ButtonBuilder()
-                .setCustomId(`unsub_${subscription.id}`)
-                .setLabel(translation.trans('commands.livck.list.unsubscribe_button'))
-                .setStyle(ButtonStyle.Danger)
-
-            const row = new ActionRowBuilder().addComponents(openButton, unsubButton);
-
-            await interaction.reply({
-                embeds: [detailEmbed],
-                components: [row],
-                ephemeral: true
-            });
-        }
-
-        // Handle refresh button
-        if (interaction.customId === 'refresh_list') {
-            await interaction.deferUpdate();
-            // Trigger list command logic again
-            // ... (re-fetch subscriptions and update message)
-            await interaction.editReply({
-                content: translation.trans('commands.livck.list.refreshed'),
-                components: interaction.message.components
-            });
-        }
-
         // Handle delete button from list
         if (interaction.customId.startsWith('delete_sub_')) {
             await interaction.deferUpdate();
@@ -810,64 +727,6 @@ export default (models) => ({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
                 embeds: [],
                 components: []
-            });
-        }
-
-
-        // Handle edit button from list (old handler - can be removed)
-        if (interaction.customId.startsWith('edit_sub_')) {
-            const subscriptionId = interaction.customId.replace('edit_sub_', '');
-
-            const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId, guildId: interaction.guildId },
-                include: [{ model: models.Statuspage }]
-            });
-
-            if (!subscription) {
-                await interaction.reply({
-                    content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
-                });
-                return;
-            }
-
-            // Show current settings with select menus to edit
-            const eventSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`edit_events_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.all'))
-                        .setValue('ALL')
-                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.status'))
-                        .setValue('STATUS')
-                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.news'))
-                        .setValue('NEWS')
-                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                );
-
-            const localeSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`edit_locale_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
-                        .setLabel(choice.label)
-                        .setValue(choice.value)
-                        .setDefault(choice.default)));
-
-            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
-            const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
-
-            await interaction.reply({
-                content: translation.trans('commands.livck.list.edit_prompt', {
-                    name: subscription.Statuspage.name,
-                    channelId: subscription.channelId
-                }),
-                components: [eventRow, localeRow],
-                ephemeral: true
             });
         }
 
@@ -1816,15 +1675,22 @@ export default (models) => ({
             const eventTypeSelect = new StringSelectMenuBuilder()
                 .setCustomId(`role_event_type_${subscriptionId}`)
                 .setPlaceholder(translation.trans('commands.livck.role_mentions.select_event_type'))
+                // NO "STATUS" OPTION. A role can only ever be pinged by an incident or a
+                // maintenance, because that is the only thing the bot POSTS — a status message
+                // is edited in place, and Discord does not notify anyone about an edit. The
+                // menu offered it anyway, so an admin could pick "status changes", see it
+                // saved, see it listed, and never be pinged when a page went down. A setting
+                // that silently does nothing is worse than one that is absent.
+                //
+                // Rows already stored as STATUS are left alone: they are inert today and stay
+                // inert, and nothing is deleted from a customer's configuration on an upgrade.
+                // Pinging on a status TRANSITION is a real feature and a separate piece of
+                // work — it needs a new message, since an edit cannot notify.
                 .addOptions(
                     new StringSelectMenuOptionBuilder()
                         .setLabel(translation.trans('commands.livck.role_mentions.event_type_all'))
                         .setValue('ALL')
-                        .setDefault(currentEventType === 'ALL'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.role_mentions.event_type_status'))
-                        .setValue('STATUS')
-                        .setDefault(currentEventType === 'STATUS'),
+                        .setDefault(currentEventType === 'ALL' || currentEventType === 'STATUS'),
                     new StringSelectMenuOptionBuilder()
                         .setLabel(translation.trans('commands.livck.role_mentions.event_type_news'))
                         .setValue('NEWS')

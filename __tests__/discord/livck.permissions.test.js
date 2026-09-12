@@ -109,7 +109,7 @@ describe('a member without Manage Server', () => {
     test('is refused even for a read-only navigation button', async () => {
         // Guarding the whole handler rather than a list of ids is what keeps a button added
         // next month covered by default.
-        const interaction = makeInteraction({ manageGuild: false, customId: 'refresh_list' });
+        const interaction = makeInteraction({ manageGuild: false, customId: 'back_to_edit_1' });
 
         await command.handleComponentInteraction(interaction, {});
 
@@ -131,7 +131,7 @@ describe('a member with Manage Server', () => {
     test('is not blocked when only the raw member permissions are available', async () => {
         // `memberPermissions` is missing on an uncached member in some gateway states; the
         // GuildMember's own permissions have to carry it.
-        const interaction = makeInteraction({ manageGuild: true, customId: 'refresh_list' });
+        const interaction = makeInteraction({ manageGuild: true, customId: 'back_to_edit_1' });
         delete interaction.memberPermissions;
 
         await expect(command.handleComponentInteraction(interaction, {}))
