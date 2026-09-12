@@ -262,8 +262,24 @@ const groupBody = (group, snapshot, locale) => {
  * which means the status message would simply freeze on its last content for ever, for every
  * subscriber of that page, with one log line and nothing a reader could see.
  */
+/** The host, which is always meaningful and never a translation. */
+const hostOf = (url) => {
+    try {
+        return new URL(url).hostname;
+    } catch {
+        return url || '';
+    }
+};
+
 const titleFor = (snapshot, locale) => {
-    const pageName = nameOf(snapshot.name, snapshot, locale, 'messages.status.error');
+    // The HOST as the last resort, not the word "error".
+    //
+    // A page whose name resolves to nothing rendered as "Dienste von Fehler", which reads as
+    // though something had gone wrong rather than as the name of a page. The adapters already
+    // fall back to the stored name when the API omits one, but `??` does not catch a name that
+    // is present and EMPTY — a translation cleared to null is stored, not removed. The
+    // hostname is right in every one of those cases and needs no translation.
+    const pageName = resolveText(snapshot.name, locale, snapshot.defaultLocale) || hostOf(snapshot.url);
     return {
         title: truncate(translation.trans('messages.status.title', { name: pageName }), DISCORD_LIMITS.EMBED_TITLE),
         footer: truncate(pageName, DISCORD_LIMITS.EMBED_FOOTER_TEXT),
