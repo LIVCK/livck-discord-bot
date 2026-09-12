@@ -83,6 +83,15 @@ The Docker image does this itself (`docker/entrypoint.sh`) and refuses to start 
 fails — the update loop selects columns that only exist after migrating, and a bot running
 against an un-migrated database fails every query silently for ever.
 
+**Payloads the live pages never happen to produce** (no network, part of `npm test`):
+`__tests__/fixtures/payloadFactory.js` builds either API's payload to order — a group nested
+four deep, a translation cleared to null, two hundred services, an incident in every state.
+`payloadMatrix.test.js` walks the schema case by case; `payloadFuzz.test.js` assembles random
+trees from the same pieces. Both feed everything through the real adapter, DTO and all five
+renderers in three languages and require the same properties of every result: inside Discord's
+limits, no translation key, no placeholder, no hidden-child count, deterministic. The fuzzer
+is seeded — `FUZZ_SEED` reproduces a failure exactly, `FUZZ_RUNS` turns it up when hunting.
+
 **End-to-end run against the real status pages** (needs a throwaway database — it truncates
 every table it uses, so never point it at one you care about):
 
