@@ -279,6 +279,150 @@ describe('an alert that vanished from the live payload', () => {
     });
 });
 
+describe('a channel that fails during the close-out', () => {
+    /** Two subscriptions, the first of which Discord refuses. */
+    const twoChannels = (failCode) => {
+        db.statuspage.Subscriptions = [
+            { ...db.statuspage.Subscriptions[0], id: 1, channelId: 'chan-broken' },
+            { ...db.statuspage.Subscriptions[0], id: 2, channelId: 'chan-ok' },
+        ];
+        db.messages.push(trackedMessage('inc-1'), { ...trackedMessage('inc-1'), subscriptionId: 2 });
+
+        provider.closed['inc-1'] = incident({
+            state: 'resolved',
+            updates: [makeUpdate({ id: 'u-final', state: 'resolved', body: { de: 'Behoben.' }, createdAt: hoursAgo(1) })],
+        });
+
+        return {
+            channels: {
+                fetch: async (id) => {
+                    if (id === 'chan-broken') throw Object.assign(new Error('refused'), { code: failCode });
+                    return {
+                        id,
+                        send: async (payload) => { discord.sent.push({ channel: id, payload }); return { id: 'm' }; },
+                        messages: { edit: async () => { discord.edits += 1; return {}; } },
+                    };
+                },
+            },
+        };
+    };
+
+    test('does not cost every other guild its resolution', async () => {
+        // The guard was applied to the live alert path and missed here. One guild that revoked
+        // "Send Messages" aborted the whole loop, so every OTHER guild's thread stayed on "we
+        // are investigating" — and never recovered, because the same error threw every cycle
+        // until the three-day window closed the thread out of scope for good.
+        await handleAlerts(7, twoChannels(50013));
+
+        expect(discord.sent.map((s) => s.channel)).toEqual(['chan-ok']);
+        expect(db.destroyed).toEqual([]);
+    });
+
+    test('a channel that is really gone loses its subscription, and only its own', async () => {
+        await handleAlerts(7, twoChannels(10003));
+
+        expect(db.destroyed).toEqual([1]);
+        expect(discord.sent.map((s) => s.channel)).toEqual(['chan-ok']);
+    });
+
+    test('and the brake applies here too', async () => {
+        // A wrong token makes EVERY channel answer 10003; this is one of the lines that would
+        // otherwise delete the whole table one tidy-up at a time.
+        const { resetReaper, REAP_LIMIT } = await import('../../util/subscriptionReaper.js');
+        resetReaper();
+
+        db.statuspage.Subscriptions = Array.from({ length: REAP_LIMIT + 5 }, (_, i) => ({
+            ...db.statuspage.Subscriptions[0], id: i + 1, channelId: `chan-${i + 1}`,
+        }));
+        for (const sub of db.statuspage.Subscriptions) {
+            db.messages.push({ ...trackedMessage('inc-1'), subscriptionId: sub.id });
+        }
+        provider.closed['inc-1'] = incident({ state: 'resolved', updates: [] });
+
+        await handleAlerts(7, { channels: { fetch: async () => { throw Object.assign(new Error('gone'), { code: 10003 }); } } });
+
+        expect(db.destroyed).toHaveLength(REAP_LIMIT);
+        resetReaper();
+    });
+});
+
+describe('throttling per subscription', () => {
+    /** Three channels on one page, all tracking the same alert. */
+    const threeChannels = () => {
+        db.statuspage.Subscriptions = [1, 2, 3].map((id) => ({
+            ...db.statuspage.Subscriptions[0], id, channelId: `chan-${id}`,
+        }));
+        db.messages = [1, 2, 3].map((id) => ({ ...trackedMessage('inc-1'), subscriptionId: id }));
+
+        provider.closed['inc-1'] = incident({
+            state: 'resolved',
+            updates: [makeUpdate({ id: 'u-final', state: 'resolved', body: { de: 'Behoben.' }, createdAt: hoursAgo(1) })],
+        });
+    };
+
+    test('every subscription receives the resolution, not just the first', async () => {
+        // Keyed on the page, the first subscription's attempt silenced all the others — for
+        // that cycle and every cycle after it, because whichever ran first kept refreshing the
+        // cooldown. Only one channel ever saw an incident end.
+        threeChannels();
+
+        await handleAlerts(7, makeClient());
+
+        expect(discord.sent).toHaveLength(3);
+    });
+
+    test('and it is still one lookup, not three', async () => {
+        // Throttling per subscription must not undo what the cooldown was for. The provider
+        // memoizes a recovered alert per (page, alert) for the length of a cycle.
+        threeChannels();
+
+        await handleAlerts(7, makeClient());
+
+        expect(provider.closedCalls).toEqual(['inc-1', 'inc-1', 'inc-1']);
+        // Three asks of the provider, which answers all of them from one request — the memo
+        // lives in providers/index.js and is covered there.
+    });
+
+    test('the next cycle asks about none of them again', async () => {
+        threeChannels();
+        await handleAlerts(7, makeClient());
+        provider.closedCalls = [];
+
+        await handleAlerts(7, makeClient());
+
+        expect(provider.closedCalls).toEqual([]);
+    });
+});
+
+describe('the cooldown map', () => {
+    test('evicts an old entry rather than growing with every alert ever seen', async () => {
+        // One entry per (page, alert). Without a bound that is every alert an installation has
+        // ever recovered, held for the life of the process.
+        const { clearCloseoutCooldowns } = await import('../../handlers/handleAlerts.js');
+        clearCloseoutCooldowns();
+
+        // 5000 is the cap; fill past it and show the earliest is asked about again.
+        db.messages.push(trackedMessage('inc-first'));
+        provider.closed['inc-first'] = null;
+        await handleAlerts(7, makeClient());
+        expect(provider.closedCalls).toEqual(['inc-first']);
+
+        db.messages = [];
+        for (let i = 0; i < 5001; i += 1) {
+            db.messages = [trackedMessage(`filler-${i}`)];
+            provider.closed[`filler-${i}`] = null;
+            await handleAlerts(7, makeClient());
+        }
+
+        // The first one was evicted, so it is asked about again instead of being throttled.
+        provider.closedCalls = [];
+        db.messages = [trackedMessage('inc-first')];
+        await handleAlerts(7, makeClient());
+
+        expect(provider.closedCalls).toEqual(['inc-first']);
+    }, 60000);
+});
+
 describe('thread headlines', () => {
     // The parent already has a Message row in these fixtures, so it is EDITED; only the
     // replies are sent. That is exactly the shape of a real close-out.

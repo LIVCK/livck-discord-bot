@@ -201,21 +201,34 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
  */
 const CLOSEOUT_RECHECK_MS = Number(process.env.ALERT_CLOSEOUT_RECHECK_MS || 30 * 60 * 1000);
 
-/** `${statuspageId}:${alertId}` → when it was last asked about. Memory only, by design. */
+/**
+ * `${subscriptionId}:${alertId}` → when it was last asked about. Memory only, by design.
+ *
+ * PER SUBSCRIPTION, not per page. Keyed on the page it throttled the wrong thing: the check
+ * sits inside the loop over subscriptions, so the first one recorded the attempt and every
+ * other subscription to that page was skipped — for that cycle and, since the cooldown was
+ * refreshed by whichever ran first, for every cycle after it. Only one channel ever received
+ * an incident's resolution; the rest stayed on "we are investigating" until the reporting
+ * window closed them out of scope. Every close-out test had a single subscription, so nothing
+ * saw it.
+ *
+ * Throttling per subscription costs no extra requests: the provider memoizes a recovered alert
+ * per (page, alert) for the length of a cycle, so all of them share one call.
+ */
 const closeoutAttempts = new Map();
 const MAX_CLOSEOUT_KEYS = 5000;
 
-const recentlyAttempted = (statuspageId, alertId) => {
-    const at = closeoutAttempts.get(`${statuspageId}:${alertId}`);
+const recentlyAttempted = (subscriptionId, alertId) => {
+    const at = closeoutAttempts.get(`${subscriptionId}:${alertId}`);
     return at !== undefined && Date.now() - at < CLOSEOUT_RECHECK_MS;
 };
 
-const rememberAttempt = (statuspageId, alertId) => {
+const rememberAttempt = (subscriptionId, alertId) => {
     if (closeoutAttempts.size >= MAX_CLOSEOUT_KEYS) {
         const oldest = closeoutAttempts.keys().next().value;
         if (oldest !== undefined) closeoutAttempts.delete(oldest);
     }
-    closeoutAttempts.set(`${statuspageId}:${alertId}`, Date.now());
+    closeoutAttempts.set(`${subscriptionId}:${alertId}`, Date.now());
 };
 
 /** Forget the cooldowns. Exposed for tests. */
@@ -252,8 +265,8 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
 
             // Asked about recently enough. Without this the same request went out every 15
             // seconds for the full three days — see CLOSEOUT_RECHECK_MS.
-            if (recentlyAttempted(statuspageRecord.id, record.serviceId)) continue
-            rememberAttempt(statuspageRecord.id, record.serviceId)
+            if (recentlyAttempted(subscription.id, record.serviceId)) continue
+            rememberAttempt(subscription.id, record.serviceId)
 
             // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
             // returns a notice shaped exactly like an incident and says nothing about which
