@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "id": "Hd1ZhHW6ork3F7rkvojDx",
+    "name": {
+      "de": "Pflügner-Schwalm Status",
+      "en": "Stelkens, Mehlorn und Kühn Status"
+    },
+    "slug": "kramer-gmbh",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

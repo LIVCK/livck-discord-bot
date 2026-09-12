@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "id": "8FNavu0qxsrl5wR1XG9Ul",
+    "name": {
+      "de": "Beer, Wittich und Goldbeck Status",
+      "en": "Winter-Dethloff Status"
+    },
+    "slug": "karsten-gmbh--co.-kg",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "bjswcKfA9Af1E6qOGpwWV",
+      "name": {
+        "de": "Loadbalancer",
+        "en": "Load balancer"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "k0SLmgnRW1wnns5y2WxRo",
+          "name": {
+            "de": "Datenbank Amsterdam (v2)",
+            "en": "Database Amsterdam (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "5SJ5UobisroKTO3l7lCiy",
+          "name": {
+            "de": "Backup Helsinki",
+            "en": "Backup Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "RppkIIADtpcsAT10igJTm",
+          "name": {
+            "de": "Mailserver Helsinki",
+            "en": "Mail Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Hlm00lFS8jbLmNdf48ntC",
+          "name": {
+            "de": "Rootserver Wien",
+            "en": "Root servers Wien"
+          },
+          "description": null,
+          "status": "major_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "hTmcTxyBhZx3GhTann7kD",
+      "name": {
+        "de": "Objektspeicher",
+        "en": "Object storage"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "0oedMqh6Ij9nrT85TcQKK",
+          "name": {
+            "de": "Kundenportal Nürnberg (Beta)",
+            "en": "Customer portal Nürnberg (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "p2G18lL2rTDBBf7NTCuZ5",
+          "name": {
+            "de": "Datenbank Wien (v2)",
+            "en": "Database Wien (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "fpmJY6LoUTEjzxWC7k5OG",
+          "name": {
+            "de": "TeamSpeak Nürnberg",
+            "en": "TeamSpeak Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "KkRSJIwSdpp69o4pqC2G9",
+          "name": {
+            "de": "API Wien (Beta)",
+            "en": "API Wien (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [
+    {
+      "id": "drWJXT8VAuL3XlBVAO0O1",
+      "title": {
+        "de": "Störung: DNS",
+        "en": "Outage: TeamSpeak"
+      },
+      "severity": "major",
+      "status": "identified",
+      "started_at": "2026-09-12T06:03:14.946Z",
+      "resolved_at": null,
+      "updates": [
+        {
+          "id": "ZBH1b5lA9iaCqeWcGpsNI",
+          "status": "investigating",
+          "message": {
+            "de": "Hic facilis veniam facilis dolor. Ex iusto nisi.",
+            "en": "Praesentium ducimus itaque ex fugit dolore ex maiores. Vero harum nobis nam eos vel."
+          },
+          "created_at": "2026-09-12T06:23:14.946Z"
+        },
+        {
+          "id": "5ZGKp9cGrxhx9ud6XK4g9",
+          "status": "identified",
+          "message": {
+            "de": "Dignissimos occaecati perferendis sapiente aliquid architecto aliquam officiis nulla eaque. Neque tenetur dignissimos sit.",
+            "en": "Dolores sit vel voluptatibus tempore porro. Vero animi beatae temporibus."
+          },
+          "created_at": "2026-09-12T06:43:14.946Z"
+        }
+      ],
+      "affected_components": [],
+      "affected_services": [],
+      "attachments": [],
+      "postmortem": null
+    }
+  ],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

@@ -1,0 +1,1162 @@
+{
+  "meta": {
+    "id": "B2SGEWTbHtkyXv9d2gkU9",
+    "name": {
+      "de": "Harms KG Status",
+      "en": "Wollenberg-Zandt Status"
+    },
+    "slug": "cordes-oberem",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "389qF1OOrPpDwp18e9Uox",
+      "name": {
+        "de": "Objektspeicher",
+        "en": "Object storage"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "ElEqSGqwpKQB2CEYcoC5X",
+          "name": {
+            "de": "Backup Helsinki",
+            "en": "Backup Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "oFeniZ3FthJKUH5ttOlr3",
+          "name": {
+            "de": "Backup Falkenstein (Legacy)",
+            "en": "Backup Falkenstein (Legacy)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "TTQUOIlBrJLDIdL5dwEGp",
+          "name": {
+            "de": "API Helsinki",
+            "en": "API Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "eNxj4xu42crDlWanCfo2Q",
+          "name": {
+            "de": "TeamSpeak Frankfurt",
+            "en": "TeamSpeak Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "C4IuwjgiJIccbqZRu5rTU",
+          "name": {
+            "de": "Mailserver Nürnberg",
+            "en": "Mail Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "NBgpFjdcqdQiJGrXrqqSU",
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "quuyzMCELOOwFfsuwyf91",
+          "name": {
+            "de": "Loadbalancer Amsterdam",
+            "en": "Load balancer Amsterdam"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "95KnamsPGp4eSqDZHNYDW",
+          "name": {
+            "de": "DNS Falkenstein",
+            "en": "DNS Falkenstein"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "o4kz2HINTcRPUj0WlcwvO",
+          "name": {
+            "de": "API Nürnberg",
+            "en": "API Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "98b8UzN2cqT4dM8IvvStd",
+      "name": {
+        "de": "Loadbalancer",
+        "en": "Load balancer"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "h4ulZYbzYv2k0O1EJ12vb",
+          "name": {
+            "de": "Datenbank Amsterdam",
+            "en": "Database Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "PmiwREPHl7gbOTUd1XKQH",
+          "name": {
+            "de": "Webhosting Wien",
+            "en": "Web hosting Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "KJX1QxZ3NVcEJiaJfjUYD",
+          "name": {
+            "de": "Objektspeicher Frankfurt",
+            "en": "Object storage Frankfurt"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "D6DhsRNc7Cmc3hCjKB4tz",
+          "name": {
+            "de": "DNS Wien",
+            "en": "DNS Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "n2TXeRrf3eGOX0BbFBS4r",
+          "name": {
+            "de": "Loadbalancer Frankfurt",
+            "en": "Load balancer Frankfurt"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "CLTmYdEQzcHmMvl71KbgH",
+          "name": {
+            "de": "Backup Amsterdam",
+            "en": "Backup Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "es1vijsouLnEcohQDZkhl",
+          "name": {
+            "de": "Rootserver Nürnberg (Beta)",
+            "en": "Root servers Nürnberg (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "DCYRnLiWHz3vrF6cklvFZ",
+          "name": {
+            "de": "Loadbalancer Helsinki",
+            "en": "Load balancer Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "aq4rH8nURRAii0xvN5w8d",
+          "name": {
+            "de": "Loadbalancer Falkenstein",
+            "en": "Load balancer Falkenstein"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "JrPSkGBYvXikfTUSxAdQo",
+      "name": {
+        "de": "Mailserver",
+        "en": "Mail"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "mo9IR0tWDNtE6TbWVmYFz",
+          "name": {
+            "de": "Mailserver Wien",
+            "en": "Mail Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "5Eb13bjFIjXv2z6FsL4NH",
+          "name": {
+            "de": "Mailserver Wien",
+            "en": "Mail Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "iddn9GFnlbZz0zwMthAnZ",
+          "name": {
+            "de": "Webhosting Wien",
+            "en": "Web hosting Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "dJNwfoIV49l8NWlfN7VjN",
+          "name": {
+            "de": "Kundenportal Helsinki",
+            "en": "Customer portal Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "E1Um3MPEOB263fNn1jFo2",
+          "name": {
+            "de": "Loadbalancer Frankfurt",
+            "en": "Load balancer Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "im7Oix2393DJqqA5TkskB",
+          "name": {
+            "de": "Gameserver Nürnberg",
+            "en": "Game servers Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "fqruILgfzqMlMG0WTB36G",
+          "name": {
+            "de": "Mailserver Amsterdam",
+            "en": "Mail Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "P14U8M9K4B7IAsEzkTiuf",
+          "name": {
+            "de": "Gameserver Frankfurt",
+            "en": "Game servers Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "pzQ04Pvbuwy6FlM8DxCRj",
+          "name": {
+            "de": "DNS Nürnberg",
+            "en": "DNS Nürnberg"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "4jsHywlmucVDOFvCmv5M4",
+      "name": {
+        "de": "Rootserver",
+        "en": "Root servers"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "YbmftQhwFMd2SBM6qtcnj",
+          "name": {
+            "de": "Datenbank Nürnberg",
+            "en": "Database Nürnberg"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "jSfuzYDkxmIj1LBC5UQ9D",
+          "name": {
+            "de": "Loadbalancer Nürnberg (Beta)",
+            "en": "Load balancer Nürnberg (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "4L5gbUpz6E6tcB1zSNO3S",
+          "name": {
+            "de": "TeamSpeak Nürnberg",
+            "en": "TeamSpeak Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "BL2ySHC3j0b4juHMVkVgY",
+          "name": {
+            "de": "API Falkenstein",
+            "en": "API Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "gcmmgpsmhNlalS6kjXxkZ",
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "qWD9AAKZ3X5tdWeQKuLpN",
+          "name": {
+            "de": "Loadbalancer Wien",
+            "en": "Load balancer Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "YmIYqCEV8kTJ4StvxfS1R",
+          "name": {
+            "de": "Rootserver Wien (Beta)",
+            "en": "Root servers Wien (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "DxiTzBbMyG6G3mp6loOdU",
+          "name": {
+            "de": "API Wien (v2)",
+            "en": "API Wien (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "uGXhqPOFWMijbLyFc1UCq",
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "ryztFDUwuObWpyKMbg3UP",
+      "name": {
+        "de": "API",
+        "en": "API"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "OGaV0IIWoCj6QnSkAPK6r",
+          "name": {
+            "de": "TeamSpeak Amsterdam",
+            "en": "TeamSpeak Amsterdam"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "W4vuxCA0xDisyuecnY3J3",
+          "name": {
+            "de": "Loadbalancer Falkenstein",
+            "en": "Load balancer Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "2JA1NlLdPzkMhKr6YgLuO",
+          "name": {
+            "de": "Gameserver Nürnberg",
+            "en": "Game servers Nürnberg"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "JT8DqJfwJnxi99FBhFkEg",
+          "name": {
+            "de": "Datenbank Wien",
+            "en": "Database Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "ab4ngciJpNHKZXWYwbYDe",
+          "name": {
+            "de": "API Helsinki",
+            "en": "API Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "07JaQ1tkYpzP1bpNfv8Zu",
+          "name": {
+            "de": "Objektspeicher Frankfurt",
+            "en": "Object storage Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Pf6aBFsJojxnr00rSMETv",
+          "name": {
+            "de": "TeamSpeak Frankfurt",
+            "en": "TeamSpeak Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "TTAQJe0H3BlJ7aQu5CweA",
+          "name": {
+            "de": "API Nürnberg",
+            "en": "API Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "P4OCjVoN7nvQmV1sTRRht",
+          "name": {
+            "de": "DNS Falkenstein",
+            "en": "DNS Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "xhJbubK4rI3Zn0aRnQEjj",
+      "name": {
+        "de": "TeamSpeak",
+        "en": "TeamSpeak"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "IHrovoqUwpOTW2b0Cc8bW",
+          "name": {
+            "de": "Kundenportal Wien",
+            "en": "Customer portal Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "oEdeuS7rKspdrXi3B3kLc",
+          "name": {
+            "de": "TeamSpeak Helsinki",
+            "en": "TeamSpeak Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "QEy5wBuU2rsKCYRU2Cl8c",
+          "name": {
+            "de": "Objektspeicher Frankfurt",
+            "en": "Object storage Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "avSjGn5H71dVpwZtiiuW1",
+          "name": {
+            "de": "TeamSpeak Amsterdam (v2)",
+            "en": "TeamSpeak Amsterdam (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "A5htG1zncDoHIWmKx9Wxy",
+          "name": {
+            "de": "TeamSpeak Falkenstein",
+            "en": "TeamSpeak Falkenstein"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Qemm4j6sHw9A50ytA22Ux",
+          "name": {
+            "de": "Webhosting Nürnberg",
+            "en": "Web hosting Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "OCy6kaFWfdLA7CszmkaCh",
+          "name": {
+            "de": "Webhosting Wien",
+            "en": "Web hosting Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "f59Psj9EL9Mhb3ewdEaTC",
+          "name": {
+            "de": "DNS Wien",
+            "en": "DNS Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "o9HyEnYjmb21cHhQIGu3r",
+          "name": {
+            "de": "Webhosting Helsinki",
+            "en": "Web hosting Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "TE3DzkMhWMLN5MqkLl02s",
+      "name": {
+        "de": "Objektspeicher",
+        "en": "Object storage"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "FDlC8FFkYGDDLGwyuCy2a",
+          "name": {
+            "de": "Kundenportal Amsterdam",
+            "en": "Customer portal Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "tOdDL3kou38IMGemNVFb0",
+          "name": {
+            "de": "Objektspeicher Frankfurt",
+            "en": "Object storage Frankfurt"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Wu0m60HCcIcvGhMKIJyzQ",
+          "name": {
+            "de": "Datenbank Frankfurt",
+            "en": "Database Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "n3qzPkobiuPur9fIqXTWc",
+          "name": {
+            "de": "Webhosting Frankfurt",
+            "en": "Web hosting Frankfurt"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "tHrKImJiG39lxmaRI8oSj",
+          "name": {
+            "de": "Backup Wien",
+            "en": "Backup Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "ownu59hqDGuJb3x0v9Gfk",
+          "name": {
+            "de": "Objektspeicher Helsinki (Legacy)",
+            "en": "Object storage Helsinki (Legacy)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "3qVLs5QRNvITSpWQSTJWg",
+          "name": {
+            "de": "Objektspeicher Helsinki",
+            "en": "Object storage Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "QACkY3sRcFgjs9EnLjJYV",
+          "name": {
+            "de": "Kundenportal Amsterdam",
+            "en": "Customer portal Amsterdam"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "ApU26PtPmDPY94zQHaGTq",
+          "name": {
+            "de": "Kundenportal Helsinki",
+            "en": "Customer portal Helsinki"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    },
+    {
+      "id": "HJqul9gty2tJTN9I8jznf",
+      "name": {
+        "de": "Kundenportal",
+        "en": "Customer portal"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "j1snuCTWx7HTJPk09Ctt4",
+          "name": {
+            "de": "Loadbalancer Amsterdam",
+            "en": "Load balancer Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "WRTh9TiXJS2YLkCH2I6Cl",
+          "name": {
+            "de": "Kundenportal Falkenstein",
+            "en": "Customer portal Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "ypVJ4ZDE8QPbKlDwhAxGf",
+          "name": {
+            "de": "Mailserver Nürnberg",
+            "en": "Mail Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "oqetHtCfktZAX2JX6Wksu",
+          "name": {
+            "de": "Mailserver Nürnberg",
+            "en": "Mail Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "tQMDW3seLIT9xqg4RW0Hh",
+          "name": {
+            "de": "Datenbank Amsterdam",
+            "en": "Database Amsterdam"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Bu65fJueBMTH1xNvA8Ne6",
+          "name": {
+            "de": "Backup Wien",
+            "en": "Backup Wien"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "wpQAxAHlDHxzjqT80zwVj",
+          "name": {
+            "de": "Rootserver Frankfurt",
+            "en": "Root servers Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "usDm8BNxthrscUgv84B7z",
+          "name": {
+            "de": "Webhosting Wien",
+            "en": "Web hosting Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "VWCLB0isGhVWud5Z5IvhR",
+          "name": {
+            "de": "Mailserver Helsinki",
+            "en": "Mail Helsinki"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

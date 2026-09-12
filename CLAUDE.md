@@ -83,6 +83,14 @@ The Docker image does this itself (`docker/entrypoint.sh`) and refuses to start 
 fails — the update loop selects columns that only exist after migrating, and a bot running
 against an un-migrated database fails every query silently for ever.
 
+**The frozen corpus** (no network, part of `npm test`): twenty-one realistic payloads —
+generated once with a fixed seed by `node scripts/generate-corpus.js` and committed as bytes —
+run through the real adapter, DTO and renderers, with the OUTPUT written down
+(`corpus.golden.test.js`) and the DECISIONS written down (`corpus.pipeline.test.js`: post,
+then silence, then exactly one edit when a service goes down). Regenerate deliberately and
+review the diff; never from a test, because a generator called per run makes every run a
+different test.
+
 **Payloads the live pages never happen to produce** (no network, part of `npm test`):
 `__tests__/fixtures/payloadFactory.js` builds either API's payload to order — a group nested
 four deep, a translation cleared to null, two hundred services, an incident in every state.

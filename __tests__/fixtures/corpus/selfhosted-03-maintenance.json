@@ -1,0 +1,28 @@
+{
+  "eb085717-f921-4967-b223-20593c6eb720": {
+    "id": "eb085717-f921-4967-b223-20593c6eb720",
+    "name": "API",
+    "monitors": [
+      {
+        "id": "31dabe43-b7f2-4a17-b13f-7c7b0f804d38",
+        "name": "Webhosting Frankfurt",
+        "state": "MAINTENANCE"
+      },
+      {
+        "id": "180c6dd2-dd68-46f2-b6aa-934131de3ab1",
+        "name": "Rootserver Nürnberg",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "5f7ed51e-7022-40a0-bfe0-675a32a33697",
+        "name": "Kundenportal Falkenstein",
+        "state": "MAINTENANCE"
+      },
+      {
+        "id": "e716c957-3807-4f77-84a1-55aa70786384",
+        "name": "Objektspeicher Falkenstein (Beta)",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "id": "nALxYweP4ZUJYKSguOltV",
+    "name": {
+      "de": "Kemper, Porth und Madubuko Status",
+      "en": "Schahbasian, Jungbluth und Deerberg Status"
+    },
+    "slug": "lippe-gmbh",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "a7jYO42JC1E4qQP0dXjwz",
+      "name": {
+        "de": "Webhosting",
+        "en": "Web hosting"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "5Kg6g9c7dXsJ15bOQ4LtR",
+          "name": {
+            "de": "Gameserver",
+            "en": "Game servers"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": true,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true,
+          "children": [
+            {
+              "id": "zFW3Hr1ZIlTvjN2phNGqj",
+              "name": {
+                "de": "Kundenportal Frankfurt",
+                "en": "Customer portal Frankfurt"
+              },
+              "description": null,
+              "status": "partial_outage",
+              "is_visible": true,
+              "is_group": false,
+              "show_uptime_bars": false,
+              "hide_operational_children": false,
+              "default_open": true
+            },
+            {
+              "id": "MMyTYRNaH0Srw3CWYSQw8",
+              "name": {
+                "de": "Webhosting Amsterdam",
+                "en": "Web hosting Amsterdam"
+              },
+              "description": null,
+              "status": "partial_outage",
+              "is_visible": true,
+              "is_group": false,
+              "show_uptime_bars": false,
+              "hide_operational_children": false,
+              "default_open": true
+            },
+            {
+              "id": "Tf6582Lukt7tdRNXXxKtb",
+              "name": {
+                "de": "Loadbalancer Falkenstein",
+                "en": "Load balancer Falkenstein"
+              },
+              "description": null,
+              "status": "operational",
+              "is_visible": true,
+              "is_group": false,
+              "show_uptime_bars": false,
+              "hide_operational_children": false,
+              "default_open": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

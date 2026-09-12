@@ -1,0 +1,28 @@
+{
+  "3ce3a39d-0fe4-4fad-bfdb-88e9afc55d8d": {
+    "id": "3ce3a39d-0fe4-4fad-bfdb-88e9afc55d8d",
+    "name": "Rootserver",
+    "monitors": [
+      {
+        "id": "c5e1d7c7-0b2d-40d5-8448-b1b6c7154f71",
+        "name": "Objektspeicher Nürnberg (Beta)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "c33a5e4c-21fb-43a9-9941-34c6c1662582",
+        "name": "DNS Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "87dd2b48-2aec-4351-baa9-88da5f412d28",
+        "name": "Gameserver Wien",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "0ea56c30-748c-4230-b94e-68fd80a66173",
+        "name": "Objektspeicher Frankfurt",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "ddd4b216-5063-4c2a-97a9-fbae4138eb33": {
+    "id": "ddd4b216-5063-4c2a-97a9-fbae4138eb33",
+    "name": "Gameserver",
+    "monitors": []
+  },
+  "8dedefb4-76bc-4eb9-a20e-704379af3e8b": {
+    "id": "8dedefb4-76bc-4eb9-a20e-704379af3e8b",
+    "name": "Webhosting",
+    "monitors": [
+      {
+        "id": "91795d22-979d-4b5a-a606-14958dc47c56",
+        "name": "Rootserver Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "146b8f1a-4095-4787-a677-3d8b5001f768",
+        "name": "API Amsterdam (Beta)",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

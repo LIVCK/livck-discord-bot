@@ -1,0 +1,54 @@
+{
+  "68a54bc8-8aac-459f-b141-b7ddc9b1e0e3": {
+    "id": "68a54bc8-8aac-459f-b141-b7ddc9b1e0e3",
+    "name": "Webhosting",
+    "monitors": [
+      {
+        "id": "08b4fad6-a8a6-4369-b44e-d0be9073f3d0",
+        "name": "Rootserver Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "a0f33011-e9d9-427b-b779-717a0b006aec",
+        "name": "Backup Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "2301049e-6486-4f6b-8133-64a20e153c3d",
+        "name": "API Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "1c5a4bfa-c83c-4d31-a7d1-1f7ecf16285c",
+        "name": "TeamSpeak Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "876d26ef-10c6-42bb-966e-4cde143cd83f",
+        "name": "Mailserver Amsterdam",
+        "state": "AVAILABLE"
+      }
+    ]
+  },
+  "b6434c58-b219-4759-a394-aeb4eb1796d2": {
+    "id": "b6434c58-b219-4759-a394-aeb4eb1796d2",
+    "name": "Gameserver",
+    "monitors": [
+      {
+        "id": "6fc6a9a2-88c5-490a-b9d1-5a8c1e63b264",
+        "name": "Rootserver Nürnberg (Beta)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "2a8f916b-38b7-4534-88cb-a4bc5645e32c",
+        "name": "Kundenportal Helsinki (v2)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "aa630bd4-0493-40d5-b5fc-8bab3d442905",
+        "name": "Backup Amsterdam",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

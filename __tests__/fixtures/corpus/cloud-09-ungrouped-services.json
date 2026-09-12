@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "id": "CumZeoaYGnOIyjDbOFOvH",
+    "name": {
+      "de": "Beushausen Gruppe Status",
+      "en": "Wassiluk-Scherbarth Status"
+    },
+    "slug": "rose-kuhnke-und-dietz",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "JGKfKWUTXaDSPheUtLewo",
+      "name": {
+        "de": "Datenbank Helsinki",
+        "en": "Database Helsinki"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    },
+    {
+      "id": "DcytWXwDkmmASgWoxB6Lj",
+      "name": {
+        "de": "Webhosting Nürnberg",
+        "en": "Web hosting Nürnberg"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    },
+    {
+      "id": "ZIczyBi7fo8LqemeFMs9S",
+      "name": {
+        "de": "TeamSpeak Nürnberg",
+        "en": "TeamSpeak Nürnberg"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    },
+    {
+      "id": "BUfrSqBUNcZOzrR3wqidS",
+      "name": {
+        "de": "Objektspeicher Falkenstein",
+        "en": "Object storage Falkenstein"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    },
+    {
+      "id": "5rNJobueewM3EFllj8WrP",
+      "name": {
+        "de": "Loadbalancer Helsinki (Beta)",
+        "en": "Load balancer Helsinki (Beta)"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    },
+    {
+      "id": "iCuzeVvD3SafTMOzDu839",
+      "name": {
+        "de": "Rootserver Wien",
+        "en": "Root servers Wien"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": false,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}
