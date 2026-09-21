@@ -15,11 +15,14 @@ const provider = { snapshot: null, closed: {}, closedCalls: [] };
 
 jest.unstable_mockModule('../../providers/index.js', () => ({
     fetchSnapshot: async () => provider.snapshot,
-    fetchClosedAlert: async (_statuspage, alertId) => {
+    fetchClosedAlert: async (_statuspage, alertId, _expectedKind, options) => {
         provider.closedCalls.push(alertId);
+        provider.lastOptions = options;
         const value = provider.closed[alertId];
         if (value instanceof Error) throw value;
-        return value ?? null;
+        // A fixture may be a DTO alert (still reachable) or an explicit verdict.
+        if (value && typeof value === 'object' && 'removed' in value) return value;
+        return { alert: value ?? null, removed: false };
     },
     resolveSource: async () => 'CLOUD',
     clearSnapshotCache: () => {},

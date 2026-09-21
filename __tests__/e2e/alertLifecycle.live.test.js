@@ -46,7 +46,13 @@ const provider = { snapshot: null, closed: {} };
 if (enabled) {
     jest.unstable_mockModule('../../providers/index.js', () => ({
         fetchSnapshot: async () => provider.snapshot,
-        fetchClosedAlert: async (_page, id) => provider.closed[id] ?? null,
+        fetchClosedAlert: async (_page, id) => {
+            const value = provider.closed[id];
+            // A fixture is either the recovered alert or an explicit verdict — the shape the
+            // real provider returns, so "removed" is exercised here rather than assumed.
+            if (value && typeof value === 'object' && 'removed' in value) return value;
+            return { alert: value ?? null, removed: false };
+        },
         resolveSource: async () => 'CLOUD',
         clearSnapshotCache: () => {},
         NotLivckError: class NotLivckError extends Error {},
@@ -88,10 +94,10 @@ e2e('an incident from first report to resolution', () => {
 
         // The real thing, fetched through the real adapter.
         const { fetchClosedAlert } = await import('../../providers/cloud.js');
-        source = await fetchClosedAlert(
+        ({ alert: source } = await fetchClosedAlert(
             { url: 'https://status.emeraldhost.de', name: 'eh', externalId: 'jzrYG3ZN7ldnMmMKn6725' },
             '0coRsn8ll1vrJSo2yAF3T'
-        );
+        ));
         if (!source || source.updates.length < 3) {
             throw new Error('The reference incident changed shape; pick another from /history.');
         }
@@ -278,5 +284,29 @@ e2e('an incident from first report to resolution', () => {
         const last = await fetchFresh(after.at(-1).messageId);
         expect(last.reference?.messageId).toBe(beforeRows[0].messageId);
         expect(last.embeds[0].title).toContain('Behoben');
+    }, 180000);
+
+    test('and when the incident is taken OFF the page, the thread goes with it', async () => {
+        // The other ending, and the only irreversible one. A resolved incident stays and gets
+        // its closing reply — that is every test above. An incident the operator REMOVED gets
+        // no announcement anywhere: the status page tells nobody, because the usual reason is
+        // that it should not have been published, so the bot removes what it posted instead
+        // of narrating a retraction the page itself does not make.
+        //
+        // Everything here is real: real messages in a real channel, deleted through the real
+        // API by the production path, with the bot holding only View Channels, Send Messages,
+        // Embed Links and Read Message History.
+        const before = await rows();
+        expect(before.length).toBeGreaterThan(1);
+
+        provider.closed[source.id] = { alert: null, removed: true };
+        clearCloseoutCooldowns();
+        await cycle([]);
+
+        // Not one row left, and not one message left in the channel.
+        expect(await rows()).toHaveLength(0);
+        for (const row of before) {
+            await expect(fetchFresh(row.messageId)).rejects.toMatchObject({ code: 10008 });
+        }
     }, 180000);
 });

@@ -360,6 +360,45 @@ e2e('against a real Discord bot', () => {
         }, 180000);
     });
 
+    describe('removing a thread', () => {
+        test('the bot may delete its own messages with the four permissions it asks for', async () => {
+            // THE ONE THING ONLY THE REAL API CAN ANSWER. When an alert is taken off a status
+            // page the bot deletes the thread it posted, silently. Deleting someone ELSE's
+            // message needs "Manage Messages", which is not in the 84992 this bot is invited
+            // with — a bot deleting its OWN message is documented not to need it, and this is
+            // where that stops being documentation and starts being measured.
+            //
+            // It also proves the order the production path uses: replies first, parent last,
+            // so no reader ever sees "Original message was deleted" under a live thread.
+            const parent = await channel.send({ content: 'e2e: alert parent' });
+            const replies = [];
+            for (const n of [1, 2]) {
+                replies.push(await channel.send({
+                    content: `e2e: alert update ${n}`,
+                    reply: { messageReference: parent.id, failIfNotExists: false },
+                }));
+            }
+
+            for (const reply of replies) {
+                await channel.messages.delete(reply.id);
+            }
+            await channel.messages.delete(parent.id);
+
+            for (const id of [...replies.map((r) => r.id), parent.id]) {
+                await expect(fetchFresh(id)).rejects.toMatchObject({ code: 10008 });
+            }
+        }, 180000);
+
+        test('deleting a message that is already gone is the 10008 the code treats as success', async () => {
+            // `removeAlertThread` drops the row on 10008 rather than keeping a pointer to a
+            // message nobody can see. That only holds if Discord really answers 10008.
+            const message = await channel.send({ content: 'e2e: deleted twice' });
+            await channel.messages.delete(message.id);
+
+            await expect(channel.messages.delete(message.id)).rejects.toMatchObject({ code: 10008 });
+        }, 180000);
+    });
+
     describe('rate limiting', () => {
         test('a full cycle never trips an invalid-request warning', async () => {
             // ~10,000 invalid requests in 10 minutes gets the bot's IP banned at Cloudflare,

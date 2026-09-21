@@ -54,6 +54,39 @@ fetch instead of two.
 - **Embed limits** are enforced in `util/discordLimits.js`; Discord rejects an over-limit
   message whole, so an unguarded layout means the page posts nothing.
 
+### How an alert ends
+
+Two different endings, and the difference is worth getting right because one of them is
+irreversible.
+
+An alert that **resolves, completes or is cancelled** is still on the status page. It drops out
+of the live payload — the Cloud's feed only carries what is open — so the bot asks the detail
+endpoint for it and delivers the ending as one more reply, plus a `**Status:** …` line on the
+announcement. Nothing is deleted.
+
+An alert the operator **took off the page** — deleted, unpublished, unlinked — gets no
+announcement anywhere. The page tells nobody, because the usual reason is that it should not
+have been published, and a bot answering that with "cancelled" in the channel would be
+announcing the retraction the page deliberately does not make. So the bot removes the thread it
+posted, silently: replies first, parent last, rows and all. Deleting a message notifies no one,
+and it needs no permission beyond the four the bot already asks for (proven in
+`__tests__/e2e/discord.live.test.js`).
+
+Both arrive as a 404 from the same endpoint, so the whole thing hangs on telling them apart —
+`providers/cloud.js` does that and nothing else decides it:
+
+| | 404 means |
+|---|---|
+| `maintenanceDetail` | it is off the page. Definitive. |
+| `incidentDetail`, history shown | it is off the page. Definitive. |
+| `incidentDetail`, history hidden | **unknown** — could just be a resolved incident being hidden |
+| anything that is not a 404 | unknown; a transport error throws and deletes nothing |
+
+`meta.show_incident_history` is the switch, it comes from the live payload, and a payload that
+does not carry it counts as "unknown". Self-hosted pages never delete: their only signal is
+absence from a list that is windowed by `alerts_display_days`, so reading it as removal would
+erase a customer's incident history three days after it was posted.
+
 ### Database Architecture
 - **Sequelize ORM** with MariaDB
 - **Redis** for caching/locking (prevents concurrent processing of same status page)

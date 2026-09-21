@@ -41,6 +41,23 @@ export default (sequelize) => {
             defaultValue: null,
         },
         /**
+         * The ROOT ALERT this message belongs to.
+         *
+         * On a parent it equals `serviceId`; on a reply it is the parent's alert id, which
+         * `serviceId` (the update's id) does not otherwise record anywhere. It exists so a
+         * thread can be enumerated once its alert has left the API — which is exactly when
+         * the bot has to remove it, and exactly when the alert can no longer be asked for
+         * its updates.
+         *
+         * NULL on rows written before this column existed, and on status messages. A parent
+         * without it is never deleted: see `removeAlertThread`.
+         */
+        alertId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: null,
+        },
+        /**
          * Hash of the last payload actually sent to Discord.
          *
          * The status message is re-rendered every cycle but changes only when the status

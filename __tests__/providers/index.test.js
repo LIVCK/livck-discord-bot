@@ -200,7 +200,10 @@ describe('recovering a closed alert', () => {
 
     test('a self-hosted page is never asked at all', async () => {
         // There is no such endpoint, and asking would be a 404 per subscription per cycle.
-        await expect(fetchClosedAlert(makePage({ kind: SOURCE.SELF_HOSTED }), 'inc-1')).resolves.toBeNull();
+        // `removed: false` matters as much as `alert: null`: absence from a self-hosted list
+        // is windowed by age, so it must never be read as "the operator took it down".
+        await expect(fetchClosedAlert(makePage({ kind: SOURCE.SELF_HOSTED }), 'inc-1'))
+            .resolves.toEqual({ alert: null, removed: false });
         expect(cloud.closedCalls).toBe(0);
     });
 

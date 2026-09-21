@@ -234,7 +234,7 @@ e2e('the whole pipeline against real status pages', () => {
             const { resolveText } = await import('../../dto/statuspage.js');
             const { DISCORD_LIMITS: L } = await import('../../util/discordLimits.js');
 
-            const alert = await fetchClosedAlert({ url, name: 'e2e' }, id);
+            const { alert } = await fetchClosedAlert({ url, name: 'e2e' }, id);
             expect(alert).not.toBeNull();
             expect(alert.kind).toBe(kind);
             expect(alert.url.startsWith(url)).toBe(true);
@@ -261,7 +261,7 @@ e2e('the whole pipeline against real status pages', () => {
         test('a closed maintenance is recoverable even though the live payload dropped it', async () => {
             // The whole reason the close-out works without a backend change.
             const { fetchClosedAlert } = await import('../../providers/cloud.js');
-            const alert = await fetchClosedAlert({ url: 'https://status.emeraldhost.de', name: 'e2e' }, 'pgtKC95GkvxUcC1Cl1rPT');
+            const { alert } = await fetchClosedAlert({ url: 'https://status.emeraldhost.de', name: 'e2e' }, 'pgtKC95GkvxUcC1Cl1rPT');
 
             expect(alert.state).toBe('completed');
             expect(alert.updates.at(-1).state).toBe('completed');
@@ -271,7 +271,31 @@ e2e('the whole pipeline against real status pages', () => {
             const { fetchClosedAlert } = await import('../../providers/cloud.js');
             await expect(
                 fetchClosedAlert({ url: 'https://status.emeraldhost.de', name: 'e2e' }, 'definitelynotanid00')
-            ).resolves.toBeNull();
+            ).resolves.toEqual({ alert: null, removed: false });
+        }, 60000);
+
+        test('a real page says whether a 404 may be read as a removal', async () => {
+            // The delete path hangs off this one boolean, and it comes from the live payload
+            // rather than from anything the bot assumes. If the Cloud ever stops sending it,
+            // this fails here rather than silently turning every 404 into "not sure".
+            const { fetchSnapshot } = await import('../../providers/cloud.js');
+            const { snapshot } = await fetchSnapshot({ url: 'https://status.emeraldhost.de', name: 'e2e' });
+
+            expect(typeof snapshot.showIncidentHistory).toBe('boolean');
+        }, 60000);
+
+        test('and an unknown id on a page WITH history is a provable removal', async () => {
+            // status.emeraldhost.de shows its history, so nothing is being hidden: an id the
+            // page does not know can only be an id that is not on it.
+            const { fetchClosedAlert } = await import('../../providers/cloud.js');
+            const verdict = await fetchClosedAlert(
+                { url: 'https://status.emeraldhost.de', name: 'e2e' },
+                'definitelynotanid00',
+                'incident',
+                { historyVisible: true },
+            );
+
+            expect(verdict).toEqual({ alert: null, removed: true });
         }, 60000);
     });
 

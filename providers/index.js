@@ -84,12 +84,20 @@ const closedAlerts = new Map();
  *
  * Self-hosted pages never need this: their `/api/v1/alerts` keeps a resolved alert in the list
  * (it is filtered by age, not by state), so nothing ever disappears mid-timeline. The call is
- * therefore Cloud-only and returns null everywhere else.
+ * therefore Cloud-only.
  *
- * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
+ * `removed: false` is what self-hosted gets, and it is the honest answer rather than a
+ * shortcut. That backend has no per-alert endpoint on any public route — the only lookup is
+ * `apiResource('alerts')`, which sits behind auth and which this bot has no business reaching
+ * for. Absence from the list is therefore the ONLY signal available there, and it is not a
+ * sound one: the list is windowed by `alerts_display_days`, so everything drops out of it
+ * eventually. Treating that as removal would delete a customer's incident history three days
+ * after it was posted.
+ *
+ * @returns {Promise<{alert: object|null, removed: boolean}>} see providers/cloud.js
  */
-export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null) => {
-    if (statuspage.kind !== SOURCE.CLOUD) return null;
+export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null, options = {}) => {
+    if (statuspage.kind !== SOURCE.CLOUD) return { alert: null, removed: false };
 
     const key = `${statuspage.url}::${alertId}`;
     const cached = closedAlerts.get(key);
@@ -102,7 +110,7 @@ export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null)
         if (oldest !== undefined) closedAlerts.delete(oldest);
     }
 
-    const promise = cloudProvider.fetchClosedAlert(statuspage, alertId, expectedKind);
+    const promise = cloudProvider.fetchClosedAlert(statuspage, alertId, expectedKind, options);
     closedAlerts.set(key, { at: Date.now(), promise });
     promise.catch(() => closedAlerts.delete(key));
 

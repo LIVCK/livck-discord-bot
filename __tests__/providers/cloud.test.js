@@ -249,6 +249,41 @@ describe('toSnapshot against recorded payloads', () => {
     });
 });
 
+describe('show_incident_history', () => {
+    // The one field the DELETE path depends on. Its job is to say whether a 404 from a detail
+    // endpoint is proof that an alert was taken off the page, or just the page hiding what it
+    // resolved — so a wrong reading here removes a real incident from a customer's channel.
+
+    test('is carried through from the payload meta', () => {
+        const snapshot = toSnapshot(load('emeraldhost.full.json'), { url: 'https://status.emeraldhost.de', name: 'x' });
+        expect(snapshot.showIncidentHistory).toBe(true);
+    });
+
+    test('a page that hides its history says so rather than staying silent', () => {
+        const payload = load('emeraldhost.full.json');
+        payload.meta = { ...payload.meta, show_incident_history: false };
+
+        expect(toSnapshot(payload, { url: 'https://x', name: 'x' }).showIncidentHistory).toBe(false);
+    });
+
+    test('an older edge build that omits it yields null, not false and not true', () => {
+        // Kept distinct on purpose: `null` is "did not say". Both `null` and `false` block the
+        // delete, but only `false` is the page having actually answered.
+        const payload = load('emeraldhost.full.json');
+        const meta = { ...payload.meta };
+        delete meta.show_incident_history;
+
+        expect(toSnapshot({ ...payload, meta }, { url: 'https://x', name: 'x' }).showIncidentHistory).toBeNull();
+    });
+
+    test('a non-boolean is not taken at face value', () => {
+        const payload = load('emeraldhost.full.json');
+        payload.meta = { ...payload.meta, show_incident_history: 'yes' };
+
+        expect(toSnapshot(payload, { url: 'https://x', name: 'x' }).showIncidentHistory).toBeNull();
+    });
+});
+
 describe('alerts', () => {
     const payload = (extra) => toSnapshot({
         meta: { default_locale: 'de', supported_locales: ['de'] },

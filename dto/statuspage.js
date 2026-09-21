@@ -226,6 +226,7 @@ export const makeAlert = ({
  * @param {string} input.overall - one of STATUS
  * @param {string} [input.defaultLocale] - anchor for resolveText
  * @param {string[]} [input.locales] - languages this page offers
+ * @param {boolean|null} [input.showIncidentHistory] - see the field below
  */
 export const makeSnapshot = ({
     source,
@@ -236,6 +237,7 @@ export const makeSnapshot = ({
     locales = [],
     groups = [],
     alerts = [],
+    showIncidentHistory = null,
 }) => Object.freeze({
     v: DTO_VERSION,
     source,
@@ -246,6 +248,20 @@ export const makeSnapshot = ({
     locales: Object.freeze([...locales]),
     groups: Object.freeze(groups),
     alerts: Object.freeze(alerts),
+    /**
+     * Whether the page keeps RESOLVED alerts reachable — `true`, `false`, or `null` for a
+     * backend that does not say.
+     *
+     * The bot reads one thing from it: whether a 404 from the detail endpoint means the alert
+     * was REMOVED. With the history on, the endpoint answers for a resolved alert too, so a
+     * 404 can only mean it is gone. With it off, the endpoint hides resolved alerts on
+     * purpose, and a 404 says nothing about whether the alert still exists.
+     *
+     * Since the bot DELETES the thread it posted when an alert is removed, getting that
+     * distinction wrong destroys a customer's incident history in their channel. `null` is
+     * therefore not "assume the usual": it is refused like `false`.
+     */
+    showIncidentHistory,
 });
 
 /** Every service across every group, in display order. */

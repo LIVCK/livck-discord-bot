@@ -293,6 +293,12 @@ export const toSnapshot = (payload, statuspage) => {
         locales: meta.supported_locales ?? [],
         groups: flattenTree(components),
         alerts,
+        // Read ONLY to decide whether a 404 from a detail endpoint proves removal. A payload
+        // from an older edge build has no such key; `null` is kept as "did not say" rather
+        // than folded into `false`, so the reason is visible where it is used.
+        showIncidentHistory: typeof meta.show_incident_history === 'boolean'
+            ? meta.show_incident_history
+            : null,
     });
 };
 
@@ -310,20 +316,52 @@ export const toSnapshot = (payload, statuspage) => {
  * The kind is not known from an id alone, so incidents are tried first and maintenances
  * second; each alert is looked up at most once, and only when it has actually disappeared.
  *
- * A 404 is an ANSWER, not an error: with `show_incident_history` disabled the page makes a
- * resolved incident deliberately unreachable. `null` then means "cannot confirm" and the
- * caller must leave its thread on the last state it legitimately saw rather than invent an
- * ending. (Maintenance windows are not gated that way and stay recoverable either way.)
+ * A 404 is an ANSWER, not an error — but WHICH answer depends on the endpoint, and the two
+ * are not filtered alike. Straight from the source of truth
+ * (`Domains/Edge/Controllers/InternalApi/StatuspageApiController.php`):
+ *
+ *   maintenanceDetail  where public_id, whereHas(statuspages)
+ *   incidentDetail     ... plus is_published = true
+ *                      ... plus whereNull(resolved_at) WHEN show_incident_history is off
+ *
+ * So a 404 from the maintenance endpoint has exactly one cause: the window is no longer on
+ * this page. A 404 from the incident endpoint has that cause too — deleted, unpublished, or
+ * unlinked, which are all "the operator took it off the page" — but with the history switched
+ * off it ALSO fires for an incident that is merely resolved and still very much exists.
+ *
+ * `removed` is that distinction, and it is what the caller DELETES a customer's thread on, so
+ * it is only ever true when the 404 can mean nothing else:
+ *
+ *   maintenance      the maintenance endpoint 404s
+ *   anything else    both endpoints 404 AND the page shows its incident history
+ *
+ * `historyVisible` is `snapshot.showIncidentHistory`. `null` — an edge build that does not
+ * send the flag — is refused exactly like `false`; the bot does not guess about a delete.
+ *
+ * A response that is neither a hit nor a 404 (200 without an id, a transport failure) proves
+ * nothing either: the first falls through as `removed: false`, the second throws.
  *
  * @param {object} statuspage - Statuspage row (needs `url`; `externalId` skips a request)
  * @param {string} alertId
- * @returns {Promise<object|null>} DTO alert, or null when it cannot be confirmed
+ * @param {string|null} [expectedKind] - the kind the bot originally saw
+ * @param {{historyVisible?: boolean|null}} [options]
+ * @returns {Promise<{alert: object|null, removed: boolean}>} the alert when it is still
+ *   reachable; otherwise `alert: null` with `removed` saying whether it is provably gone
  */
-export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null) => {
+export const fetchClosedAlert = async (
+    statuspage,
+    alertId,
+    expectedKind = null,
+    { historyVisible = null } = {},
+) => {
     const base = statuspage.url.replace(/\/+$/, '');
     const client = new LIVCKCloud(statuspage.url, statuspage.externalId || null);
 
     const notFound = (error) => error?.status === 404;
+
+    // Set ONLY by a real 404. A malformed 200 leaves them false and proves nothing.
+    let incidentGone = false;
+    let maintenanceGone = false;
 
     try {
         const payload = await client.fetchIncident(alertId);
@@ -343,23 +381,32 @@ export const fetchClosedAlert = async (statuspage, alertId, expectedKind = null)
             // payload claims; the payload decides only when the caller had no expectation.
             const kind = expectedKind ?? (incident.kind === 'notice' ? ALERT_KIND.NOTICE : ALERT_KIND.INCIDENT);
 
-            return kind === ALERT_KIND.NOTICE
-                ? noticeToAlert(incident, base)
-                : incidentToAlert(incident, base);
+            return {
+                alert: kind === ALERT_KIND.NOTICE
+                    ? noticeToAlert(incident, base)
+                    : incidentToAlert(incident, base),
+                removed: false,
+            };
         }
     } catch (error) {
         if (!notFound(error)) throw error;
+        incidentGone = true;
     }
 
     try {
         const payload = await client.fetchMaintenance(alertId);
         const maintenance = payload?.data ?? payload;
-        if (maintenance?.id) return maintenanceToAlert(maintenance, base);
+        if (maintenance?.id) return { alert: maintenanceToAlert(maintenance, base), removed: false };
     } catch (error) {
         if (!notFound(error)) throw error;
+        maintenanceGone = true;
     }
 
-    return null;
+    const removed = expectedKind === ALERT_KIND.MAINTENANCE
+        ? maintenanceGone
+        : incidentGone && maintenanceGone && historyVisible === true;
+
+    return { alert: null, removed };
 };
 
 /**

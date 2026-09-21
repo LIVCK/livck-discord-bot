@@ -8,7 +8,7 @@ import { buildRoleMentions } from '../util/roleMentions.js'
 import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
-import { syncMessage, isChannelGone } from '../util/messageSync.js'
+import { syncMessage, isChannelGone, UNKNOWN_MESSAGE } from '../util/messageSync.js'
 import { mayReap, recordReap } from '../util/subscriptionReaper.js'
 import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
 
@@ -169,7 +169,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
             ...(mentions.roleIds.length > 0 ? { allowedMentions: mentions.allowedMentions } : {}),
         },
         models,
-        create: { subscriptionId: subscription.id, category: 'NEWS', serviceId: alert.id, kind: alert.kind },
+        create: { subscriptionId: subscription.id, category: 'NEWS', serviceId: alert.id, alertId: alert.id, kind: alert.kind },
     })
 
     // The parent was deleted in Discord; it is recreated next cycle, and replies would have
@@ -202,7 +202,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
                 components: [linkRow(alert.url, updateLabel)],
             },
             models,
-            create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id, kind: alert.kind },
+            create: { subscriptionId: subscription.id, category: 'ALERT', serviceId: update.id, alertId: alert.id, kind: alert.kind },
             send: (payload, channel) => channel.send({
                 ...payload,
                 reply: { messageReference: parentId, failIfNotExists: false },
@@ -280,6 +280,77 @@ const rememberAttempt = (subscriptionId, alertId) => {
 /** Forget the cooldowns. Exposed for tests. */
 export const clearCloseoutCooldowns = () => closeoutAttempts.clear();
 
+/**
+ * Remove the thread the bot posted for an alert that is no longer on the status page.
+ *
+ * WHY DELETE RATHER THAN EDIT. A Discord channel is a just-in-time feed; the status page is
+ * the record. When an operator takes an alert OFF the page — deleted, unpublished, unlinked —
+ * nobody subscribed to the page is told, and that is the correct behaviour: the usual reason
+ * is that the alert should not have been published at all. A bot that answered the same event
+ * with "cancelled" in the channel would be announcing the retraction the page deliberately
+ * does not announce. So the thread goes, silently. Deleting a message notifies no one.
+ *
+ * This is NOT the path a resolved incident or a finished maintenance takes. Those are still on
+ * the page, the detail endpoint still serves them, and they get their closing update as a
+ * reply like any other. Only a provable removal reaches this function — see the `removed`
+ * verdict in providers/cloud.js, which is false for every ambiguous 404 and for every error.
+ *
+ * WHAT IT REFUSES TO DO. One irreversible action guarded by three conditions:
+ *
+ *  1. It needs the parent row to carry `alertId`. A row written before that column existed
+ *     cannot have its replies enumerated, and deleting a parent while leaving the replies
+ *     behind turns a thread into a column of "Original message was deleted".
+ *  2. Replies go first, parent last. The other order leaves exactly that state visible for
+ *     as long as the deletes take.
+ *  3. A row is dropped only once Discord has confirmed the message is gone — either deleted
+ *     now, or already absent (10008). Anything else keeps the row, so the next cooldown
+ *     tries again instead of losing track of a message that is still in the channel.
+ *
+ * A permission error is the case worth being careful about: "Manage Messages" is not among the
+ * four permissions the bot asks for, and a bot may always delete its OWN messages — but a
+ * server can still deny it. That throws here, the rows survive, and the thread simply stays.
+ *
+ * @returns {Promise<boolean>} whether the whole thread is gone
+ */
+const removeAlertThread = async (subscription, parentRecord, client) => {
+    if (!parentRecord.alertId) return false
+
+    const rows = await models.Message.findAll({
+        where: {
+            subscriptionId: subscription.id,
+            alertId: parentRecord.alertId,
+            category: { [Op.in]: ['NEWS', 'ALERT'] },
+        },
+    })
+
+    // Replies first, the parent last — see (2) above.
+    const ordered = [
+        ...rows.filter((row) => row.category === 'ALERT'),
+        ...rows.filter((row) => row.category === 'NEWS'),
+    ]
+
+    const channel = await client.channels.fetch(subscription.channelId)
+    let removed = 0
+
+    for (const row of ordered) {
+        try {
+            await channel.messages.delete(row.messageId)
+        } catch (error) {
+            // Already gone is success: the row is stale and should go with the rest.
+            if (error?.code !== UNKNOWN_MESSAGE) throw error
+        }
+        await models.Message.destroy({ where: { id: row.id } })
+        removed += 1
+    }
+
+    logger.info(
+        `[handleAlerts] Alert ${parentRecord.alertId} is off the status page; ` +
+        `removed ${removed} message(s) in channel ${subscription.channelId}`
+    )
+
+    return true
+}
+
 const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, locale, footer, client) => {
     const stillLive = new Set(snapshot.alerts.map((alert) => alert.id))
     const cutoff = Date.now() - ALERT_WINDOW_MS
@@ -317,11 +388,24 @@ const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, 
             // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
             // returns a notice shaped exactly like an incident and says nothing about which
             // it is, so without this a closed advisory came back red with an outage severity.
-            const closed = await fetchClosedAlert(statuspageRecord, record.serviceId, record.kind || null)
-            if (!closed) continue
+            //
+            // `historyVisible` is what separates "the operator removed it" from "the page
+            // hides resolved alerts", which arrive as the same 404. Only the first may delete
+            // anything; see the verdict in providers/cloud.js.
+            const { alert: closed, removed } = await fetchClosedAlert(
+                statuspageRecord,
+                record.serviceId,
+                record.kind || null,
+                { historyVisible: snapshot.showIncidentHistory },
+            )
+            if (!closed && !removed) continue
 
             try {
-                await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
+                if (removed) {
+                    await removeAlertThread(subscription, record, client)
+                } else {
+                    await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
+                }
             } catch (error) {
                 // The same guard the live path has, which this loop was missing. Without it
                 // one guild that revoked "Send Messages" aborted the whole reconciliation:
