@@ -167,8 +167,11 @@ const SCENARIOS = {
         ],
         incidents: [incident({ status: 'identified', updates: 2 })],
     }),
+    // `degraded`, not `degraded_performance`. The latter is Atlassian's spelling; LIVCK's
+    // enum has never had it, so the adapter mapped every one of these to `unknown` and this
+    // scenario tested the opposite of its own name.
     'cloud-03-degraded-only': () => cloudPage({
-        components: [group({ children: spread(6, ['degraded_performance', 'operational']), status: 'degraded_performance' })],
+        components: [group({ children: spread(6, ['degraded', 'operational']), status: 'degraded' })],
     }),
     'cloud-04-maintenance-window': () => cloudPage({
         components: [group({ children: spread(3, ['under_maintenance', 'operational']), status: 'under_maintenance' })],
@@ -211,6 +214,22 @@ const SCENARIOS = {
     'cloud-14-many-small-groups': () => cloudPage({
         components: Array.from({ length: 14 }, () => group({ children: spread(2, ['operational']) })),
     }),
+    // A healthy page WITH an active maintenance window. The rollup rescues it to the
+    // page-level `maintenance` status, which is a different value from a component's
+    // `under_maintenance` and was produced by nothing in the corpus.
+    'cloud-16-maintenance-rescue': () => cloudPage({
+        components: [group({ children: spread(4, ['operational']) })],
+        active: [maintenance({ status: 'in_progress', updates: 1 })],
+    }),
+    // Every status the Cloud can send, side by side, so one scenario alone proves the
+    // vocabulary is complete.
+    'cloud-17-every-status': () => cloudPage({
+        components: [group({
+            status: 'major_outage',
+            children: ['operational', 'degraded', 'partial_outage', 'major_outage', 'under_maintenance', 'unknown']
+                .map((status) => component({ status })),
+        })],
+    }),
     'cloud-15-partial-across-groups': () => cloudPage({
         components: Array.from({ length: 4 }, (_, i) =>
             group({ children: spread(4, i === 0 ? ['partial_outage'] : ['operational']),
@@ -242,6 +261,13 @@ const SELF_HOSTED = {
         shCategory([...shMonitors(3, ['AVAILABLE']), { id: faker.string.uuid(), name: serviceName().de, state: 'UNAVAILABLE' }]),
     ]),
     'selfhosted-03-maintenance': () => selfHostedPage([shCategory(shMonitors(4, ['MAINTENANCE', 'AVAILABLE']))]),
+    // DEGRADED is mapped by the adapter and was in no payload; PENDING is not mapped, and
+    // must land on `unknown` rather than be assumed healthy.
+    'selfhosted-07-every-state': () => selfHostedPage([
+        shCategory(['AVAILABLE', 'UNAVAILABLE', 'DEGRADED', 'MAINTENANCE', 'PENDING'].map((state) => ({
+            id: faker.string.uuid(), name: serviceName().de, state,
+        }))),
+    ]),
     'selfhosted-04-empty-category': () => selfHostedPage([shCategory([]), shCategory(shMonitors(2, ['AVAILABLE']))]),
     'selfhosted-05-large': () => selfHostedPage(Array.from({ length: 8 }, () => shCategory(shMonitors(7, ['AVAILABLE', 'AVAILABLE', 'UNAVAILABLE'])))),
     'selfhosted-06-no-categories': () => selfHostedPage([]),

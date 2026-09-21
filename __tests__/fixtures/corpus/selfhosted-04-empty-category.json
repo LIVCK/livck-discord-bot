@@ -1,21 +1,21 @@
 {
-  "ddd4b216-5063-4c2a-97a9-fbae4138eb33": {
-    "id": "ddd4b216-5063-4c2a-97a9-fbae4138eb33",
-    "name": "Gameserver",
+  "f64c06bf-20de-4205-83bd-cc205c8362aa": {
+    "id": "f64c06bf-20de-4205-83bd-cc205c8362aa",
+    "name": "Webhosting",
     "monitors": []
   },
-  "8dedefb4-76bc-4eb9-a20e-704379af3e8b": {
-    "id": "8dedefb4-76bc-4eb9-a20e-704379af3e8b",
-    "name": "Webhosting",
+  "3740a05f-f306-46c1-8227-54e4cd82a9e4": {
+    "id": "3740a05f-f306-46c1-8227-54e4cd82a9e4",
+    "name": "Gameserver",
     "monitors": [
       {
-        "id": "91795d22-979d-4b5a-a606-14958dc47c56",
-        "name": "Rootserver Falkenstein",
+        "id": "ac4afe12-0a37-4f28-a29e-e9e01d9b1c64",
+        "name": "Gameserver Falkenstein",
         "state": "AVAILABLE"
       },
       {
-        "id": "146b8f1a-4095-4787-a677-3d8b5001f768",
-        "name": "API Amsterdam (Beta)",
+        "id": "7bdd28a8-56ba-4cc5-abac-6bcb273f1f4e",
+        "name": "Datenbank Frankfurt (Beta)",
         "state": "AVAILABLE"
       }
     ]

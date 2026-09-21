@@ -94,7 +94,7 @@ exports[`Layout golden output DETAILED renders unchanged (de) 1`] = `
         {
           "inline": false,
           "name": "Zahlungsdienste",
-          "value": "❔ **Stripe**",
+          "value": "🟠 **Stripe**",
         },
       ],
       "footer": {
@@ -130,7 +130,7 @@ exports[`Layout golden output DETAILED renders unchanged (en) 1`] = `
         {
           "inline": false,
           "name": "Zahlungsdienste",
-          "value": "❔ **Stripe**",
+          "value": "🟠 **Stripe**",
         },
       ],
       "footer": {
@@ -159,7 +159,7 @@ exports[`Layout golden output MINIMAL renders unchanged (de) 1`] = `
 🟢 Edge Nürnberg
 
 **Zahlungsdienste**
-🔴 Stripe
+🟠 Stripe
 ",
       "footer": {
         "text": "status.livck.com",
@@ -187,7 +187,7 @@ exports[`Layout golden output MINIMAL renders unchanged (en) 1`] = `
 🟢 Edge Nürnberg
 
 **Zahlungsdienste**
-🔴 Stripe
+🟠 Stripe
 ",
       "footer": {
         "text": "status.livck.com",
@@ -291,7 +291,7 @@ exports[`Layout golden output TREE renders unchanged (de) 1`] = `
     🟢 Edge Nürnberg
 
 **🟠 Zahlungsdienste**
-    🔴 Stripe
+    🟠 Stripe
 ",
       "footer": {
         "text": "status.livck.com",
@@ -319,7 +319,7 @@ exports[`Layout golden output TREE renders unchanged (en) 1`] = `
     🟢 Edge Nürnberg
 
 **🟠 Zahlungsdienste**
-    🔴 Stripe
+    🟠 Stripe
 ",
       "footer": {
         "text": "status.livck.com",

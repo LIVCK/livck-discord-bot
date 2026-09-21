@@ -32,8 +32,17 @@ import {
  * they are not silently dropped.
  */
 
-/** Status values the Cloud can send. Anything else is treated as unknown rather than assumed up. */
-const KNOWN_STATUSES = new Set([
+/**
+ * Status values the Cloud can send. Anything else is treated as unknown rather than assumed up.
+ *
+ * Exported so tests can derive their inputs from it instead of retyping the list. A hand-typed
+ * copy drifted once already: it said `degraded_performance`, which is Atlassian's spelling and
+ * not a value in LIVCK's `ComponentStatus` enum. Every payload built from that list therefore
+ * carried a status the adapter rejects, so `degraded` — a first-class state a customer's page
+ * really shows — had never once been rendered by a test, while `unknown` was being exercised
+ * under its name.
+ */
+export const KNOWN_STATUSES = new Set([
     STATUS.OPERATIONAL,
     STATUS.DEGRADED,
     STATUS.PARTIAL_OUTAGE,

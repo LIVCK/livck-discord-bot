@@ -1,11 +1,11 @@
 {
   "meta": {
-    "id": "0PcDM9IN6nTnbwmXVnpH7",
+    "id": "pwB84FKRPF0Q3AeovMUaM",
     "name": {
-      "de": "Vogel AG Status",
-      "en": "Cors AG Status"
+      "de": "Döring AG Status",
+      "en": "Kubera KG Status"
     },
-    "slug": "trampeli-ag",
+    "slug": "hofmann-ohg",
     "supported_locales": [
       "de",
       "en"
@@ -16,13 +16,13 @@
   },
   "components": [
     {
-      "id": "wzbY55TIjAftkh63VzYZb",
+      "id": "bGD5kFfsDllPd34Qmca46",
       "name": {
-        "de": "Datenbank",
-        "en": "Database"
+        "de": "Loadbalancer",
+        "en": "Load balancer"
       },
       "description": null,
-      "status": "degraded",
+      "status": "major_outage",
       "is_visible": true,
       "is_group": true,
       "show_uptime_bars": false,
@@ -30,10 +30,10 @@
       "default_open": true,
       "children": [
         {
-          "id": "cv0wARaQCpS20CoxDPIYy",
+          "id": "9YCz0XzkeQEwlB54csWRT",
           "name": {
-            "de": "Kundenportal Nürnberg (Beta)",
-            "en": "Customer portal Nürnberg (Beta)"
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien"
           },
           "description": null,
           "status": "operational",
@@ -44,10 +44,10 @@
           "default_open": true
         },
         {
-          "id": "fGE4zN4of1Wwhjh7UNVPY",
+          "id": "3vJdat0vDQARXLOBubE7g",
           "name": {
-            "de": "Gameserver Falkenstein (Legacy)",
-            "en": "Game servers Falkenstein (Legacy)"
+            "de": "Datenbank Frankfurt",
+            "en": "Database Frankfurt"
           },
           "description": null,
           "status": "degraded",
@@ -58,13 +58,13 @@
           "default_open": true
         },
         {
-          "id": "TgsKzgdyJcpEGwlmE3R2b",
+          "id": "K9olPNnkrK4C49aVp56cA",
           "name": {
-            "de": "TeamSpeak Wien",
-            "en": "TeamSpeak Wien"
+            "de": "DNS Wien (Beta)",
+            "en": "DNS Wien (Beta)"
           },
           "description": null,
-          "status": "degraded",
+          "status": "partial_outage",
           "is_visible": true,
           "is_group": false,
           "show_uptime_bars": false,
@@ -72,13 +72,13 @@
           "default_open": true
         },
         {
-          "id": "9HiaPCeNir2nx2cjFgfqe",
+          "id": "yFxK5t18ORGZwAmAlQccC",
           "name": {
-            "de": "Mailserver Amsterdam",
-            "en": "Mail Amsterdam"
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien"
           },
           "description": null,
-          "status": "operational",
+          "status": "major_outage",
           "is_visible": true,
           "is_group": false,
           "show_uptime_bars": false,
@@ -86,13 +86,13 @@
           "default_open": true
         },
         {
-          "id": "uuJYpSECTP33WoP3eEMdz",
+          "id": "5EdoqrqiggAypv6QcbK5J",
           "name": {
-            "de": "Datenbank Amsterdam",
-            "en": "Database Amsterdam"
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
           },
           "description": null,
-          "status": "degraded",
+          "status": "under_maintenance",
           "is_visible": true,
           "is_group": false,
           "show_uptime_bars": false,
@@ -100,13 +100,13 @@
           "default_open": true
         },
         {
-          "id": "7i1BV3zKJTMDR7VWNRSq7",
+          "id": "WIyiOko4DVobU4qzwPXCp",
           "name": {
-            "de": "Datenbank Wien",
-            "en": "Database Wien"
+            "de": "Datenbank Nürnberg",
+            "en": "Database Nürnberg"
           },
           "description": null,
-          "status": "degraded",
+          "status": "unknown",
           "is_visible": true,
           "is_group": false,
           "show_uptime_bars": false,

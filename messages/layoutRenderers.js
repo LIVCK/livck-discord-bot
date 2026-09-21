@@ -112,9 +112,20 @@ export const getStatusEmoji = (status) => {
         case STATUS.MAJOR_OUTAGE:
             return '<a:status_down:1344187930499088394>';
         default:
-            // Deliberately unchanged for now: `degraded` has always rendered as ❔ here, and
-            // giving the richer Cloud states their own icons is a separate, visible change.
-            return '❔';
+            // THE COLOURED DOT, not a question mark.
+            //
+            // Custom animated emoji exist for exactly two states. Everything else fell through
+            // to `❔`, which put FIVE distinct statuses on one symbol in the default layout:
+            // degraded, partial_outage, under_maintenance, unknown and the page-level
+            // maintenance. A reader could not tell a planned maintenance window from a service
+            // the bot knows nothing about, and neither from a partial failure.
+            //
+            // `getStatusDot` has carried the right staffing all along — amber for degraded and
+            // partial, blue for maintenance, a plain dot for unknown — and the compact and tree
+            // layouts have been using it correctly. This is the same vocabulary, reached from
+            // here too, so the two states that DO have an icon keep it and the rest stop
+            // pretending to be the same thing.
+            return getStatusDot(status);
     }
 };
 
@@ -456,7 +467,11 @@ export const renderTreeLayout = (snapshot, locale = 'de') => {
         description += `**${getStatusDot(group.status)} ${groupName(group, snapshot, locale)}**\n`;
 
         group.services.forEach((service) => {
-            const dot = getStatusDot(service.status === STATUS.OPERATIONAL ? STATUS.OPERATIONAL : STATUS.MAJOR_OUTAGE);
+            // The service's OWN status. Collapsing everything non-operational to major_outage
+            // painted a planned maintenance window and a degraded service the same red as a
+            // total failure — which reads as worse than it is, and is the one direction a
+            // status page must never err in.
+            const dot = getStatusDot(service.status);
             description += `    ${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
@@ -496,7 +511,11 @@ export const renderMinimalLayout = (snapshot, locale = 'de') => {
         description += `**${groupName(group, snapshot, locale)}**\n`;
 
         group.services.forEach((service) => {
-            const dot = getStatusDot(service.status === STATUS.OPERATIONAL ? STATUS.OPERATIONAL : STATUS.MAJOR_OUTAGE);
+            // The service's OWN status. Collapsing everything non-operational to major_outage
+            // painted a planned maintenance window and a degraded service the same red as a
+            // total failure — which reads as worse than it is, and is the one direction a
+            // status page must never err in.
+            const dot = getStatusDot(service.status);
             description += `${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 

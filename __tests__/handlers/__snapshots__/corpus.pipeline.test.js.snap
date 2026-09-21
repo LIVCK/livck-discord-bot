@@ -215,3 +215,33 @@ exports[`cloud-15-partial-across-groups.json the decisions across three cycles, 
   "rows": 2,
 }
 `;
+
+exports[`cloud-16-maintenance-rescue.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-17-every-status.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;

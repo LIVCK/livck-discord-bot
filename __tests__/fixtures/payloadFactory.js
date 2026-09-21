@@ -12,13 +12,27 @@
  * that fails once a week teaches nobody anything.
  */
 
-/** Cloud component statuses, as the API spells them. */
-export const CLOUD_STATUSES = [
-    'operational', 'degraded_performance', 'partial_outage', 'major_outage', 'under_maintenance',
-];
+import { KNOWN_STATUSES as ADAPTER_STATUSES } from '../../providers/cloud.js';
 
-/** Self-hosted monitor states. */
-export const SELF_HOSTED_STATES = ['AVAILABLE', 'UNAVAILABLE', 'MAINTENANCE', 'PENDING'];
+/**
+ * Cloud component statuses, taken FROM THE ADAPTER rather than retyped.
+ *
+ * The hand-typed version said `degraded_performance` — Atlassian's spelling, not a value in
+ * LIVCK's enum. The adapter rejected it, so every payload built from that list carried
+ * `unknown` where it meant `degraded`, and the one status a busy page shows most often had
+ * never been rendered by any test. Deriving it means the list cannot drift from what the
+ * adapter accepts; `statusVocabularyIsComplete` in the matrix fails if it ever tries.
+ */
+export const CLOUD_STATUSES = [...ADAPTER_STATUSES];
+
+/**
+ * Self-hosted monitor states the adapter maps, plus one it deliberately does not.
+ *
+ * `DEGRADED` was missing, which is the same omission from the other direction. `PENDING` is
+ * kept on purpose: it is not in the map, and a state the adapter does not recognise must land
+ * on `unknown` rather than be assumed healthy.
+ */
+export const SELF_HOSTED_STATES = ['AVAILABLE', 'UNAVAILABLE', 'DEGRADED', 'MAINTENANCE', 'PENDING'];
 
 export const INCIDENT_STATES = ['investigating', 'identified', 'monitoring', 'resolved'];
 export const INCIDENT_SEVERITIES = ['minor', 'major', 'critical'];

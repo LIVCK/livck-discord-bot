@@ -1,26 +1,26 @@
 {
-  "3ce3a39d-0fe4-4fad-bfdb-88e9afc55d8d": {
-    "id": "3ce3a39d-0fe4-4fad-bfdb-88e9afc55d8d",
-    "name": "Rootserver",
+  "42fc323d-c735-4623-8a1f-4a7885d51420": {
+    "id": "42fc323d-c735-4623-8a1f-4a7885d51420",
+    "name": "Datenbank",
     "monitors": [
       {
-        "id": "c5e1d7c7-0b2d-40d5-8448-b1b6c7154f71",
-        "name": "Objektspeicher Nürnberg (Beta)",
+        "id": "68bab8c8-dede-4fb4-a76b-ceb920e70437",
+        "name": "API Wien (Legacy)",
         "state": "AVAILABLE"
       },
       {
-        "id": "c33a5e4c-21fb-43a9-9941-34c6c1662582",
-        "name": "DNS Falkenstein",
+        "id": "8b81679c-f85e-4857-bf88-e38535e0d54d",
+        "name": "Mailserver Amsterdam",
         "state": "AVAILABLE"
       },
       {
-        "id": "87dd2b48-2aec-4351-baa9-88da5f412d28",
-        "name": "Gameserver Wien",
+        "id": "cb9c2ee2-d17f-460b-8477-400cb769fdf8",
+        "name": "Objektspeicher Amsterdam",
         "state": "AVAILABLE"
       },
       {
-        "id": "0ea56c30-748c-4230-b94e-68fd80a66173",
-        "name": "Objektspeicher Frankfurt",
+        "id": "139ee4e1-5481-4c85-91c8-f5d579bfeea8",
+        "name": "Kundenportal Wien (Legacy)",
         "state": "UNAVAILABLE"
       }
     ]

@@ -1186,7 +1186,7 @@ exports[`cloud-03-degraded-only.json COMPACT in de and en 1`] = `
             "inline": true,
             "name": "Datenbank",
             "value": "┃ **2/6** Dienste
-┗━ ● Eingeschränkt",
+┗━ 🟠 Eingeschränkt",
           },
           {
             "inline": true,
@@ -1218,7 +1218,7 @@ exports[`cloud-03-degraded-only.json COMPACT in de and en 1`] = `
             "inline": true,
             "name": "Database",
             "value": "┃ **2/6** services
-┗━ ● Degraded",
+┗━ 🟠 Degraded",
           },
           {
             "inline": true,
@@ -1255,11 +1255,11 @@ exports[`cloud-03-degraded-only.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Datenbank",
             "value": "<a:status_up:1344187859921535047> **Kundenportal Nürnberg (Beta)**
-❔ **Gameserver Falkenstein (Legacy)**
-❔ **TeamSpeak Wien**
+🟠 **Gameserver Falkenstein (Legacy)**
+🟠 **TeamSpeak Wien**
 <a:status_up:1344187859921535047> **Mailserver Amsterdam**
-❔ **Datenbank Amsterdam**
-❔ **Datenbank Wien**",
+🟠 **Datenbank Amsterdam**
+🟠 **Datenbank Wien**",
           },
         ],
         "footer": {
@@ -1281,11 +1281,11 @@ exports[`cloud-03-degraded-only.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Database",
             "value": "<a:status_up:1344187859921535047> **Customer portal Nürnberg (Beta)**
-❔ **Game servers Falkenstein (Legacy)**
-❔ **TeamSpeak Wien**
+🟠 **Game servers Falkenstein (Legacy)**
+🟠 **TeamSpeak Wien**
 <a:status_up:1344187859921535047> **Mail Amsterdam**
-❔ **Database Amsterdam**
-❔ **Database Wien**",
+🟠 **Database Amsterdam**
+🟠 **Database Wien**",
           },
         ],
         "footer": {
@@ -1309,11 +1309,11 @@ exports[`cloud-03-degraded-only.json MINIMAL in de and en 1`] = `
         "color": 15965202,
         "description": "**Datenbank**
 🟢 Kundenportal Nürnberg (Beta)
-🔴 Gameserver Falkenstein (Legacy)
-🔴 TeamSpeak Wien
+🟠 Gameserver Falkenstein (Legacy)
+🟠 TeamSpeak Wien
 🟢 Mailserver Amsterdam
-🔴 Datenbank Amsterdam
-🔴 Datenbank Wien
+🟠 Datenbank Amsterdam
+🟠 Datenbank Wien
 ",
         "footer": {
           "icon_url": undefined,
@@ -1331,11 +1331,11 @@ exports[`cloud-03-degraded-only.json MINIMAL in de and en 1`] = `
         "color": 15965202,
         "description": "**Database**
 🟢 Customer portal Nürnberg (Beta)
-🔴 Game servers Falkenstein (Legacy)
-🔴 TeamSpeak Wien
+🟠 Game servers Falkenstein (Legacy)
+🟠 TeamSpeak Wien
 🟢 Mail Amsterdam
-🔴 Database Amsterdam
-🔴 Database Wien
+🟠 Database Amsterdam
+🟠 Database Wien
 ",
         "footer": {
           "icon_url": undefined,
@@ -1365,7 +1365,7 @@ exports[`cloud-03-degraded-only.json OVERVIEW in de and en 1`] = `
           {
             "inline": true,
             "name": "Datenbank",
-            "value": "● 2/6",
+            "value": "🟠 2/6",
           },
           {
             "inline": true,
@@ -1401,7 +1401,7 @@ exports[`cloud-03-degraded-only.json OVERVIEW in de and en 1`] = `
           {
             "inline": true,
             "name": "Database",
-            "value": "● 2/6",
+            "value": "🟠 2/6",
           },
           {
             "inline": true,
@@ -1433,13 +1433,13 @@ exports[`cloud-03-degraded-only.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**● Datenbank**
+        "description": "**🟠 Datenbank**
     🟢 Kundenportal Nürnberg (Beta)
-    🔴 Gameserver Falkenstein (Legacy)
-    🔴 TeamSpeak Wien
+    🟠 Gameserver Falkenstein (Legacy)
+    🟠 TeamSpeak Wien
     🟢 Mailserver Amsterdam
-    🔴 Datenbank Amsterdam
-    🔴 Datenbank Wien
+    🟠 Datenbank Amsterdam
+    🟠 Datenbank Wien
 ",
         "footer": {
           "icon_url": undefined,
@@ -1455,13 +1455,13 @@ exports[`cloud-03-degraded-only.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**● Database**
+        "description": "**🟠 Database**
     🟢 Customer portal Nürnberg (Beta)
-    🔴 Game servers Falkenstein (Legacy)
-    🔴 TeamSpeak Wien
+    🟠 Game servers Falkenstein (Legacy)
+    🟠 TeamSpeak Wien
     🟢 Mail Amsterdam
-    🔴 Database Amsterdam
-    🔴 Database Wien
+    🟠 Database Amsterdam
+    🟠 Database Wien
 ",
         "footer": {
           "icon_url": undefined,
@@ -1502,7 +1502,7 @@ exports[`cloud-03-degraded-only.json the snapshot the renderers were given 1`] =
             "en": "Game servers Falkenstein (Legacy)",
           },
           "path": [],
-          "status": "unknown",
+          "status": "degraded",
         },
         {
           "name": {
@@ -1510,7 +1510,7 @@ exports[`cloud-03-degraded-only.json the snapshot the renderers were given 1`] =
             "en": "TeamSpeak Wien",
           },
           "path": [],
-          "status": "unknown",
+          "status": "degraded",
         },
         {
           "name": {
@@ -1526,7 +1526,7 @@ exports[`cloud-03-degraded-only.json the snapshot the renderers were given 1`] =
             "en": "Database Amsterdam",
           },
           "path": [],
-          "status": "unknown",
+          "status": "degraded",
         },
         {
           "name": {
@@ -1534,17 +1534,17 @@ exports[`cloud-03-degraded-only.json the snapshot the renderers were given 1`] =
             "en": "Database Wien",
           },
           "path": [],
-          "status": "unknown",
+          "status": "degraded",
         },
       ],
-      "status": "unknown",
+      "status": "degraded",
     },
   ],
   "locales": [
     "de",
     "en",
   ],
-  "overall": "partial_outage",
+  "overall": "degraded",
 }
 `;
 
@@ -1628,8 +1628,8 @@ exports[`cloud-04-maintenance-window.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Objektspeicher",
             "value": "<a:status_up:1344187859921535047> **Webhosting Helsinki (v2)**
-❔ **DNS Frankfurt**
-❔ **Loadbalancer Amsterdam**",
+🔵 **DNS Frankfurt**
+🔵 **Loadbalancer Amsterdam**",
           },
         ],
         "footer": {
@@ -1651,8 +1651,8 @@ exports[`cloud-04-maintenance-window.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Object storage",
             "value": "<a:status_up:1344187859921535047> **Web hosting Helsinki (v2)**
-❔ **DNS Frankfurt**
-❔ **Load balancer Amsterdam**",
+🔵 **DNS Frankfurt**
+🔵 **Load balancer Amsterdam**",
           },
         ],
         "footer": {
@@ -1676,8 +1676,8 @@ exports[`cloud-04-maintenance-window.json MINIMAL in de and en 1`] = `
         "color": 3447003,
         "description": "**Objektspeicher**
 🟢 Webhosting Helsinki (v2)
-🔴 DNS Frankfurt
-🔴 Loadbalancer Amsterdam
+🔵 DNS Frankfurt
+🔵 Loadbalancer Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -1695,8 +1695,8 @@ exports[`cloud-04-maintenance-window.json MINIMAL in de and en 1`] = `
         "color": 3447003,
         "description": "**Object storage**
 🟢 Web hosting Helsinki (v2)
-🔴 DNS Frankfurt
-🔴 Load balancer Amsterdam
+🔵 DNS Frankfurt
+🔵 Load balancer Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -1796,8 +1796,8 @@ exports[`cloud-04-maintenance-window.json TREE in de and en 1`] = `
         "color": 3447003,
         "description": "**🔵 Objektspeicher**
     🟢 Webhosting Helsinki (v2)
-    🔴 DNS Frankfurt
-    🔴 Loadbalancer Amsterdam
+    🔵 DNS Frankfurt
+    🔵 Loadbalancer Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -1815,8 +1815,8 @@ exports[`cloud-04-maintenance-window.json TREE in de and en 1`] = `
         "color": 3447003,
         "description": "**🔵 Object storage**
     🟢 Web hosting Helsinki (v2)
-    🔴 DNS Frankfurt
-    🔴 Load balancer Amsterdam
+    🔵 DNS Frankfurt
+    🔵 Load balancer Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -2636,8 +2636,8 @@ exports[`cloud-07-nested-two-deep.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Webhosting",
             "value": "**Gameserver**
-┗━ ❔ **Kundenportal Frankfurt**
-┗━ ❔ **Webhosting Amsterdam**
+┗━ 🟠 **Kundenportal Frankfurt**
+┗━ 🟠 **Webhosting Amsterdam**
 ┗━ <a:status_up:1344187859921535047> **Loadbalancer Falkenstein**",
           },
         ],
@@ -2660,8 +2660,8 @@ exports[`cloud-07-nested-two-deep.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Web hosting",
             "value": "**Game servers**
-┗━ ❔ **Customer portal Frankfurt**
-┗━ ❔ **Web hosting Amsterdam**
+┗━ 🟠 **Customer portal Frankfurt**
+┗━ 🟠 **Web hosting Amsterdam**
 ┗━ <a:status_up:1344187859921535047> **Load balancer Falkenstein**",
           },
         ],
@@ -2685,8 +2685,8 @@ exports[`cloud-07-nested-two-deep.json MINIMAL in de and en 1`] = `
       "embed": {
         "color": 3066993,
         "description": "**Webhosting**
-🔴 Kundenportal Frankfurt
-🔴 Webhosting Amsterdam
+🟠 Kundenportal Frankfurt
+🟠 Webhosting Amsterdam
 🟢 Loadbalancer Falkenstein
 ",
         "footer": {
@@ -2704,8 +2704,8 @@ exports[`cloud-07-nested-two-deep.json MINIMAL in de and en 1`] = `
       "embed": {
         "color": 3066993,
         "description": "**Web hosting**
-🔴 Customer portal Frankfurt
-🔴 Web hosting Amsterdam
+🟠 Customer portal Frankfurt
+🟠 Web hosting Amsterdam
 🟢 Load balancer Falkenstein
 ",
         "footer": {
@@ -2805,8 +2805,8 @@ exports[`cloud-07-nested-two-deep.json TREE in de and en 1`] = `
       "embed": {
         "color": 3066993,
         "description": "**🟢 Webhosting**
-    🔴 Kundenportal Frankfurt
-    🔴 Webhosting Amsterdam
+    🟠 Kundenportal Frankfurt
+    🟠 Webhosting Amsterdam
     🟢 Loadbalancer Falkenstein
 ",
         "footer": {
@@ -2824,8 +2824,8 @@ exports[`cloud-07-nested-two-deep.json TREE in de and en 1`] = `
       "embed": {
         "color": 3066993,
         "description": "**🟢 Web hosting**
-    🔴 Customer portal Frankfurt
-    🔴 Web hosting Amsterdam
+    🟠 Customer portal Frankfurt
+    🟠 Web hosting Amsterdam
     🟢 Load balancer Falkenstein
 ",
         "footer": {
@@ -3063,8 +3063,8 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
 <a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
 <a:status_up:1344187859921535047> **Mailserver Nürnberg**
 <a:status_up:1344187859921535047> **DNS Frankfurt**
-❔ **Loadbalancer Amsterdam**
-❔ **DNS Falkenstein**
+🟠 **Loadbalancer Amsterdam**
+🟠 **DNS Falkenstein**
 <a:status_up:1344187859921535047> **API Nürnberg**",
           },
           {
@@ -3072,31 +3072,31 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
             "name": "Loadbalancer",
             "value": "<a:status_up:1344187859921535047> **Datenbank Amsterdam**
 <a:status_up:1344187859921535047> **Webhosting Wien**
-❔ **Objektspeicher Frankfurt**
-❔ **DNS Wien**
-❔ **Loadbalancer Frankfurt**
+🟠 **Objektspeicher Frankfurt**
+🟠 **DNS Wien**
+🟠 **Loadbalancer Frankfurt**
 <a:status_up:1344187859921535047> **Backup Amsterdam**
 <a:status_up:1344187859921535047> **Rootserver Nürnberg (Beta)**
 <a:status_up:1344187859921535047> **Loadbalancer Helsinki**
-❔ **Loadbalancer Falkenstein**",
+🟠 **Loadbalancer Falkenstein**",
           },
           {
             "inline": false,
             "name": "Mailserver",
             "value": "<a:status_up:1344187859921535047> **Mailserver Wien**
 <a:status_up:1344187859921535047> **Mailserver Wien**
-❔ **Webhosting Wien**
+🟠 **Webhosting Wien**
 <a:status_up:1344187859921535047> **Kundenportal Helsinki**
 <a:status_up:1344187859921535047> **Loadbalancer Frankfurt**
 <a:status_up:1344187859921535047> **Gameserver Nürnberg**
 <a:status_up:1344187859921535047> **Mailserver Amsterdam**
 <a:status_up:1344187859921535047> **Gameserver Frankfurt**
-❔ **DNS Nürnberg**",
+🟠 **DNS Nürnberg**",
           },
           {
             "inline": false,
             "name": "Rootserver",
-            "value": "❔ **Datenbank Nürnberg**
+            "value": "🟠 **Datenbank Nürnberg**
 <a:status_up:1344187859921535047> **Loadbalancer Nürnberg (Beta)**
 <a:status_up:1344187859921535047> **TeamSpeak Nürnberg**
 <a:status_up:1344187859921535047> **API Falkenstein**
@@ -3109,10 +3109,10 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "API",
-            "value": "❔ **TeamSpeak Amsterdam**
+            "value": "🟠 **TeamSpeak Amsterdam**
 <a:status_up:1344187859921535047> **Loadbalancer Falkenstein**
-❔ **Gameserver Nürnberg**
-❔ **Datenbank Wien**
+🟠 **Gameserver Nürnberg**
+🟠 **Datenbank Wien**
 <a:status_up:1344187859921535047> **API Helsinki**
 <a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
 <a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
@@ -3122,13 +3122,13 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "TeamSpeak",
-            "value": "❔ **Kundenportal Wien**
+            "value": "🟠 **Kundenportal Wien**
 <a:status_up:1344187859921535047> **TeamSpeak Helsinki**
 <a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
 <a:status_up:1344187859921535047> **TeamSpeak Amsterdam (v2)**
-❔ **TeamSpeak Falkenstein**
+🟠 **TeamSpeak Falkenstein**
 <a:status_up:1344187859921535047> **Webhosting Nürnberg**
-❔ **Webhosting Wien**
+🟠 **Webhosting Wien**
 <a:status_up:1344187859921535047> **DNS Wien**
 <a:status_up:1344187859921535047> **Webhosting Helsinki**",
           },
@@ -3136,14 +3136,14 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Objektspeicher",
             "value": "<a:status_up:1344187859921535047> **Kundenportal Amsterdam**
-❔ **Objektspeicher Frankfurt**
+🟠 **Objektspeicher Frankfurt**
 <a:status_up:1344187859921535047> **Datenbank Frankfurt**
-❔ **Webhosting Frankfurt**
+🟠 **Webhosting Frankfurt**
 <a:status_up:1344187859921535047> **Backup Wien**
 <a:status_up:1344187859921535047> **Objektspeicher Helsinki (Legacy)**
 <a:status_up:1344187859921535047> **Objektspeicher Helsinki**
-❔ **Kundenportal Amsterdam**
-❔ **Kundenportal Helsinki**",
+🟠 **Kundenportal Amsterdam**
+🟠 **Kundenportal Helsinki**",
           },
           {
             "inline": false,
@@ -3152,8 +3152,8 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
 <a:status_up:1344187859921535047> **Kundenportal Falkenstein**
 <a:status_up:1344187859921535047> **Mailserver Nürnberg**
 <a:status_up:1344187859921535047> **Mailserver Nürnberg**
-❔ **Datenbank Amsterdam**
-❔ **Backup Wien**
+🟠 **Datenbank Amsterdam**
+🟠 **Backup Wien**
 <a:status_up:1344187859921535047> **Rootserver Frankfurt**
 <a:status_up:1344187859921535047> **Webhosting Wien**
 <a:status_up:1344187859921535047> **Mailserver Helsinki**",
@@ -3183,8 +3183,8 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
 <a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
 <a:status_up:1344187859921535047> **Mail Nürnberg**
 <a:status_up:1344187859921535047> **DNS Frankfurt**
-❔ **Load balancer Amsterdam**
-❔ **DNS Falkenstein**
+🟠 **Load balancer Amsterdam**
+🟠 **DNS Falkenstein**
 <a:status_up:1344187859921535047> **API Nürnberg**",
           },
           {
@@ -3192,31 +3192,31 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
             "name": "Load balancer",
             "value": "<a:status_up:1344187859921535047> **Database Amsterdam**
 <a:status_up:1344187859921535047> **Web hosting Wien**
-❔ **Object storage Frankfurt**
-❔ **DNS Wien**
-❔ **Load balancer Frankfurt**
+🟠 **Object storage Frankfurt**
+🟠 **DNS Wien**
+🟠 **Load balancer Frankfurt**
 <a:status_up:1344187859921535047> **Backup Amsterdam**
 <a:status_up:1344187859921535047> **Root servers Nürnberg (Beta)**
 <a:status_up:1344187859921535047> **Load balancer Helsinki**
-❔ **Load balancer Falkenstein**",
+🟠 **Load balancer Falkenstein**",
           },
           {
             "inline": false,
             "name": "Mail",
             "value": "<a:status_up:1344187859921535047> **Mail Wien**
 <a:status_up:1344187859921535047> **Mail Wien**
-❔ **Web hosting Wien**
+🟠 **Web hosting Wien**
 <a:status_up:1344187859921535047> **Customer portal Helsinki**
 <a:status_up:1344187859921535047> **Load balancer Frankfurt**
 <a:status_up:1344187859921535047> **Game servers Nürnberg**
 <a:status_up:1344187859921535047> **Mail Amsterdam**
 <a:status_up:1344187859921535047> **Game servers Frankfurt**
-❔ **DNS Nürnberg**",
+🟠 **DNS Nürnberg**",
           },
           {
             "inline": false,
             "name": "Root servers",
-            "value": "❔ **Database Nürnberg**
+            "value": "🟠 **Database Nürnberg**
 <a:status_up:1344187859921535047> **Load balancer Nürnberg (Beta)**
 <a:status_up:1344187859921535047> **TeamSpeak Nürnberg**
 <a:status_up:1344187859921535047> **API Falkenstein**
@@ -3229,10 +3229,10 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "API",
-            "value": "❔ **TeamSpeak Amsterdam**
+            "value": "🟠 **TeamSpeak Amsterdam**
 <a:status_up:1344187859921535047> **Load balancer Falkenstein**
-❔ **Game servers Nürnberg**
-❔ **Database Wien**
+🟠 **Game servers Nürnberg**
+🟠 **Database Wien**
 <a:status_up:1344187859921535047> **API Helsinki**
 <a:status_up:1344187859921535047> **Object storage Frankfurt**
 <a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
@@ -3242,13 +3242,13 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "TeamSpeak",
-            "value": "❔ **Customer portal Wien**
+            "value": "🟠 **Customer portal Wien**
 <a:status_up:1344187859921535047> **TeamSpeak Helsinki**
 <a:status_up:1344187859921535047> **Object storage Frankfurt**
 <a:status_up:1344187859921535047> **TeamSpeak Amsterdam (v2)**
-❔ **TeamSpeak Falkenstein**
+🟠 **TeamSpeak Falkenstein**
 <a:status_up:1344187859921535047> **Web hosting Nürnberg**
-❔ **Web hosting Wien**
+🟠 **Web hosting Wien**
 <a:status_up:1344187859921535047> **DNS Wien**
 <a:status_up:1344187859921535047> **Web hosting Helsinki**",
           },
@@ -3256,14 +3256,14 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
             "inline": false,
             "name": "Object storage",
             "value": "<a:status_up:1344187859921535047> **Customer portal Amsterdam**
-❔ **Object storage Frankfurt**
+🟠 **Object storage Frankfurt**
 <a:status_up:1344187859921535047> **Database Frankfurt**
-❔ **Web hosting Frankfurt**
+🟠 **Web hosting Frankfurt**
 <a:status_up:1344187859921535047> **Backup Wien**
 <a:status_up:1344187859921535047> **Object storage Helsinki (Legacy)**
 <a:status_up:1344187859921535047> **Object storage Helsinki**
-❔ **Customer portal Amsterdam**
-❔ **Customer portal Helsinki**",
+🟠 **Customer portal Amsterdam**
+🟠 **Customer portal Helsinki**",
           },
           {
             "inline": false,
@@ -3272,8 +3272,8 @@ exports[`cloud-08-large-fleet.json DETAILED in de and en 1`] = `
 <a:status_up:1344187859921535047> **Customer portal Falkenstein**
 <a:status_up:1344187859921535047> **Mail Nürnberg**
 <a:status_up:1344187859921535047> **Mail Nürnberg**
-❔ **Database Amsterdam**
-❔ **Backup Wien**
+🟠 **Database Amsterdam**
+🟠 **Backup Wien**
 <a:status_up:1344187859921535047> **Root servers Frankfurt**
 <a:status_up:1344187859921535047> **Web hosting Wien**
 <a:status_up:1344187859921535047> **Mail Helsinki**",
@@ -3305,34 +3305,34 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 TeamSpeak Frankfurt
 🟢 Mailserver Nürnberg
 🟢 DNS Frankfurt
-🔴 Loadbalancer Amsterdam
-🔴 DNS Falkenstein
+🟠 Loadbalancer Amsterdam
+🟠 DNS Falkenstein
 🟢 API Nürnberg
 
 **Loadbalancer**
 🟢 Datenbank Amsterdam
 🟢 Webhosting Wien
-🔴 Objektspeicher Frankfurt
-🔴 DNS Wien
-🔴 Loadbalancer Frankfurt
+🟠 Objektspeicher Frankfurt
+🟠 DNS Wien
+🟠 Loadbalancer Frankfurt
 🟢 Backup Amsterdam
 🟢 Rootserver Nürnberg (Beta)
 🟢 Loadbalancer Helsinki
-🔴 Loadbalancer Falkenstein
+🟠 Loadbalancer Falkenstein
 
 **Mailserver**
 🟢 Mailserver Wien
 🟢 Mailserver Wien
-🔴 Webhosting Wien
+🟠 Webhosting Wien
 🟢 Kundenportal Helsinki
 🟢 Loadbalancer Frankfurt
 🟢 Gameserver Nürnberg
 🟢 Mailserver Amsterdam
 🟢 Gameserver Frankfurt
-🔴 DNS Nürnberg
+🟠 DNS Nürnberg
 
 **Rootserver**
-🔴 Datenbank Nürnberg
+🟠 Datenbank Nürnberg
 🟢 Loadbalancer Nürnberg (Beta)
 🟢 TeamSpeak Nürnberg
 🟢 API Falkenstein
@@ -3343,10 +3343,10 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 DNS Frankfurt
 
 **API**
-🔴 TeamSpeak Amsterdam
+🟠 TeamSpeak Amsterdam
 🟢 Loadbalancer Falkenstein
-🔴 Gameserver Nürnberg
-🔴 Datenbank Wien
+🟠 Gameserver Nürnberg
+🟠 Datenbank Wien
 🟢 API Helsinki
 🟢 Objektspeicher Frankfurt
 🟢 TeamSpeak Frankfurt
@@ -3354,34 +3354,34 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 DNS Falkenstein
 
 **TeamSpeak**
-🔴 Kundenportal Wien
+🟠 Kundenportal Wien
 🟢 TeamSpeak Helsinki
 🟢 Objektspeicher Frankfurt
 🟢 TeamSpeak Amsterdam (v2)
-🔴 TeamSpeak Falkenstein
+🟠 TeamSpeak Falkenstein
 🟢 Webhosting Nürnberg
-🔴 Webhosting Wien
+🟠 Webhosting Wien
 🟢 DNS Wien
 🟢 Webhosting Helsinki
 
 **Objektspeicher**
 🟢 Kundenportal Amsterdam
-🔴 Objektspeicher Frankfurt
+🟠 Objektspeicher Frankfurt
 🟢 Datenbank Frankfurt
-🔴 Webhosting Frankfurt
+🟠 Webhosting Frankfurt
 🟢 Backup Wien
 🟢 Objektspeicher Helsinki (Legacy)
 🟢 Objektspeicher Helsinki
-🔴 Kundenportal Amsterdam
-🔴 Kundenportal Helsinki
+🟠 Kundenportal Amsterdam
+🟠 Kundenportal Helsinki
 
 **Kundenportal**
 🟢 Loadbalancer Amsterdam
 🟢 Kundenportal Falkenstein
 🟢 Mailserver Nürnberg
 🟢 Mailserver Nürnberg
-🔴 Datenbank Amsterdam
-🔴 Backup Wien
+🟠 Datenbank Amsterdam
+🟠 Backup Wien
 🟢 Rootserver Frankfurt
 🟢 Webhosting Wien
 🟢 Mailserver Helsinki
@@ -3407,34 +3407,34 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 TeamSpeak Frankfurt
 🟢 Mail Nürnberg
 🟢 DNS Frankfurt
-🔴 Load balancer Amsterdam
-🔴 DNS Falkenstein
+🟠 Load balancer Amsterdam
+🟠 DNS Falkenstein
 🟢 API Nürnberg
 
 **Load balancer**
 🟢 Database Amsterdam
 🟢 Web hosting Wien
-🔴 Object storage Frankfurt
-🔴 DNS Wien
-🔴 Load balancer Frankfurt
+🟠 Object storage Frankfurt
+🟠 DNS Wien
+🟠 Load balancer Frankfurt
 🟢 Backup Amsterdam
 🟢 Root servers Nürnberg (Beta)
 🟢 Load balancer Helsinki
-🔴 Load balancer Falkenstein
+🟠 Load balancer Falkenstein
 
 **Mail**
 🟢 Mail Wien
 🟢 Mail Wien
-🔴 Web hosting Wien
+🟠 Web hosting Wien
 🟢 Customer portal Helsinki
 🟢 Load balancer Frankfurt
 🟢 Game servers Nürnberg
 🟢 Mail Amsterdam
 🟢 Game servers Frankfurt
-🔴 DNS Nürnberg
+🟠 DNS Nürnberg
 
 **Root servers**
-🔴 Database Nürnberg
+🟠 Database Nürnberg
 🟢 Load balancer Nürnberg (Beta)
 🟢 TeamSpeak Nürnberg
 🟢 API Falkenstein
@@ -3445,10 +3445,10 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 DNS Frankfurt
 
 **API**
-🔴 TeamSpeak Amsterdam
+🟠 TeamSpeak Amsterdam
 🟢 Load balancer Falkenstein
-🔴 Game servers Nürnberg
-🔴 Database Wien
+🟠 Game servers Nürnberg
+🟠 Database Wien
 🟢 API Helsinki
 🟢 Object storage Frankfurt
 🟢 TeamSpeak Frankfurt
@@ -3456,34 +3456,34 @@ exports[`cloud-08-large-fleet.json MINIMAL in de and en 1`] = `
 🟢 DNS Falkenstein
 
 **TeamSpeak**
-🔴 Customer portal Wien
+🟠 Customer portal Wien
 🟢 TeamSpeak Helsinki
 🟢 Object storage Frankfurt
 🟢 TeamSpeak Amsterdam (v2)
-🔴 TeamSpeak Falkenstein
+🟠 TeamSpeak Falkenstein
 🟢 Web hosting Nürnberg
-🔴 Web hosting Wien
+🟠 Web hosting Wien
 🟢 DNS Wien
 🟢 Web hosting Helsinki
 
 **Object storage**
 🟢 Customer portal Amsterdam
-🔴 Object storage Frankfurt
+🟠 Object storage Frankfurt
 🟢 Database Frankfurt
-🔴 Web hosting Frankfurt
+🟠 Web hosting Frankfurt
 🟢 Backup Wien
 🟢 Object storage Helsinki (Legacy)
 🟢 Object storage Helsinki
-🔴 Customer portal Amsterdam
-🔴 Customer portal Helsinki
+🟠 Customer portal Amsterdam
+🟠 Customer portal Helsinki
 
 **Customer portal**
 🟢 Load balancer Amsterdam
 🟢 Customer portal Falkenstein
 🟢 Mail Nürnberg
 🟢 Mail Nürnberg
-🔴 Database Amsterdam
-🔴 Backup Wien
+🟠 Database Amsterdam
+🟠 Backup Wien
 🟢 Root servers Frankfurt
 🟢 Web hosting Wien
 🟢 Mail Helsinki
@@ -3651,34 +3651,34 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 TeamSpeak Frankfurt
     🟢 Mailserver Nürnberg
     🟢 DNS Frankfurt
-    🔴 Loadbalancer Amsterdam
-    🔴 DNS Falkenstein
+    🟠 Loadbalancer Amsterdam
+    🟠 DNS Falkenstein
     🟢 API Nürnberg
 
 **🟢 Loadbalancer**
     🟢 Datenbank Amsterdam
     🟢 Webhosting Wien
-    🔴 Objektspeicher Frankfurt
-    🔴 DNS Wien
-    🔴 Loadbalancer Frankfurt
+    🟠 Objektspeicher Frankfurt
+    🟠 DNS Wien
+    🟠 Loadbalancer Frankfurt
     🟢 Backup Amsterdam
     🟢 Rootserver Nürnberg (Beta)
     🟢 Loadbalancer Helsinki
-    🔴 Loadbalancer Falkenstein
+    🟠 Loadbalancer Falkenstein
 
 **🟢 Mailserver**
     🟢 Mailserver Wien
     🟢 Mailserver Wien
-    🔴 Webhosting Wien
+    🟠 Webhosting Wien
     🟢 Kundenportal Helsinki
     🟢 Loadbalancer Frankfurt
     🟢 Gameserver Nürnberg
     🟢 Mailserver Amsterdam
     🟢 Gameserver Frankfurt
-    🔴 DNS Nürnberg
+    🟠 DNS Nürnberg
 
 **🟢 Rootserver**
-    🔴 Datenbank Nürnberg
+    🟠 Datenbank Nürnberg
     🟢 Loadbalancer Nürnberg (Beta)
     🟢 TeamSpeak Nürnberg
     🟢 API Falkenstein
@@ -3689,10 +3689,10 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 DNS Frankfurt
 
 **🟢 API**
-    🔴 TeamSpeak Amsterdam
+    🟠 TeamSpeak Amsterdam
     🟢 Loadbalancer Falkenstein
-    🔴 Gameserver Nürnberg
-    🔴 Datenbank Wien
+    🟠 Gameserver Nürnberg
+    🟠 Datenbank Wien
     🟢 API Helsinki
     🟢 Objektspeicher Frankfurt
     🟢 TeamSpeak Frankfurt
@@ -3700,34 +3700,34 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 DNS Falkenstein
 
 **🟢 TeamSpeak**
-    🔴 Kundenportal Wien
+    🟠 Kundenportal Wien
     🟢 TeamSpeak Helsinki
     🟢 Objektspeicher Frankfurt
     🟢 TeamSpeak Amsterdam (v2)
-    🔴 TeamSpeak Falkenstein
+    🟠 TeamSpeak Falkenstein
     🟢 Webhosting Nürnberg
-    🔴 Webhosting Wien
+    🟠 Webhosting Wien
     🟢 DNS Wien
     🟢 Webhosting Helsinki
 
 **🟢 Objektspeicher**
     🟢 Kundenportal Amsterdam
-    🔴 Objektspeicher Frankfurt
+    🟠 Objektspeicher Frankfurt
     🟢 Datenbank Frankfurt
-    🔴 Webhosting Frankfurt
+    🟠 Webhosting Frankfurt
     🟢 Backup Wien
     🟢 Objektspeicher Helsinki (Legacy)
     🟢 Objektspeicher Helsinki
-    🔴 Kundenportal Amsterdam
-    🔴 Kundenportal Helsinki
+    🟠 Kundenportal Amsterdam
+    🟠 Kundenportal Helsinki
 
 **🟢 Kundenportal**
     🟢 Loadbalancer Amsterdam
     🟢 Kundenportal Falkenstein
     🟢 Mailserver Nürnberg
     🟢 Mailserver Nürnberg
-    🔴 Datenbank Amsterdam
-    🔴 Backup Wien
+    🟠 Datenbank Amsterdam
+    🟠 Backup Wien
     🟢 Rootserver Frankfurt
     🟢 Webhosting Wien
     🟢 Mailserver Helsinki
@@ -3753,34 +3753,34 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 TeamSpeak Frankfurt
     🟢 Mail Nürnberg
     🟢 DNS Frankfurt
-    🔴 Load balancer Amsterdam
-    🔴 DNS Falkenstein
+    🟠 Load balancer Amsterdam
+    🟠 DNS Falkenstein
     🟢 API Nürnberg
 
 **🟢 Load balancer**
     🟢 Database Amsterdam
     🟢 Web hosting Wien
-    🔴 Object storage Frankfurt
-    🔴 DNS Wien
-    🔴 Load balancer Frankfurt
+    🟠 Object storage Frankfurt
+    🟠 DNS Wien
+    🟠 Load balancer Frankfurt
     🟢 Backup Amsterdam
     🟢 Root servers Nürnberg (Beta)
     🟢 Load balancer Helsinki
-    🔴 Load balancer Falkenstein
+    🟠 Load balancer Falkenstein
 
 **🟢 Mail**
     🟢 Mail Wien
     🟢 Mail Wien
-    🔴 Web hosting Wien
+    🟠 Web hosting Wien
     🟢 Customer portal Helsinki
     🟢 Load balancer Frankfurt
     🟢 Game servers Nürnberg
     🟢 Mail Amsterdam
     🟢 Game servers Frankfurt
-    🔴 DNS Nürnberg
+    🟠 DNS Nürnberg
 
 **🟢 Root servers**
-    🔴 Database Nürnberg
+    🟠 Database Nürnberg
     🟢 Load balancer Nürnberg (Beta)
     🟢 TeamSpeak Nürnberg
     🟢 API Falkenstein
@@ -3791,10 +3791,10 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 DNS Frankfurt
 
 **🟢 API**
-    🔴 TeamSpeak Amsterdam
+    🟠 TeamSpeak Amsterdam
     🟢 Load balancer Falkenstein
-    🔴 Game servers Nürnberg
-    🔴 Database Wien
+    🟠 Game servers Nürnberg
+    🟠 Database Wien
     🟢 API Helsinki
     🟢 Object storage Frankfurt
     🟢 TeamSpeak Frankfurt
@@ -3802,34 +3802,34 @@ exports[`cloud-08-large-fleet.json TREE in de and en 1`] = `
     🟢 DNS Falkenstein
 
 **🟢 TeamSpeak**
-    🔴 Customer portal Wien
+    🟠 Customer portal Wien
     🟢 TeamSpeak Helsinki
     🟢 Object storage Frankfurt
     🟢 TeamSpeak Amsterdam (v2)
-    🔴 TeamSpeak Falkenstein
+    🟠 TeamSpeak Falkenstein
     🟢 Web hosting Nürnberg
-    🔴 Web hosting Wien
+    🟠 Web hosting Wien
     🟢 DNS Wien
     🟢 Web hosting Helsinki
 
 **🟢 Object storage**
     🟢 Customer portal Amsterdam
-    🔴 Object storage Frankfurt
+    🟠 Object storage Frankfurt
     🟢 Database Frankfurt
-    🔴 Web hosting Frankfurt
+    🟠 Web hosting Frankfurt
     🟢 Backup Wien
     🟢 Object storage Helsinki (Legacy)
     🟢 Object storage Helsinki
-    🔴 Customer portal Amsterdam
-    🔴 Customer portal Helsinki
+    🟠 Customer portal Amsterdam
+    🟠 Customer portal Helsinki
 
 **🟢 Customer portal**
     🟢 Load balancer Amsterdam
     🟢 Customer portal Falkenstein
     🟢 Mail Nürnberg
     🟢 Mail Nürnberg
-    🔴 Database Amsterdam
-    🔴 Backup Wien
+    🟠 Database Amsterdam
+    🟠 Backup Wien
     🟢 Root servers Frankfurt
     🟢 Web hosting Wien
     🟢 Mail Helsinki
@@ -4966,11 +4966,11 @@ exports[`cloud-10-everything-at-once.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "Kundenportal",
-            "value": "❔ **Rootserver Nürnberg**
+            "value": "🔵 **Rootserver Nürnberg**
 <a:status_down:1344187930499088394> **Backup Nürnberg**
-❔ **Datenbank Helsinki**
-❔ **Kundenportal Falkenstein**
-❔ **Rootserver Amsterdam**",
+🔵 **Datenbank Helsinki**
+🔵 **Kundenportal Falkenstein**
+🔵 **Rootserver Amsterdam**",
           },
         ],
         "footer": {
@@ -4991,11 +4991,11 @@ exports[`cloud-10-everything-at-once.json DETAILED in de and en 1`] = `
           {
             "inline": false,
             "name": "Customer portal",
-            "value": "❔ **Root servers Nürnberg**
+            "value": "🔵 **Root servers Nürnberg**
 <a:status_down:1344187930499088394> **Backup Nürnberg**
-❔ **Database Helsinki**
-❔ **Customer portal Falkenstein**
-❔ **Root servers Amsterdam**",
+🔵 **Database Helsinki**
+🔵 **Customer portal Falkenstein**
+🔵 **Root servers Amsterdam**",
           },
         ],
         "footer": {
@@ -5018,11 +5018,11 @@ exports[`cloud-10-everything-at-once.json MINIMAL in de and en 1`] = `
       "embed": {
         "color": 15158332,
         "description": "**Kundenportal**
-🔴 Rootserver Nürnberg
+🔵 Rootserver Nürnberg
 🔴 Backup Nürnberg
-🔴 Datenbank Helsinki
-🔴 Kundenportal Falkenstein
-🔴 Rootserver Amsterdam
+🔵 Datenbank Helsinki
+🔵 Kundenportal Falkenstein
+🔵 Rootserver Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -5039,11 +5039,11 @@ exports[`cloud-10-everything-at-once.json MINIMAL in de and en 1`] = `
       "embed": {
         "color": 15158332,
         "description": "**Customer portal**
-🔴 Root servers Nürnberg
+🔵 Root servers Nürnberg
 🔴 Backup Nürnberg
-🔴 Database Helsinki
-🔴 Customer portal Falkenstein
-🔴 Root servers Amsterdam
+🔵 Database Helsinki
+🔵 Customer portal Falkenstein
+🔵 Root servers Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -5142,11 +5142,11 @@ exports[`cloud-10-everything-at-once.json TREE in de and en 1`] = `
       "embed": {
         "color": 15158332,
         "description": "**🔴 Kundenportal**
-    🔴 Rootserver Nürnberg
+    🔵 Rootserver Nürnberg
     🔴 Backup Nürnberg
-    🔴 Datenbank Helsinki
-    🔴 Kundenportal Falkenstein
-    🔴 Rootserver Amsterdam
+    🔵 Datenbank Helsinki
+    🔵 Kundenportal Falkenstein
+    🔵 Rootserver Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -5163,11 +5163,11 @@ exports[`cloud-10-everything-at-once.json TREE in de and en 1`] = `
       "embed": {
         "color": 15158332,
         "description": "**🔴 Customer portal**
-    🔴 Root servers Nürnberg
+    🔵 Root servers Nürnberg
     🔴 Backup Nürnberg
-    🔴 Database Helsinki
-    🔴 Customer portal Falkenstein
-    🔴 Root servers Amsterdam
+    🔵 Database Helsinki
+    🔵 Customer portal Falkenstein
+    🔵 Root servers Amsterdam
 ",
         "footer": {
           "icon_url": undefined,
@@ -7427,13 +7427,13 @@ exports[`cloud-15-partial-across-groups.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "┃ **0/4** Dienste
 ┗━ 🟠 Eingeschränkt",
           },
           {
             "inline": true,
-            "name": "DNS",
+            "name": "Webhosting",
             "value": "┃ **4/4** Dienste
 ┗━ 🟢 Betriebsbereit",
           },
@@ -7462,9 +7462,9 @@ exports[`cloud-15-partial-across-groups.json COMPACT in de and en 1`] = `
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Strausa UG Status",
+          "text": "Rücker-Drews Status",
         },
-        "title": "Dienste von Strausa UG Status",
+        "title": "Dienste von Rücker-Drews Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7477,13 +7477,13 @@ exports[`cloud-15-partial-across-groups.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Root servers",
+            "name": "Database",
             "value": "┃ **0/4** services
 ┗━ 🟠 Degraded",
           },
           {
             "inline": true,
-            "name": "DNS",
+            "name": "Web hosting",
             "value": "┃ **4/4** services
 ┗━ 🟢 Operational",
           },
@@ -7512,9 +7512,9 @@ exports[`cloud-15-partial-across-groups.json COMPACT in de and en 1`] = `
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Werle-Kappler Status",
+          "text": "Feld, Plautz und Lippe Status",
         },
-        "title": "Services from Werle-Kappler Status",
+        "title": "Services from Feld, Plautz und Lippe Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7532,42 +7532,42 @@ exports[`cloud-15-partial-across-groups.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Rootserver",
-            "value": "❔ **API Falkenstein (Beta)**
-❔ **Mailserver Falkenstein**
-❔ **Mailserver Frankfurt**
-❔ **Objektspeicher Falkenstein**",
-          },
-          {
-            "inline": false,
-            "name": "DNS",
-            "value": "<a:status_up:1344187859921535047> **Webhosting Frankfurt**
-<a:status_up:1344187859921535047> **TeamSpeak Nürnberg (Legacy)**
-<a:status_up:1344187859921535047> **Loadbalancer Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Falkenstein**",
-          },
-          {
-            "inline": false,
-            "name": "Kundenportal",
-            "value": "<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_up:1344187859921535047> **Backup Amsterdam**
-<a:status_up:1344187859921535047> **Webhosting Frankfurt**
-<a:status_up:1344187859921535047> **API Helsinki**",
+            "name": "Datenbank",
+            "value": "🟠 **Datenbank Amsterdam (Legacy)**
+🟠 **Objektspeicher Amsterdam**
+🟠 **Kundenportal Helsinki**
+🟠 **Datenbank Helsinki (v2)**",
           },
           {
             "inline": false,
             "name": "Webhosting",
+            "value": "<a:status_up:1344187859921535047> **Gameserver Wien (Legacy)**
+<a:status_up:1344187859921535047> **Gameserver Helsinki**
+<a:status_up:1344187859921535047> **Rootserver Falkenstein (Beta)**
+<a:status_up:1344187859921535047> **Webhosting Frankfurt**",
+          },
+          {
+            "inline": false,
+            "name": "Kundenportal",
             "value": "<a:status_up:1344187859921535047> **Datenbank Nürnberg**
-<a:status_up:1344187859921535047> **Gameserver Frankfurt**
-<a:status_up:1344187859921535047> **Backup Wien (Legacy)**
-<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**",
+<a:status_up:1344187859921535047> **Kundenportal Falkenstein**
+<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
+<a:status_up:1344187859921535047> **DNS Falkenstein**",
+          },
+          {
+            "inline": false,
+            "name": "Webhosting",
+            "value": "<a:status_up:1344187859921535047> **Kundenportal Helsinki (v2)**
+<a:status_up:1344187859921535047> **DNS Nürnberg**
+<a:status_up:1344187859921535047> **API Helsinki**
+<a:status_up:1344187859921535047> **Backup Helsinki**",
           },
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Strausa UG Status",
+          "text": "Rücker-Drews Status",
         },
-        "title": "Dienste von Strausa UG Status",
+        "title": "Dienste von Rücker-Drews Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7580,42 +7580,42 @@ exports[`cloud-15-partial-across-groups.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Root servers",
-            "value": "❔ **API Falkenstein (Beta)**
-❔ **Mail Falkenstein**
-❔ **Mail Frankfurt**
-❔ **Object storage Falkenstein**",
-          },
-          {
-            "inline": false,
-            "name": "DNS",
-            "value": "<a:status_up:1344187859921535047> **Web hosting Frankfurt**
-<a:status_up:1344187859921535047> **TeamSpeak Nürnberg (Legacy)**
-<a:status_up:1344187859921535047> **Load balancer Falkenstein**
-<a:status_up:1344187859921535047> **Mail Falkenstein**",
-          },
-          {
-            "inline": false,
-            "name": "Customer portal",
-            "value": "<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_up:1344187859921535047> **Backup Amsterdam**
-<a:status_up:1344187859921535047> **Web hosting Frankfurt**
-<a:status_up:1344187859921535047> **API Helsinki**",
+            "name": "Database",
+            "value": "🟠 **Database Amsterdam (Legacy)**
+🟠 **Object storage Amsterdam**
+🟠 **Customer portal Helsinki**
+🟠 **Database Helsinki (v2)**",
           },
           {
             "inline": false,
             "name": "Web hosting",
+            "value": "<a:status_up:1344187859921535047> **Game servers Wien (Legacy)**
+<a:status_up:1344187859921535047> **Game servers Helsinki**
+<a:status_up:1344187859921535047> **Root servers Falkenstein (Beta)**
+<a:status_up:1344187859921535047> **Web hosting Frankfurt**",
+          },
+          {
+            "inline": false,
+            "name": "Customer portal",
             "value": "<a:status_up:1344187859921535047> **Database Nürnberg**
-<a:status_up:1344187859921535047> **Game servers Frankfurt**
-<a:status_up:1344187859921535047> **Backup Wien (Legacy)**
-<a:status_up:1344187859921535047> **Object storage Frankfurt**",
+<a:status_up:1344187859921535047> **Customer portal Falkenstein**
+<a:status_up:1344187859921535047> **Object storage Frankfurt**
+<a:status_up:1344187859921535047> **DNS Falkenstein**",
+          },
+          {
+            "inline": false,
+            "name": "Web hosting",
+            "value": "<a:status_up:1344187859921535047> **Customer portal Helsinki (v2)**
+<a:status_up:1344187859921535047> **DNS Nürnberg**
+<a:status_up:1344187859921535047> **API Helsinki**
+<a:status_up:1344187859921535047> **Backup Helsinki**",
           },
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Werle-Kappler Status",
+          "text": "Feld, Plautz und Lippe Status",
         },
-        "title": "Services from Werle-Kappler Status",
+        "title": "Services from Feld, Plautz und Lippe Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7630,35 +7630,35 @@ exports[`cloud-15-partial-across-groups.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Rootserver**
-🔴 API Falkenstein (Beta)
-🔴 Mailserver Falkenstein
-🔴 Mailserver Frankfurt
-🔴 Objektspeicher Falkenstein
-
-**DNS**
-🟢 Webhosting Frankfurt
-🟢 TeamSpeak Nürnberg (Legacy)
-🟢 Loadbalancer Falkenstein
-🟢 Mailserver Falkenstein
-
-**Kundenportal**
-🟢 API Frankfurt
-🟢 Backup Amsterdam
-🟢 Webhosting Frankfurt
-🟢 API Helsinki
+        "description": "**Datenbank**
+🟠 Datenbank Amsterdam (Legacy)
+🟠 Objektspeicher Amsterdam
+🟠 Kundenportal Helsinki
+🟠 Datenbank Helsinki (v2)
 
 **Webhosting**
+🟢 Gameserver Wien (Legacy)
+🟢 Gameserver Helsinki
+🟢 Rootserver Falkenstein (Beta)
+🟢 Webhosting Frankfurt
+
+**Kundenportal**
 🟢 Datenbank Nürnberg
-🟢 Gameserver Frankfurt
-🟢 Backup Wien (Legacy)
+🟢 Kundenportal Falkenstein
 🟢 Objektspeicher Frankfurt
+🟢 DNS Falkenstein
+
+**Webhosting**
+🟢 Kundenportal Helsinki (v2)
+🟢 DNS Nürnberg
+🟢 API Helsinki
+🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
-          "text": "Strausa UG Status",
+          "text": "Rücker-Drews Status",
         },
-        "title": "Dienste von Strausa UG Status",
+        "title": "Dienste von Rücker-Drews Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7668,35 +7668,35 @@ exports[`cloud-15-partial-across-groups.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Root servers**
-🔴 API Falkenstein (Beta)
-🔴 Mail Falkenstein
-🔴 Mail Frankfurt
-🔴 Object storage Falkenstein
-
-**DNS**
-🟢 Web hosting Frankfurt
-🟢 TeamSpeak Nürnberg (Legacy)
-🟢 Load balancer Falkenstein
-🟢 Mail Falkenstein
-
-**Customer portal**
-🟢 API Frankfurt
-🟢 Backup Amsterdam
-🟢 Web hosting Frankfurt
-🟢 API Helsinki
+        "description": "**Database**
+🟠 Database Amsterdam (Legacy)
+🟠 Object storage Amsterdam
+🟠 Customer portal Helsinki
+🟠 Database Helsinki (v2)
 
 **Web hosting**
+🟢 Game servers Wien (Legacy)
+🟢 Game servers Helsinki
+🟢 Root servers Falkenstein (Beta)
+🟢 Web hosting Frankfurt
+
+**Customer portal**
 🟢 Database Nürnberg
-🟢 Game servers Frankfurt
-🟢 Backup Wien (Legacy)
+🟢 Customer portal Falkenstein
 🟢 Object storage Frankfurt
+🟢 DNS Falkenstein
+
+**Web hosting**
+🟢 Customer portal Helsinki (v2)
+🟢 DNS Nürnberg
+🟢 API Helsinki
+🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
-          "text": "Werle-Kappler Status",
+          "text": "Feld, Plautz und Lippe Status",
         },
-        "title": "Services from Werle-Kappler Status",
+        "title": "Services from Feld, Plautz und Lippe Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7719,12 +7719,12 @@ exports[`cloud-15-partial-across-groups.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "🟠 0/4",
           },
           {
             "inline": true,
-            "name": "DNS",
+            "name": "Webhosting",
             "value": "🟢 4/4",
           },
           {
@@ -7750,9 +7750,9 @@ exports[`cloud-15-partial-across-groups.json OVERVIEW in de and en 1`] = `
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Strausa UG Status",
+          "text": "Rücker-Drews Status",
         },
-        "title": "Dienste von Strausa UG Status",
+        "title": "Dienste von Rücker-Drews Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7770,12 +7770,12 @@ exports[`cloud-15-partial-across-groups.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Root servers",
+            "name": "Database",
             "value": "🟠 0/4",
           },
           {
             "inline": true,
-            "name": "DNS",
+            "name": "Web hosting",
             "value": "🟢 4/4",
           },
           {
@@ -7801,9 +7801,9 @@ exports[`cloud-15-partial-across-groups.json OVERVIEW in de and en 1`] = `
         ],
         "footer": {
           "icon_url": undefined,
-          "text": "Werle-Kappler Status",
+          "text": "Feld, Plautz und Lippe Status",
         },
-        "title": "Services from Werle-Kappler Status",
+        "title": "Services from Feld, Plautz und Lippe Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7818,35 +7818,35 @@ exports[`cloud-15-partial-across-groups.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🟠 Rootserver**
-    🔴 API Falkenstein (Beta)
-    🔴 Mailserver Falkenstein
-    🔴 Mailserver Frankfurt
-    🔴 Objektspeicher Falkenstein
-
-**🟢 DNS**
-    🟢 Webhosting Frankfurt
-    🟢 TeamSpeak Nürnberg (Legacy)
-    🟢 Loadbalancer Falkenstein
-    🟢 Mailserver Falkenstein
-
-**🟢 Kundenportal**
-    🟢 API Frankfurt
-    🟢 Backup Amsterdam
-    🟢 Webhosting Frankfurt
-    🟢 API Helsinki
+        "description": "**🟠 Datenbank**
+    🟠 Datenbank Amsterdam (Legacy)
+    🟠 Objektspeicher Amsterdam
+    🟠 Kundenportal Helsinki
+    🟠 Datenbank Helsinki (v2)
 
 **🟢 Webhosting**
+    🟢 Gameserver Wien (Legacy)
+    🟢 Gameserver Helsinki
+    🟢 Rootserver Falkenstein (Beta)
+    🟢 Webhosting Frankfurt
+
+**🟢 Kundenportal**
     🟢 Datenbank Nürnberg
-    🟢 Gameserver Frankfurt
-    🟢 Backup Wien (Legacy)
+    🟢 Kundenportal Falkenstein
     🟢 Objektspeicher Frankfurt
+    🟢 DNS Falkenstein
+
+**🟢 Webhosting**
+    🟢 Kundenportal Helsinki (v2)
+    🟢 DNS Nürnberg
+    🟢 API Helsinki
+    🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
-          "text": "Strausa UG Status",
+          "text": "Rücker-Drews Status",
         },
-        "title": "Dienste von Strausa UG Status",
+        "title": "Dienste von Rücker-Drews Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7856,35 +7856,35 @@ exports[`cloud-15-partial-across-groups.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🟠 Root servers**
-    🔴 API Falkenstein (Beta)
-    🔴 Mail Falkenstein
-    🔴 Mail Frankfurt
-    🔴 Object storage Falkenstein
-
-**🟢 DNS**
-    🟢 Web hosting Frankfurt
-    🟢 TeamSpeak Nürnberg (Legacy)
-    🟢 Load balancer Falkenstein
-    🟢 Mail Falkenstein
-
-**🟢 Customer portal**
-    🟢 API Frankfurt
-    🟢 Backup Amsterdam
-    🟢 Web hosting Frankfurt
-    🟢 API Helsinki
+        "description": "**🟠 Database**
+    🟠 Database Amsterdam (Legacy)
+    🟠 Object storage Amsterdam
+    🟠 Customer portal Helsinki
+    🟠 Database Helsinki (v2)
 
 **🟢 Web hosting**
+    🟢 Game servers Wien (Legacy)
+    🟢 Game servers Helsinki
+    🟢 Root servers Falkenstein (Beta)
+    🟢 Web hosting Frankfurt
+
+**🟢 Customer portal**
     🟢 Database Nürnberg
-    🟢 Game servers Frankfurt
-    🟢 Backup Wien (Legacy)
+    🟢 Customer portal Falkenstein
     🟢 Object storage Frankfurt
+    🟢 DNS Falkenstein
+
+**🟢 Web hosting**
+    🟢 Customer portal Helsinki (v2)
+    🟢 DNS Nürnberg
+    🟢 API Helsinki
+    🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
-          "text": "Werle-Kappler Status",
+          "text": "Feld, Plautz und Lippe Status",
         },
-        "title": "Services from Werle-Kappler Status",
+        "title": "Services from Feld, Plautz und Lippe Status",
         "url": "https://corpus.example",
       },
       "type": "single",
@@ -7901,38 +7901,38 @@ exports[`cloud-15-partial-across-groups.json the snapshot the renderers were giv
     {
       "childrenTotal": null,
       "name": {
-        "de": "Rootserver",
-        "en": "Root servers",
+        "de": "Datenbank",
+        "en": "Database",
       },
       "services": [
         {
           "name": {
-            "de": "API Falkenstein (Beta)",
-            "en": "API Falkenstein (Beta)",
+            "de": "Datenbank Amsterdam (Legacy)",
+            "en": "Database Amsterdam (Legacy)",
           },
           "path": [],
           "status": "partial_outage",
         },
         {
           "name": {
-            "de": "Mailserver Falkenstein",
-            "en": "Mail Falkenstein",
+            "de": "Objektspeicher Amsterdam",
+            "en": "Object storage Amsterdam",
           },
           "path": [],
           "status": "partial_outage",
         },
         {
           "name": {
-            "de": "Mailserver Frankfurt",
-            "en": "Mail Frankfurt",
+            "de": "Kundenportal Helsinki",
+            "en": "Customer portal Helsinki",
           },
           "path": [],
           "status": "partial_outage",
         },
         {
           "name": {
-            "de": "Objektspeicher Falkenstein",
-            "en": "Object storage Falkenstein",
+            "de": "Datenbank Helsinki (v2)",
+            "en": "Database Helsinki (v2)",
           },
           "path": [],
           "status": "partial_outage",
@@ -7943,38 +7943,38 @@ exports[`cloud-15-partial-across-groups.json the snapshot the renderers were giv
     {
       "childrenTotal": null,
       "name": {
-        "de": "DNS",
-        "en": "DNS",
+        "de": "Webhosting",
+        "en": "Web hosting",
       },
       "services": [
         {
           "name": {
+            "de": "Gameserver Wien (Legacy)",
+            "en": "Game servers Wien (Legacy)",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Gameserver Helsinki",
+            "en": "Game servers Helsinki",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Rootserver Falkenstein (Beta)",
+            "en": "Root servers Falkenstein (Beta)",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
             "de": "Webhosting Frankfurt",
             "en": "Web hosting Frankfurt",
-          },
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": {
-            "de": "TeamSpeak Nürnberg (Legacy)",
-            "en": "TeamSpeak Nürnberg (Legacy)",
-          },
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": {
-            "de": "Loadbalancer Falkenstein",
-            "en": "Load balancer Falkenstein",
-          },
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": {
-            "de": "Mailserver Falkenstein",
-            "en": "Mail Falkenstein",
           },
           "path": [],
           "status": "operational",
@@ -7991,32 +7991,32 @@ exports[`cloud-15-partial-across-groups.json the snapshot the renderers were giv
       "services": [
         {
           "name": {
-            "de": "API Frankfurt",
-            "en": "API Frankfurt",
+            "de": "Datenbank Nürnberg",
+            "en": "Database Nürnberg",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "Backup Amsterdam",
-            "en": "Backup Amsterdam",
+            "de": "Kundenportal Falkenstein",
+            "en": "Customer portal Falkenstein",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "Webhosting Frankfurt",
-            "en": "Web hosting Frankfurt",
+            "de": "Objektspeicher Frankfurt",
+            "en": "Object storage Frankfurt",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "API Helsinki",
-            "en": "API Helsinki",
+            "de": "DNS Falkenstein",
+            "en": "DNS Falkenstein",
           },
           "path": [],
           "status": "operational",
@@ -8033,32 +8033,32 @@ exports[`cloud-15-partial-across-groups.json the snapshot the renderers were giv
       "services": [
         {
           "name": {
-            "de": "Datenbank Nürnberg",
-            "en": "Database Nürnberg",
+            "de": "Kundenportal Helsinki (v2)",
+            "en": "Customer portal Helsinki (v2)",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "Gameserver Frankfurt",
-            "en": "Game servers Frankfurt",
+            "de": "DNS Nürnberg",
+            "en": "DNS Nürnberg",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "Backup Wien (Legacy)",
-            "en": "Backup Wien (Legacy)",
+            "de": "API Helsinki",
+            "en": "API Helsinki",
           },
           "path": [],
           "status": "operational",
         },
         {
           "name": {
-            "de": "Objektspeicher Frankfurt",
-            "en": "Object storage Frankfurt",
+            "de": "Backup Helsinki",
+            "en": "Backup Helsinki",
           },
           "path": [],
           "status": "operational",
@@ -8075,6 +8075,729 @@ exports[`cloud-15-partial-across-groups.json the snapshot the renderers were giv
 }
 `;
 
+exports[`cloud-16-maintenance-rescue.json COMPACT in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 3447003,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Rootserver",
+            "value": "┃ **4/4** Dienste
+┗━ 🟢 Betriebsbereit",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Loogen AG Status",
+        },
+        "title": "Dienste von Loogen AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 3447003,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Root servers",
+            "value": "┃ **4/4** services
+┗━ 🟢 Operational",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Best, Zanner und Bremser Status",
+        },
+        "title": "Services from Best, Zanner und Bremser Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json DETAILED in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 3447003,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Rootserver",
+            "value": "<a:status_up:1344187859921535047> **API Falkenstein (Beta)**
+<a:status_up:1344187859921535047> **Mailserver Falkenstein**
+<a:status_up:1344187859921535047> **Mailserver Frankfurt**
+<a:status_up:1344187859921535047> **Objektspeicher Falkenstein**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Loogen AG Status",
+        },
+        "title": "Dienste von Loogen AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 3447003,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Root servers",
+            "value": "<a:status_up:1344187859921535047> **API Falkenstein (Beta)**
+<a:status_up:1344187859921535047> **Mail Falkenstein**
+<a:status_up:1344187859921535047> **Mail Frankfurt**
+<a:status_up:1344187859921535047> **Object storage Falkenstein**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Best, Zanner und Bremser Status",
+        },
+        "title": "Services from Best, Zanner und Bremser Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json MINIMAL in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "**Rootserver**
+🟢 API Falkenstein (Beta)
+🟢 Mailserver Falkenstein
+🟢 Mailserver Frankfurt
+🟢 Objektspeicher Falkenstein
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Loogen AG Status",
+        },
+        "title": "Dienste von Loogen AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "**Root servers**
+🟢 API Falkenstein (Beta)
+🟢 Mail Falkenstein
+🟢 Mail Frankfurt
+🟢 Object storage Falkenstein
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Best, Zanner und Bremser Status",
+        },
+        "title": "Services from Best, Zanner und Bremser Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json OVERVIEW in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "🔵 Teilweise Beeinträchtigungen
+\`\`\`diff
++ 4/4 Dienste Betriebsbereit
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Rootserver",
+            "value": "🟢 4/4",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Loogen AG Status",
+        },
+        "title": "Dienste von Loogen AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "🔵 Partial service degradation
+\`\`\`diff
++ 4/4 services Operational
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Root servers",
+            "value": "🟢 4/4",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Best, Zanner und Bremser Status",
+        },
+        "title": "Services from Best, Zanner und Bremser Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json TREE in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "**🟢 Rootserver**
+    🟢 API Falkenstein (Beta)
+    🟢 Mailserver Falkenstein
+    🟢 Mailserver Frankfurt
+    🟢 Objektspeicher Falkenstein
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Loogen AG Status",
+        },
+        "title": "Dienste von Loogen AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 3447003,
+        "description": "**🟢 Root servers**
+    🟢 API Falkenstein (Beta)
+    🟢 Mail Falkenstein
+    🟢 Mail Frankfurt
+    🟢 Object storage Falkenstein
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Best, Zanner und Bremser Status",
+        },
+        "title": "Services from Best, Zanner und Bremser Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json the snapshot the renderers were given 1`] = `
+{
+  "alerts": [
+    {
+      "kind": "maintenance",
+      "severity": null,
+      "state": "in_progress",
+      "updates": 0,
+    },
+  ],
+  "defaultLocale": "de",
+  "groups": [
+    {
+      "childrenTotal": null,
+      "name": {
+        "de": "Rootserver",
+        "en": "Root servers",
+      },
+      "services": [
+        {
+          "name": {
+            "de": "API Falkenstein (Beta)",
+            "en": "API Falkenstein (Beta)",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Mailserver Falkenstein",
+            "en": "Mail Falkenstein",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Mailserver Frankfurt",
+            "en": "Mail Frankfurt",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Objektspeicher Falkenstein",
+            "en": "Object storage Falkenstein",
+          },
+          "path": [],
+          "status": "operational",
+        },
+      ],
+      "status": "operational",
+    },
+  ],
+  "locales": [
+    "de",
+    "en",
+  ],
+  "overall": "maintenance",
+}
+`;
+
+exports[`cloud-17-every-status.json COMPACT in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15158332,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Loadbalancer",
+            "value": "┃ **1/6** Dienste
+┗━ 🔴 **1** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Döring AG Status",
+        },
+        "title": "Dienste von Döring AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15158332,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Load balancer",
+            "value": "┃ **1/6** services
+┗━ 🔴 **1** down",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Kubera KG Status",
+        },
+        "title": "Services from Kubera KG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-17-every-status.json DETAILED in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15158332,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Loadbalancer",
+            "value": "<a:status_up:1344187859921535047> **Gameserver Wien**
+🟠 **Datenbank Frankfurt**
+🟠 **DNS Wien (Beta)**
+<a:status_down:1344187930499088394> **Gameserver Wien**
+🔵 **DNS Frankfurt**
+● **Datenbank Nürnberg**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Döring AG Status",
+        },
+        "title": "Dienste von Döring AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15158332,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Load balancer",
+            "value": "<a:status_up:1344187859921535047> **Game servers Wien**
+🟠 **Database Frankfurt**
+🟠 **DNS Wien (Beta)**
+<a:status_down:1344187930499088394> **Game servers Wien**
+🔵 **DNS Frankfurt**
+● **Database Nürnberg**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Kubera KG Status",
+        },
+        "title": "Services from Kubera KG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-17-every-status.json MINIMAL in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "**Loadbalancer**
+🟢 Gameserver Wien
+🟠 Datenbank Frankfurt
+🟠 DNS Wien (Beta)
+🔴 Gameserver Wien
+🔵 DNS Frankfurt
+● Datenbank Nürnberg
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Döring AG Status",
+        },
+        "title": "Dienste von Döring AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "**Load balancer**
+🟢 Game servers Wien
+🟠 Database Frankfurt
+🟠 DNS Wien (Beta)
+🔴 Game servers Wien
+🔵 DNS Frankfurt
+● Database Nürnberg
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Kubera KG Status",
+        },
+        "title": "Services from Kubera KG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-17-every-status.json OVERVIEW in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "🔴 Systemprobleme erkannt
+\`\`\`diff
+- 5 Dienste ausgefallen
++ 1 Dienste Betriebsbereit
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Loadbalancer",
+            "value": "🔴 1/6 • **1** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Döring AG Status",
+        },
+        "title": "Dienste von Döring AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "🔴 System issues detected
+\`\`\`diff
+- 5 services down
++ 1 services Operational
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Load balancer",
+            "value": "🔴 1/6 • **1** down",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "Kubera KG Status",
+        },
+        "title": "Services from Kubera KG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-17-every-status.json TREE in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "**🔴 Loadbalancer**
+    🟢 Gameserver Wien
+    🟠 Datenbank Frankfurt
+    🟠 DNS Wien (Beta)
+    🔴 Gameserver Wien
+    🔵 DNS Frankfurt
+    ● Datenbank Nürnberg
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Döring AG Status",
+        },
+        "title": "Dienste von Döring AG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15158332,
+        "description": "**🔴 Load balancer**
+    🟢 Game servers Wien
+    🟠 Database Frankfurt
+    🟠 DNS Wien (Beta)
+    🔴 Game servers Wien
+    🔵 DNS Frankfurt
+    ● Database Nürnberg
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "Kubera KG Status",
+        },
+        "title": "Services from Kubera KG Status",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`cloud-17-every-status.json the snapshot the renderers were given 1`] = `
+{
+  "alerts": [],
+  "defaultLocale": "de",
+  "groups": [
+    {
+      "childrenTotal": null,
+      "name": {
+        "de": "Loadbalancer",
+        "en": "Load balancer",
+      },
+      "services": [
+        {
+          "name": {
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien",
+          },
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": {
+            "de": "Datenbank Frankfurt",
+            "en": "Database Frankfurt",
+          },
+          "path": [],
+          "status": "degraded",
+        },
+        {
+          "name": {
+            "de": "DNS Wien (Beta)",
+            "en": "DNS Wien (Beta)",
+          },
+          "path": [],
+          "status": "partial_outage",
+        },
+        {
+          "name": {
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien",
+          },
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt",
+          },
+          "path": [],
+          "status": "under_maintenance",
+        },
+        {
+          "name": {
+            "de": "Datenbank Nürnberg",
+            "en": "Database Nürnberg",
+          },
+          "path": [],
+          "status": "unknown",
+        },
+      ],
+      "status": "major_outage",
+    },
+  ],
+  "locales": [
+    "de",
+    "en",
+  ],
+  "overall": "major_outage",
+}
+`;
+
 exports[`selfhosted-01-all-available.json COMPACT in de and en 1`] = `
 {
   "de": [
@@ -8084,13 +8807,13 @@ exports[`selfhosted-01-all-available.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Kundenportal",
             "value": "┃ **5/5** Dienste
 ┗━ 🟢 Betriebsbereit",
           },
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Mailserver",
             "value": "┃ **3/3** Dienste
 ┗━ 🟢 Betriebsbereit",
           },
@@ -8117,13 +8840,13 @@ exports[`selfhosted-01-all-available.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Kundenportal",
             "value": "┃ **5/5** services
 ┗━ 🟢 Operational",
           },
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Mailserver",
             "value": "┃ **3/3** services
 ┗━ 🟢 Operational",
           },
@@ -8155,19 +8878,19 @@ exports[`selfhosted-01-all-available.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Webhosting",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Amsterdam**
-<a:status_up:1344187859921535047> **Backup Amsterdam**
-<a:status_up:1344187859921535047> **API Amsterdam**
+            "name": "Kundenportal",
+            "value": "<a:status_up:1344187859921535047> **Datenbank Helsinki**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**
 <a:status_up:1344187859921535047> **TeamSpeak Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Amsterdam**",
+<a:status_up:1344187859921535047> **DNS Amsterdam (Legacy)**
+<a:status_up:1344187859921535047> **TeamSpeak Helsinki**",
           },
           {
             "inline": false,
-            "name": "Gameserver",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Nürnberg (Beta)**
-<a:status_up:1344187859921535047> **Kundenportal Helsinki (v2)**
-<a:status_up:1344187859921535047> **Backup Amsterdam**",
+            "name": "Mailserver",
+            "value": "<a:status_up:1344187859921535047> **Kundenportal Nürnberg**
+<a:status_up:1344187859921535047> **TeamSpeak Falkenstein**
+<a:status_up:1344187859921535047> **Backup Helsinki**",
           },
         ],
         "footer": {
@@ -8187,19 +8910,19 @@ exports[`selfhosted-01-all-available.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Webhosting",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Amsterdam**
-<a:status_up:1344187859921535047> **Backup Amsterdam**
-<a:status_up:1344187859921535047> **API Amsterdam**
+            "name": "Kundenportal",
+            "value": "<a:status_up:1344187859921535047> **Datenbank Helsinki**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**
 <a:status_up:1344187859921535047> **TeamSpeak Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Amsterdam**",
+<a:status_up:1344187859921535047> **DNS Amsterdam (Legacy)**
+<a:status_up:1344187859921535047> **TeamSpeak Helsinki**",
           },
           {
             "inline": false,
-            "name": "Gameserver",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Nürnberg (Beta)**
-<a:status_up:1344187859921535047> **Kundenportal Helsinki (v2)**
-<a:status_up:1344187859921535047> **Backup Amsterdam**",
+            "name": "Mailserver",
+            "value": "<a:status_up:1344187859921535047> **Kundenportal Nürnberg**
+<a:status_up:1344187859921535047> **TeamSpeak Falkenstein**
+<a:status_up:1344187859921535047> **Backup Helsinki**",
           },
         ],
         "footer": {
@@ -8221,17 +8944,17 @@ exports[`selfhosted-01-all-available.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**Webhosting**
-🟢 Rootserver Amsterdam
-🟢 Backup Amsterdam
-🟢 API Amsterdam
+        "description": "**Kundenportal**
+🟢 Datenbank Helsinki
+🟢 Rootserver Helsinki
 🟢 TeamSpeak Falkenstein
-🟢 Mailserver Amsterdam
+🟢 DNS Amsterdam (Legacy)
+🟢 TeamSpeak Helsinki
 
-**Gameserver**
-🟢 Rootserver Nürnberg (Beta)
-🟢 Kundenportal Helsinki (v2)
-🟢 Backup Amsterdam
+**Mailserver**
+🟢 Kundenportal Nürnberg
+🟢 TeamSpeak Falkenstein
+🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8247,17 +8970,17 @@ exports[`selfhosted-01-all-available.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**Webhosting**
-🟢 Rootserver Amsterdam
-🟢 Backup Amsterdam
-🟢 API Amsterdam
+        "description": "**Kundenportal**
+🟢 Datenbank Helsinki
+🟢 Rootserver Helsinki
 🟢 TeamSpeak Falkenstein
-🟢 Mailserver Amsterdam
+🟢 DNS Amsterdam (Legacy)
+🟢 TeamSpeak Helsinki
 
-**Gameserver**
-🟢 Rootserver Nürnberg (Beta)
-🟢 Kundenportal Helsinki (v2)
-🟢 Backup Amsterdam
+**Mailserver**
+🟢 Kundenportal Nürnberg
+🟢 TeamSpeak Falkenstein
+🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8285,12 +9008,12 @@ exports[`selfhosted-01-all-available.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Kundenportal",
             "value": "🟢 5/5",
           },
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Mailserver",
             "value": "🟢 3/3",
           },
           {
@@ -8320,12 +9043,12 @@ exports[`selfhosted-01-all-available.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Kundenportal",
             "value": "🟢 5/5",
           },
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Mailserver",
             "value": "🟢 3/3",
           },
           {
@@ -8353,17 +9076,17 @@ exports[`selfhosted-01-all-available.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**🟢 Webhosting**
-    🟢 Rootserver Amsterdam
-    🟢 Backup Amsterdam
-    🟢 API Amsterdam
+        "description": "**🟢 Kundenportal**
+    🟢 Datenbank Helsinki
+    🟢 Rootserver Helsinki
     🟢 TeamSpeak Falkenstein
-    🟢 Mailserver Amsterdam
+    🟢 DNS Amsterdam (Legacy)
+    🟢 TeamSpeak Helsinki
 
-**🟢 Gameserver**
-    🟢 Rootserver Nürnberg (Beta)
-    🟢 Kundenportal Helsinki (v2)
-    🟢 Backup Amsterdam
+**🟢 Mailserver**
+    🟢 Kundenportal Nürnberg
+    🟢 TeamSpeak Falkenstein
+    🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8379,17 +9102,17 @@ exports[`selfhosted-01-all-available.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**🟢 Webhosting**
-    🟢 Rootserver Amsterdam
-    🟢 Backup Amsterdam
-    🟢 API Amsterdam
+        "description": "**🟢 Kundenportal**
+    🟢 Datenbank Helsinki
+    🟢 Rootserver Helsinki
     🟢 TeamSpeak Falkenstein
-    🟢 Mailserver Amsterdam
+    🟢 DNS Amsterdam (Legacy)
+    🟢 TeamSpeak Helsinki
 
-**🟢 Gameserver**
-    🟢 Rootserver Nürnberg (Beta)
-    🟢 Kundenportal Helsinki (v2)
-    🟢 Backup Amsterdam
+**🟢 Mailserver**
+    🟢 Kundenportal Nürnberg
+    🟢 TeamSpeak Falkenstein
+    🟢 Backup Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8411,20 +9134,15 @@ exports[`selfhosted-01-all-available.json the snapshot the renderers were given 
   "groups": [
     {
       "childrenTotal": null,
-      "name": "Webhosting",
+      "name": "Kundenportal",
       "services": [
         {
-          "name": "Rootserver Amsterdam",
+          "name": "Datenbank Helsinki",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Backup Amsterdam",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "API Amsterdam",
+          "name": "Rootserver Helsinki",
           "path": [],
           "status": "operational",
         },
@@ -8434,7 +9152,12 @@ exports[`selfhosted-01-all-available.json the snapshot the renderers were given 
           "status": "operational",
         },
         {
-          "name": "Mailserver Amsterdam",
+          "name": "DNS Amsterdam (Legacy)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "TeamSpeak Helsinki",
           "path": [],
           "status": "operational",
         },
@@ -8443,20 +9166,20 @@ exports[`selfhosted-01-all-available.json the snapshot the renderers were given 
     },
     {
       "childrenTotal": null,
-      "name": "Gameserver",
+      "name": "Mailserver",
       "services": [
         {
-          "name": "Rootserver Nürnberg (Beta)",
+          "name": "Kundenportal Nürnberg",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Kundenportal Helsinki (v2)",
+          "name": "TeamSpeak Falkenstein",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Backup Amsterdam",
+          "name": "Backup Helsinki",
           "path": [],
           "status": "operational",
         },
@@ -8478,7 +9201,7 @@ exports[`selfhosted-02-one-down.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "┃ **3/4** Dienste
 ┗━ 🔴 **1** ausgefallen",
           },
@@ -8510,7 +9233,7 @@ exports[`selfhosted-02-one-down.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "┃ **3/4** services
 ┗━ 🔴 **1** down",
           },
@@ -8547,11 +9270,11 @@ exports[`selfhosted-02-one-down.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Rootserver",
-            "value": "<a:status_up:1344187859921535047> **Objektspeicher Nürnberg (Beta)**
-<a:status_up:1344187859921535047> **DNS Falkenstein**
-<a:status_up:1344187859921535047> **Gameserver Wien**
-<a:status_down:1344187930499088394> **Objektspeicher Frankfurt**",
+            "name": "Datenbank",
+            "value": "<a:status_up:1344187859921535047> **API Wien (Legacy)**
+<a:status_up:1344187859921535047> **Mailserver Amsterdam**
+<a:status_up:1344187859921535047> **Objektspeicher Amsterdam**
+<a:status_down:1344187930499088394> **Kundenportal Wien (Legacy)**",
           },
         ],
         "footer": {
@@ -8571,11 +9294,11 @@ exports[`selfhosted-02-one-down.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Rootserver",
-            "value": "<a:status_up:1344187859921535047> **Objektspeicher Nürnberg (Beta)**
-<a:status_up:1344187859921535047> **DNS Falkenstein**
-<a:status_up:1344187859921535047> **Gameserver Wien**
-<a:status_down:1344187930499088394> **Objektspeicher Frankfurt**",
+            "name": "Datenbank",
+            "value": "<a:status_up:1344187859921535047> **API Wien (Legacy)**
+<a:status_up:1344187859921535047> **Mailserver Amsterdam**
+<a:status_up:1344187859921535047> **Objektspeicher Amsterdam**
+<a:status_down:1344187930499088394> **Kundenportal Wien (Legacy)**",
           },
         ],
         "footer": {
@@ -8597,11 +9320,11 @@ exports[`selfhosted-02-one-down.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Rootserver**
-🟢 Objektspeicher Nürnberg (Beta)
-🟢 DNS Falkenstein
-🟢 Gameserver Wien
-🔴 Objektspeicher Frankfurt
+        "description": "**Datenbank**
+🟢 API Wien (Legacy)
+🟢 Mailserver Amsterdam
+🟢 Objektspeicher Amsterdam
+🔴 Kundenportal Wien (Legacy)
 ",
         "footer": {
           "icon_url": undefined,
@@ -8617,11 +9340,11 @@ exports[`selfhosted-02-one-down.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Rootserver**
-🟢 Objektspeicher Nürnberg (Beta)
-🟢 DNS Falkenstein
-🟢 Gameserver Wien
-🔴 Objektspeicher Frankfurt
+        "description": "**Datenbank**
+🟢 API Wien (Legacy)
+🟢 Mailserver Amsterdam
+🟢 Objektspeicher Amsterdam
+🔴 Kundenportal Wien (Legacy)
 ",
         "footer": {
           "icon_url": undefined,
@@ -8650,7 +9373,7 @@ exports[`selfhosted-02-one-down.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "🔴 3/4 • **1** ausgefallen",
           },
           {
@@ -8686,7 +9409,7 @@ exports[`selfhosted-02-one-down.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Rootserver",
+            "name": "Datenbank",
             "value": "🔴 3/4 • **1** down",
           },
           {
@@ -8719,11 +9442,11 @@ exports[`selfhosted-02-one-down.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🔴 Rootserver**
-    🟢 Objektspeicher Nürnberg (Beta)
-    🟢 DNS Falkenstein
-    🟢 Gameserver Wien
-    🔴 Objektspeicher Frankfurt
+        "description": "**🔴 Datenbank**
+    🟢 API Wien (Legacy)
+    🟢 Mailserver Amsterdam
+    🟢 Objektspeicher Amsterdam
+    🔴 Kundenportal Wien (Legacy)
 ",
         "footer": {
           "icon_url": undefined,
@@ -8739,11 +9462,11 @@ exports[`selfhosted-02-one-down.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🔴 Rootserver**
-    🟢 Objektspeicher Nürnberg (Beta)
-    🟢 DNS Falkenstein
-    🟢 Gameserver Wien
-    🔴 Objektspeicher Frankfurt
+        "description": "**🔴 Datenbank**
+    🟢 API Wien (Legacy)
+    🟢 Mailserver Amsterdam
+    🟢 Objektspeicher Amsterdam
+    🔴 Kundenportal Wien (Legacy)
 ",
         "footer": {
           "icon_url": undefined,
@@ -8765,25 +9488,25 @@ exports[`selfhosted-02-one-down.json the snapshot the renderers were given 1`] =
   "groups": [
     {
       "childrenTotal": null,
-      "name": "Rootserver",
+      "name": "Datenbank",
       "services": [
         {
-          "name": "Objektspeicher Nürnberg (Beta)",
+          "name": "API Wien (Legacy)",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "DNS Falkenstein",
+          "name": "Mailserver Amsterdam",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Gameserver Wien",
+          "name": "Objektspeicher Amsterdam",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Objektspeicher Frankfurt",
+          "name": "Kundenportal Wien (Legacy)",
           "path": [],
           "status": "major_outage",
         },
@@ -8805,7 +9528,7 @@ exports[`selfhosted-03-maintenance.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "API",
+            "name": "Gameserver",
             "value": "┃ **2/4** Dienste
 ┗━ 🟠 Eingeschränkt",
           },
@@ -8837,7 +9560,7 @@ exports[`selfhosted-03-maintenance.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "API",
+            "name": "Gameserver",
             "value": "┃ **2/4** services
 ┗━ 🟠 Degraded",
           },
@@ -8874,11 +9597,11 @@ exports[`selfhosted-03-maintenance.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "API",
-            "value": "❔ **Webhosting Frankfurt**
-<a:status_up:1344187859921535047> **Rootserver Nürnberg**
-❔ **Kundenportal Falkenstein**
-<a:status_up:1344187859921535047> **Objektspeicher Falkenstein (Beta)**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Kundenportal Falkenstein**
+🔵 **Loadbalancer Frankfurt**
+🔵 **Gameserver Frankfurt (Beta)**
+<a:status_up:1344187859921535047> **DNS Helsinki**",
           },
         ],
         "footer": {
@@ -8898,11 +9621,11 @@ exports[`selfhosted-03-maintenance.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "API",
-            "value": "❔ **Webhosting Frankfurt**
-<a:status_up:1344187859921535047> **Rootserver Nürnberg**
-❔ **Kundenportal Falkenstein**
-<a:status_up:1344187859921535047> **Objektspeicher Falkenstein (Beta)**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Kundenportal Falkenstein**
+🔵 **Loadbalancer Frankfurt**
+🔵 **Gameserver Frankfurt (Beta)**
+<a:status_up:1344187859921535047> **DNS Helsinki**",
           },
         ],
         "footer": {
@@ -8924,11 +9647,11 @@ exports[`selfhosted-03-maintenance.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**API**
-🔴 Webhosting Frankfurt
-🟢 Rootserver Nürnberg
-🔴 Kundenportal Falkenstein
-🟢 Objektspeicher Falkenstein (Beta)
+        "description": "**Gameserver**
+🟢 Kundenportal Falkenstein
+🔵 Loadbalancer Frankfurt
+🔵 Gameserver Frankfurt (Beta)
+🟢 DNS Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8944,11 +9667,11 @@ exports[`selfhosted-03-maintenance.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**API**
-🔴 Webhosting Frankfurt
-🟢 Rootserver Nürnberg
-🔴 Kundenportal Falkenstein
-🟢 Objektspeicher Falkenstein (Beta)
+        "description": "**Gameserver**
+🟢 Kundenportal Falkenstein
+🔵 Loadbalancer Frankfurt
+🔵 Gameserver Frankfurt (Beta)
+🟢 DNS Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -8977,7 +9700,7 @@ exports[`selfhosted-03-maintenance.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "API",
+            "name": "Gameserver",
             "value": "🟠 2/4",
           },
           {
@@ -9013,7 +9736,7 @@ exports[`selfhosted-03-maintenance.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "API",
+            "name": "Gameserver",
             "value": "🟠 2/4",
           },
           {
@@ -9046,11 +9769,11 @@ exports[`selfhosted-03-maintenance.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🟠 API**
-    🔴 Webhosting Frankfurt
-    🟢 Rootserver Nürnberg
-    🔴 Kundenportal Falkenstein
-    🟢 Objektspeicher Falkenstein (Beta)
+        "description": "**🟠 Gameserver**
+    🟢 Kundenportal Falkenstein
+    🔵 Loadbalancer Frankfurt
+    🔵 Gameserver Frankfurt (Beta)
+    🟢 DNS Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -9066,11 +9789,11 @@ exports[`selfhosted-03-maintenance.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🟠 API**
-    🔴 Webhosting Frankfurt
-    🟢 Rootserver Nürnberg
-    🔴 Kundenportal Falkenstein
-    🟢 Objektspeicher Falkenstein (Beta)
+        "description": "**🟠 Gameserver**
+    🟢 Kundenportal Falkenstein
+    🔵 Loadbalancer Frankfurt
+    🔵 Gameserver Frankfurt (Beta)
+    🟢 DNS Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -9092,25 +9815,25 @@ exports[`selfhosted-03-maintenance.json the snapshot the renderers were given 1`
   "groups": [
     {
       "childrenTotal": null,
-      "name": "API",
+      "name": "Gameserver",
       "services": [
         {
-          "name": "Webhosting Frankfurt",
-          "path": [],
-          "status": "under_maintenance",
-        },
-        {
-          "name": "Rootserver Nürnberg",
+          "name": "Kundenportal Falkenstein",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Kundenportal Falkenstein",
+          "name": "Loadbalancer Frankfurt",
           "path": [],
           "status": "under_maintenance",
         },
         {
-          "name": "Objektspeicher Falkenstein (Beta)",
+          "name": "Gameserver Frankfurt (Beta)",
+          "path": [],
+          "status": "under_maintenance",
+        },
+        {
+          "name": "DNS Helsinki",
           "path": [],
           "status": "operational",
         },
@@ -9132,13 +9855,13 @@ exports[`selfhosted-04-empty-category.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "┃ **0/0** Dienste
 ┗━ 🟢 Betriebsbereit",
           },
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Gameserver",
             "value": "┃ **2/2** Dienste
 ┗━ 🟢 Betriebsbereit",
           },
@@ -9165,13 +9888,13 @@ exports[`selfhosted-04-empty-category.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "┃ **0/0** services
 ┗━ 🟢 Operational",
           },
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Gameserver",
             "value": "┃ **2/2** services
 ┗━ 🟢 Operational",
           },
@@ -9203,14 +9926,14 @@ exports[`selfhosted-04-empty-category.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "Keine Dienste vorhanden.",
           },
           {
             "inline": false,
-            "name": "Webhosting",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Falkenstein**
-<a:status_up:1344187859921535047> **API Amsterdam (Beta)**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Gameserver Falkenstein**
+<a:status_up:1344187859921535047> **Datenbank Frankfurt (Beta)**",
           },
         ],
         "footer": {
@@ -9230,14 +9953,14 @@ exports[`selfhosted-04-empty-category.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "No services available.",
           },
           {
             "inline": false,
-            "name": "Webhosting",
-            "value": "<a:status_up:1344187859921535047> **Rootserver Falkenstein**
-<a:status_up:1344187859921535047> **API Amsterdam (Beta)**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Gameserver Falkenstein**
+<a:status_up:1344187859921535047> **Datenbank Frankfurt (Beta)**",
           },
         ],
         "footer": {
@@ -9259,12 +9982,12 @@ exports[`selfhosted-04-empty-category.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**Gameserver**
+        "description": "**Webhosting**
 🟢 Betriebsbereit
 
-**Webhosting**
-🟢 Rootserver Falkenstein
-🟢 API Amsterdam (Beta)
+**Gameserver**
+🟢 Gameserver Falkenstein
+🟢 Datenbank Frankfurt (Beta)
 ",
         "footer": {
           "icon_url": undefined,
@@ -9280,12 +10003,12 @@ exports[`selfhosted-04-empty-category.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**Gameserver**
+        "description": "**Webhosting**
 🟢 Operational
 
-**Webhosting**
-🟢 Rootserver Falkenstein
-🟢 API Amsterdam (Beta)
+**Gameserver**
+🟢 Gameserver Falkenstein
+🟢 Datenbank Frankfurt (Beta)
 ",
         "footer": {
           "icon_url": undefined,
@@ -9313,12 +10036,12 @@ exports[`selfhosted-04-empty-category.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "🟢 0/0",
           },
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Gameserver",
             "value": "🟢 2/2",
           },
           {
@@ -9348,12 +10071,12 @@ exports[`selfhosted-04-empty-category.json OVERVIEW in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Gameserver",
+            "name": "Webhosting",
             "value": "🟢 0/0",
           },
           {
             "inline": true,
-            "name": "Webhosting",
+            "name": "Gameserver",
             "value": "🟢 2/2",
           },
           {
@@ -9381,12 +10104,12 @@ exports[`selfhosted-04-empty-category.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**🟢 Gameserver**
+        "description": "**🟢 Webhosting**
     Betriebsbereit
 
-**🟢 Webhosting**
-    🟢 Rootserver Falkenstein
-    🟢 API Amsterdam (Beta)
+**🟢 Gameserver**
+    🟢 Gameserver Falkenstein
+    🟢 Datenbank Frankfurt (Beta)
 ",
         "footer": {
           "icon_url": undefined,
@@ -9402,12 +10125,12 @@ exports[`selfhosted-04-empty-category.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 3066993,
-        "description": "**🟢 Gameserver**
+        "description": "**🟢 Webhosting**
     Operational
 
-**🟢 Webhosting**
-    🟢 Rootserver Falkenstein
-    🟢 API Amsterdam (Beta)
+**🟢 Gameserver**
+    🟢 Gameserver Falkenstein
+    🟢 Datenbank Frankfurt (Beta)
 ",
         "footer": {
           "icon_url": undefined,
@@ -9429,21 +10152,21 @@ exports[`selfhosted-04-empty-category.json the snapshot the renderers were given
   "groups": [
     {
       "childrenTotal": null,
-      "name": "Gameserver",
+      "name": "Webhosting",
       "services": [],
       "status": "operational",
     },
     {
       "childrenTotal": null,
-      "name": "Webhosting",
+      "name": "Gameserver",
       "services": [
         {
-          "name": "Rootserver Falkenstein",
+          "name": "Gameserver Falkenstein",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "API Amsterdam (Beta)",
+          "name": "Datenbank Frankfurt (Beta)",
           "path": [],
           "status": "operational",
         },
@@ -9465,49 +10188,49 @@ exports[`selfhosted-05-large.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Loadbalancer",
-            "value": "┃ **6/7** Dienste
-┗━ 🔴 **1** ausgefallen",
+            "name": "Mailserver",
+            "value": "┃ **5/7** Dienste
+┗━ 🔴 **2** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Objektspeicher",
+            "value": "┃ **3/7** Dienste
+┗━ 🔴 **4** ausgefallen",
           },
           {
             "inline": true,
             "name": "API",
             "value": "┃ **3/7** Dienste
 ┗━ 🔴 **4** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "TeamSpeak",
+            "value": "┃ **2/7** Dienste
+┗━ 🔴 **5** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "┃ **4/7** Dienste
+┗━ 🔴 **3** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "API",
+            "value": "┃ **2/7** Dienste
+┗━ 🔴 **5** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Datenbank",
+            "value": "┃ **1/7** Dienste
+┗━ 🔴 **6** ausgefallen",
           },
           {
             "inline": true,
             "name": "Mailserver",
-            "value": "┃ **4/7** Dienste
-┗━ 🔴 **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "┃ **4/7** Dienste
-┗━ 🔴 **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "DNS",
-            "value": "┃ **4/7** Dienste
-┗━ 🔴 **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "┃ **4/7** Dienste
-┗━ 🔴 **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "Rootserver",
-            "value": "┃ **3/7** Dienste
-┗━ 🔴 **4** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "API",
             "value": "┃ **4/7** Dienste
 ┗━ 🔴 **3** ausgefallen",
           },
@@ -9534,49 +10257,49 @@ exports[`selfhosted-05-large.json COMPACT in de and en 1`] = `
         "fields": [
           {
             "inline": true,
-            "name": "Loadbalancer",
-            "value": "┃ **6/7** services
-┗━ 🔴 **1** down",
+            "name": "Mailserver",
+            "value": "┃ **5/7** services
+┗━ 🔴 **2** down",
+          },
+          {
+            "inline": true,
+            "name": "Objektspeicher",
+            "value": "┃ **3/7** services
+┗━ 🔴 **4** down",
           },
           {
             "inline": true,
             "name": "API",
             "value": "┃ **3/7** services
 ┗━ 🔴 **4** down",
+          },
+          {
+            "inline": true,
+            "name": "TeamSpeak",
+            "value": "┃ **2/7** services
+┗━ 🔴 **5** down",
+          },
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "┃ **4/7** services
+┗━ 🔴 **3** down",
+          },
+          {
+            "inline": true,
+            "name": "API",
+            "value": "┃ **2/7** services
+┗━ 🔴 **5** down",
+          },
+          {
+            "inline": true,
+            "name": "Datenbank",
+            "value": "┃ **1/7** services
+┗━ 🔴 **6** down",
           },
           {
             "inline": true,
             "name": "Mailserver",
-            "value": "┃ **4/7** services
-┗━ 🔴 **3** down",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "┃ **4/7** services
-┗━ 🔴 **3** down",
-          },
-          {
-            "inline": true,
-            "name": "DNS",
-            "value": "┃ **4/7** services
-┗━ 🔴 **3** down",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "┃ **4/7** services
-┗━ 🔴 **3** down",
-          },
-          {
-            "inline": true,
-            "name": "Rootserver",
-            "value": "┃ **3/7** services
-┗━ 🔴 **4** down",
-          },
-          {
-            "inline": true,
-            "name": "API",
             "value": "┃ **4/7** services
 ┗━ 🔴 **3** down",
           },
@@ -9608,91 +10331,91 @@ exports[`selfhosted-05-large.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Loadbalancer",
-            "value": "<a:status_up:1344187859921535047> **Backup Amsterdam (Beta)**
-<a:status_up:1344187859921535047> **TeamSpeak Falkenstein (v2)**
+            "name": "Mailserver",
+            "value": "<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
+<a:status_up:1344187859921535047> **Kundenportal Amsterdam**
+<a:status_up:1344187859921535047> **Objektspeicher Falkenstein**
+<a:status_up:1344187859921535047> **Webhosting Helsinki**
+<a:status_down:1344187930499088394> **Loadbalancer Frankfurt**
 <a:status_up:1344187859921535047> **Loadbalancer Amsterdam**
-<a:status_down:1344187930499088394> **TeamSpeak Helsinki**
-<a:status_up:1344187859921535047> **Rootserver Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Nürnberg**
-<a:status_up:1344187859921535047> **Kundenportal Helsinki**",
+<a:status_down:1344187930499088394> **Gameserver Falkenstein**",
+          },
+          {
+            "inline": false,
+            "name": "Objektspeicher",
+            "value": "<a:status_down:1344187930499088394> **DNS Helsinki (Legacy)**
+<a:status_down:1344187930499088394> **Objektspeicher Amsterdam**
+<a:status_up:1344187859921535047> **Backup Wien (Beta)**
+<a:status_down:1344187930499088394> **TeamSpeak Nürnberg**
+<a:status_up:1344187859921535047> **DNS Amsterdam**
+<a:status_up:1344187859921535047> **API Wien**
+<a:status_down:1344187930499088394> **Webhosting Frankfurt**",
           },
           {
             "inline": false,
             "name": "API",
-            "value": "<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_up:1344187859921535047> **Loadbalancer Frankfurt**
-<a:status_up:1344187859921535047> **Gameserver Frankfurt (Beta)**
-<a:status_down:1344187930499088394> **Kundenportal Nürnberg**
-<a:status_down:1344187930499088394> **Objektspeicher Amsterdam**
-<a:status_down:1344187930499088394> **Mailserver Amsterdam (Beta)**
-<a:status_down:1344187930499088394> **TeamSpeak Amsterdam (v2)**",
+            "value": "<a:status_up:1344187859921535047> **Loadbalancer Nürnberg (Legacy)**
+<a:status_down:1344187930499088394> **Rootserver Frankfurt**
+<a:status_up:1344187859921535047> **Kundenportal Helsinki (v2)**
+<a:status_down:1344187930499088394> **Rootserver Nürnberg**
+<a:status_down:1344187930499088394> **Gameserver Frankfurt (Beta)**
+<a:status_up:1344187859921535047> **DNS Frankfurt**
+<a:status_down:1344187930499088394> **Objektspeicher Helsinki (Legacy)**",
           },
           {
             "inline": false,
-            "name": "Mailserver",
-            "value": "<a:status_down:1344187930499088394> **DNS Amsterdam**
-<a:status_up:1344187859921535047> **Mailserver Nürnberg (Legacy)**
-<a:status_up:1344187859921535047> **Backup Wien**
-<a:status_down:1344187930499088394> **TeamSpeak Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Falkenstein (Legacy)**
-<a:status_up:1344187859921535047> **Webhosting Nürnberg**
+            "name": "TeamSpeak",
+            "value": "<a:status_down:1344187930499088394> **Webhosting Wien**
+<a:status_up:1344187859921535047> **API Falkenstein (v2)**
+<a:status_down:1344187930499088394> **Rootserver Wien (Legacy)**
+<a:status_down:1344187930499088394> **Rootserver Helsinki**
+<a:status_down:1344187930499088394> **API Helsinki**
+<a:status_up:1344187859921535047> **Webhosting Amsterdam**
 <a:status_down:1344187930499088394> **Loadbalancer Amsterdam**",
           },
           {
             "inline": false,
-            "name": "TeamSpeak",
-            "value": "<a:status_down:1344187930499088394> **API Frankfurt**
-<a:status_up:1344187859921535047> **Loadbalancer Wien**
-<a:status_down:1344187930499088394> **TeamSpeak Frankfurt (Beta)**
-<a:status_down:1344187930499088394> **Gameserver Helsinki**
-<a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
-<a:status_up:1344187859921535047> **Mailserver Helsinki**
-<a:status_up:1344187859921535047> **Kundenportal Nürnberg**",
-          },
-          {
-            "inline": false,
-            "name": "DNS",
-            "value": "<a:status_up:1344187859921535047> **Kundenportal Nürnberg**
-<a:status_up:1344187859921535047> **Loadbalancer Frankfurt**
-<a:status_down:1344187930499088394> **Loadbalancer Falkenstein**
-<a:status_up:1344187859921535047> **Gameserver Frankfurt**
-<a:status_up:1344187859921535047> **Objektspeicher Helsinki**
-<a:status_down:1344187930499088394> **API Amsterdam**
-<a:status_down:1344187930499088394> **Kundenportal Helsinki (Beta)**",
-          },
-          {
-            "inline": false,
-            "name": "TeamSpeak",
-            "value": "<a:status_up:1344187859921535047> **Loadbalancer Amsterdam**
-<a:status_down:1344187930499088394> **Rootserver Helsinki**
-<a:status_up:1344187859921535047> **Loadbalancer Wien**
-<a:status_down:1344187930499088394> **Kundenportal Amsterdam (Beta)**
-<a:status_up:1344187859921535047> **Objektspeicher Wien (Beta)**
-<a:status_up:1344187859921535047> **DNS Wien**
-<a:status_down:1344187930499088394> **Gameserver Falkenstein (Beta)**",
-          },
-          {
-            "inline": false,
-            "name": "Rootserver",
-            "value": "<a:status_up:1344187859921535047> **Gameserver Wien**
-<a:status_down:1344187930499088394> **API Helsinki (Legacy)**
-<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_down:1344187930499088394> **Kundenportal Amsterdam**
-<a:status_down:1344187930499088394> **Mailserver Amsterdam (Legacy)**
-<a:status_up:1344187859921535047> **DNS Frankfurt (Legacy)**
-<a:status_down:1344187930499088394> **Mailserver Nürnberg**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
+<a:status_up:1344187859921535047> **Loadbalancer Falkenstein**
+<a:status_up:1344187859921535047> **DNS Nürnberg**
+<a:status_down:1344187930499088394> **TeamSpeak Frankfurt**
+<a:status_down:1344187930499088394> **Kundenportal Frankfurt**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg**",
           },
           {
             "inline": false,
             "name": "API",
-            "value": "<a:status_up:1344187859921535047> **Loadbalancer Helsinki (Beta)**
-<a:status_down:1344187930499088394> **Backup Amsterdam**
-<a:status_down:1344187930499088394> **Loadbalancer Wien**
-<a:status_up:1344187859921535047> **Datenbank Wien (Legacy)**
-<a:status_down:1344187930499088394> **Kundenportal Falkenstein (v2)**
-<a:status_up:1344187859921535047> **DNS Wien**
-<a:status_up:1344187859921535047> **TeamSpeak Falkenstein (v2)**",
+            "value": "<a:status_down:1344187930499088394> **Datenbank Wien (Legacy)**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg**
+<a:status_up:1344187859921535047> **Backup Nürnberg**
+<a:status_down:1344187930499088394> **Backup Frankfurt**
+<a:status_down:1344187930499088394> **Objektspeicher Helsinki**
+<a:status_up:1344187859921535047> **Backup Helsinki (v2)**
+<a:status_down:1344187930499088394> **API Nürnberg**",
+          },
+          {
+            "inline": false,
+            "name": "Datenbank",
+            "value": "<a:status_down:1344187930499088394> **API Amsterdam**
+<a:status_down:1344187930499088394> **Gameserver Amsterdam (v2)**
+<a:status_down:1344187930499088394> **Objektspeicher Nürnberg**
+<a:status_up:1344187859921535047> **Mailserver Nürnberg (v2)**
+<a:status_down:1344187930499088394> **Gameserver Frankfurt**
+<a:status_down:1344187930499088394> **TeamSpeak Falkenstein**
+<a:status_down:1344187930499088394> **API Frankfurt (v2)**",
+          },
+          {
+            "inline": false,
+            "name": "Mailserver",
+            "value": "<a:status_down:1344187930499088394> **Webhosting Wien (Legacy)**
+<a:status_down:1344187930499088394> **Datenbank Helsinki**
+<a:status_up:1344187859921535047> **TeamSpeak Helsinki**
+<a:status_up:1344187859921535047> **API Helsinki**
+<a:status_up:1344187859921535047> **Webhosting Falkenstein**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg (Beta)**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**",
           },
         ],
         "footer": {
@@ -9712,91 +10435,91 @@ exports[`selfhosted-05-large.json DETAILED in de and en 1`] = `
         "fields": [
           {
             "inline": false,
-            "name": "Loadbalancer",
-            "value": "<a:status_up:1344187859921535047> **Backup Amsterdam (Beta)**
-<a:status_up:1344187859921535047> **TeamSpeak Falkenstein (v2)**
+            "name": "Mailserver",
+            "value": "<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
+<a:status_up:1344187859921535047> **Kundenportal Amsterdam**
+<a:status_up:1344187859921535047> **Objektspeicher Falkenstein**
+<a:status_up:1344187859921535047> **Webhosting Helsinki**
+<a:status_down:1344187930499088394> **Loadbalancer Frankfurt**
 <a:status_up:1344187859921535047> **Loadbalancer Amsterdam**
-<a:status_down:1344187930499088394> **TeamSpeak Helsinki**
-<a:status_up:1344187859921535047> **Rootserver Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Nürnberg**
-<a:status_up:1344187859921535047> **Kundenportal Helsinki**",
+<a:status_down:1344187930499088394> **Gameserver Falkenstein**",
+          },
+          {
+            "inline": false,
+            "name": "Objektspeicher",
+            "value": "<a:status_down:1344187930499088394> **DNS Helsinki (Legacy)**
+<a:status_down:1344187930499088394> **Objektspeicher Amsterdam**
+<a:status_up:1344187859921535047> **Backup Wien (Beta)**
+<a:status_down:1344187930499088394> **TeamSpeak Nürnberg**
+<a:status_up:1344187859921535047> **DNS Amsterdam**
+<a:status_up:1344187859921535047> **API Wien**
+<a:status_down:1344187930499088394> **Webhosting Frankfurt**",
           },
           {
             "inline": false,
             "name": "API",
-            "value": "<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_up:1344187859921535047> **Loadbalancer Frankfurt**
-<a:status_up:1344187859921535047> **Gameserver Frankfurt (Beta)**
-<a:status_down:1344187930499088394> **Kundenportal Nürnberg**
-<a:status_down:1344187930499088394> **Objektspeicher Amsterdam**
-<a:status_down:1344187930499088394> **Mailserver Amsterdam (Beta)**
-<a:status_down:1344187930499088394> **TeamSpeak Amsterdam (v2)**",
+            "value": "<a:status_up:1344187859921535047> **Loadbalancer Nürnberg (Legacy)**
+<a:status_down:1344187930499088394> **Rootserver Frankfurt**
+<a:status_up:1344187859921535047> **Kundenportal Helsinki (v2)**
+<a:status_down:1344187930499088394> **Rootserver Nürnberg**
+<a:status_down:1344187930499088394> **Gameserver Frankfurt (Beta)**
+<a:status_up:1344187859921535047> **DNS Frankfurt**
+<a:status_down:1344187930499088394> **Objektspeicher Helsinki (Legacy)**",
           },
           {
             "inline": false,
-            "name": "Mailserver",
-            "value": "<a:status_down:1344187930499088394> **DNS Amsterdam**
-<a:status_up:1344187859921535047> **Mailserver Nürnberg (Legacy)**
-<a:status_up:1344187859921535047> **Backup Wien**
-<a:status_down:1344187930499088394> **TeamSpeak Falkenstein**
-<a:status_up:1344187859921535047> **Mailserver Falkenstein (Legacy)**
-<a:status_up:1344187859921535047> **Webhosting Nürnberg**
+            "name": "TeamSpeak",
+            "value": "<a:status_down:1344187930499088394> **Webhosting Wien**
+<a:status_up:1344187859921535047> **API Falkenstein (v2)**
+<a:status_down:1344187930499088394> **Rootserver Wien (Legacy)**
+<a:status_down:1344187930499088394> **Rootserver Helsinki**
+<a:status_down:1344187930499088394> **API Helsinki**
+<a:status_up:1344187859921535047> **Webhosting Amsterdam**
 <a:status_down:1344187930499088394> **Loadbalancer Amsterdam**",
           },
           {
             "inline": false,
-            "name": "TeamSpeak",
-            "value": "<a:status_down:1344187930499088394> **API Frankfurt**
-<a:status_up:1344187859921535047> **Loadbalancer Wien**
-<a:status_down:1344187930499088394> **TeamSpeak Frankfurt (Beta)**
-<a:status_down:1344187930499088394> **Gameserver Helsinki**
-<a:status_up:1344187859921535047> **TeamSpeak Frankfurt**
-<a:status_up:1344187859921535047> **Mailserver Helsinki**
-<a:status_up:1344187859921535047> **Kundenportal Nürnberg**",
-          },
-          {
-            "inline": false,
-            "name": "DNS",
-            "value": "<a:status_up:1344187859921535047> **Kundenportal Nürnberg**
-<a:status_up:1344187859921535047> **Loadbalancer Frankfurt**
-<a:status_down:1344187930499088394> **Loadbalancer Falkenstein**
-<a:status_up:1344187859921535047> **Gameserver Frankfurt**
-<a:status_up:1344187859921535047> **Objektspeicher Helsinki**
-<a:status_down:1344187930499088394> **API Amsterdam**
-<a:status_down:1344187930499088394> **Kundenportal Helsinki (Beta)**",
-          },
-          {
-            "inline": false,
-            "name": "TeamSpeak",
-            "value": "<a:status_up:1344187859921535047> **Loadbalancer Amsterdam**
-<a:status_down:1344187930499088394> **Rootserver Helsinki**
-<a:status_up:1344187859921535047> **Loadbalancer Wien**
-<a:status_down:1344187930499088394> **Kundenportal Amsterdam (Beta)**
-<a:status_up:1344187859921535047> **Objektspeicher Wien (Beta)**
-<a:status_up:1344187859921535047> **DNS Wien**
-<a:status_down:1344187930499088394> **Gameserver Falkenstein (Beta)**",
-          },
-          {
-            "inline": false,
-            "name": "Rootserver",
-            "value": "<a:status_up:1344187859921535047> **Gameserver Wien**
-<a:status_down:1344187930499088394> **API Helsinki (Legacy)**
-<a:status_up:1344187859921535047> **API Frankfurt**
-<a:status_down:1344187930499088394> **Kundenportal Amsterdam**
-<a:status_down:1344187930499088394> **Mailserver Amsterdam (Legacy)**
-<a:status_up:1344187859921535047> **DNS Frankfurt (Legacy)**
-<a:status_down:1344187930499088394> **Mailserver Nürnberg**",
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **Objektspeicher Frankfurt**
+<a:status_up:1344187859921535047> **Loadbalancer Falkenstein**
+<a:status_up:1344187859921535047> **DNS Nürnberg**
+<a:status_down:1344187930499088394> **TeamSpeak Frankfurt**
+<a:status_down:1344187930499088394> **Kundenportal Frankfurt**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg**",
           },
           {
             "inline": false,
             "name": "API",
-            "value": "<a:status_up:1344187859921535047> **Loadbalancer Helsinki (Beta)**
-<a:status_down:1344187930499088394> **Backup Amsterdam**
-<a:status_down:1344187930499088394> **Loadbalancer Wien**
-<a:status_up:1344187859921535047> **Datenbank Wien (Legacy)**
-<a:status_down:1344187930499088394> **Kundenportal Falkenstein (v2)**
-<a:status_up:1344187859921535047> **DNS Wien**
-<a:status_up:1344187859921535047> **TeamSpeak Falkenstein (v2)**",
+            "value": "<a:status_down:1344187930499088394> **Datenbank Wien (Legacy)**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg**
+<a:status_up:1344187859921535047> **Backup Nürnberg**
+<a:status_down:1344187930499088394> **Backup Frankfurt**
+<a:status_down:1344187930499088394> **Objektspeicher Helsinki**
+<a:status_up:1344187859921535047> **Backup Helsinki (v2)**
+<a:status_down:1344187930499088394> **API Nürnberg**",
+          },
+          {
+            "inline": false,
+            "name": "Datenbank",
+            "value": "<a:status_down:1344187930499088394> **API Amsterdam**
+<a:status_down:1344187930499088394> **Gameserver Amsterdam (v2)**
+<a:status_down:1344187930499088394> **Objektspeicher Nürnberg**
+<a:status_up:1344187859921535047> **Mailserver Nürnberg (v2)**
+<a:status_down:1344187930499088394> **Gameserver Frankfurt**
+<a:status_down:1344187930499088394> **TeamSpeak Falkenstein**
+<a:status_down:1344187930499088394> **API Frankfurt (v2)**",
+          },
+          {
+            "inline": false,
+            "name": "Mailserver",
+            "value": "<a:status_down:1344187930499088394> **Webhosting Wien (Legacy)**
+<a:status_down:1344187930499088394> **Datenbank Helsinki**
+<a:status_up:1344187859921535047> **TeamSpeak Helsinki**
+<a:status_up:1344187859921535047> **API Helsinki**
+<a:status_up:1344187859921535047> **Webhosting Falkenstein**
+<a:status_down:1344187930499088394> **Webhosting Nürnberg (Beta)**
+<a:status_up:1344187859921535047> **Rootserver Helsinki**",
           },
         ],
         "footer": {
@@ -9818,77 +10541,77 @@ exports[`selfhosted-05-large.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Loadbalancer**
-🟢 Backup Amsterdam (Beta)
-🟢 TeamSpeak Falkenstein (v2)
+        "description": "**Mailserver**
+🟢 Objektspeicher Frankfurt
+🟢 Kundenportal Amsterdam
+🟢 Objektspeicher Falkenstein
+🟢 Webhosting Helsinki
+🔴 Loadbalancer Frankfurt
 🟢 Loadbalancer Amsterdam
-🔴 TeamSpeak Helsinki
-🟢 Rootserver Falkenstein
-🟢 Mailserver Nürnberg
-🟢 Kundenportal Helsinki
+🔴 Gameserver Falkenstein
+
+**Objektspeicher**
+🔴 DNS Helsinki (Legacy)
+🔴 Objektspeicher Amsterdam
+🟢 Backup Wien (Beta)
+🔴 TeamSpeak Nürnberg
+🟢 DNS Amsterdam
+🟢 API Wien
+🔴 Webhosting Frankfurt
 
 **API**
-🟢 API Frankfurt
-🟢 Loadbalancer Frankfurt
-🟢 Gameserver Frankfurt (Beta)
-🔴 Kundenportal Nürnberg
-🔴 Objektspeicher Amsterdam
-🔴 Mailserver Amsterdam (Beta)
-🔴 TeamSpeak Amsterdam (v2)
+🟢 Loadbalancer Nürnberg (Legacy)
+🔴 Rootserver Frankfurt
+🟢 Kundenportal Helsinki (v2)
+🔴 Rootserver Nürnberg
+🔴 Gameserver Frankfurt (Beta)
+🟢 DNS Frankfurt
+🔴 Objektspeicher Helsinki (Legacy)
 
-**Mailserver**
-🔴 DNS Amsterdam
-🟢 Mailserver Nürnberg (Legacy)
-🟢 Backup Wien
-🔴 TeamSpeak Falkenstein
-🟢 Mailserver Falkenstein (Legacy)
-🟢 Webhosting Nürnberg
+**TeamSpeak**
+🔴 Webhosting Wien
+🟢 API Falkenstein (v2)
+🔴 Rootserver Wien (Legacy)
+🔴 Rootserver Helsinki
+🔴 API Helsinki
+🟢 Webhosting Amsterdam
 🔴 Loadbalancer Amsterdam
 
-**TeamSpeak**
-🔴 API Frankfurt
-🟢 Loadbalancer Wien
-🔴 TeamSpeak Frankfurt (Beta)
-🔴 Gameserver Helsinki
-🟢 TeamSpeak Frankfurt
-🟢 Mailserver Helsinki
-🟢 Kundenportal Nürnberg
-
-**DNS**
-🟢 Kundenportal Nürnberg
-🟢 Loadbalancer Frankfurt
-🔴 Loadbalancer Falkenstein
-🟢 Gameserver Frankfurt
-🟢 Objektspeicher Helsinki
-🔴 API Amsterdam
-🔴 Kundenportal Helsinki (Beta)
-
-**TeamSpeak**
-🟢 Loadbalancer Amsterdam
-🔴 Rootserver Helsinki
-🟢 Loadbalancer Wien
-🔴 Kundenportal Amsterdam (Beta)
-🟢 Objektspeicher Wien (Beta)
-🟢 DNS Wien
-🔴 Gameserver Falkenstein (Beta)
-
-**Rootserver**
-🟢 Gameserver Wien
-🔴 API Helsinki (Legacy)
-🟢 API Frankfurt
-🔴 Kundenportal Amsterdam
-🔴 Mailserver Amsterdam (Legacy)
-🟢 DNS Frankfurt (Legacy)
-🔴 Mailserver Nürnberg
+**Gameserver**
+🟢 Objektspeicher Frankfurt
+🟢 Loadbalancer Falkenstein
+🟢 DNS Nürnberg
+🔴 TeamSpeak Frankfurt
+🔴 Kundenportal Frankfurt
+🟢 Rootserver Helsinki
+🔴 Webhosting Nürnberg
 
 **API**
-🟢 Loadbalancer Helsinki (Beta)
-🔴 Backup Amsterdam
-🔴 Loadbalancer Wien
-🟢 Datenbank Wien (Legacy)
-🔴 Kundenportal Falkenstein (v2)
-🟢 DNS Wien
-🟢 TeamSpeak Falkenstein (v2)
+🔴 Datenbank Wien (Legacy)
+🔴 Webhosting Nürnberg
+🟢 Backup Nürnberg
+🔴 Backup Frankfurt
+🔴 Objektspeicher Helsinki
+🟢 Backup Helsinki (v2)
+🔴 API Nürnberg
+
+**Datenbank**
+🔴 API Amsterdam
+🔴 Gameserver Amsterdam (v2)
+🔴 Objektspeicher Nürnberg
+🟢 Mailserver Nürnberg (v2)
+🔴 Gameserver Frankfurt
+🔴 TeamSpeak Falkenstein
+🔴 API Frankfurt (v2)
+
+**Mailserver**
+🔴 Webhosting Wien (Legacy)
+🔴 Datenbank Helsinki
+🟢 TeamSpeak Helsinki
+🟢 API Helsinki
+🟢 Webhosting Falkenstein
+🔴 Webhosting Nürnberg (Beta)
+🟢 Rootserver Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -9904,77 +10627,77 @@ exports[`selfhosted-05-large.json MINIMAL in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**Loadbalancer**
-🟢 Backup Amsterdam (Beta)
-🟢 TeamSpeak Falkenstein (v2)
+        "description": "**Mailserver**
+🟢 Objektspeicher Frankfurt
+🟢 Kundenportal Amsterdam
+🟢 Objektspeicher Falkenstein
+🟢 Webhosting Helsinki
+🔴 Loadbalancer Frankfurt
 🟢 Loadbalancer Amsterdam
-🔴 TeamSpeak Helsinki
-🟢 Rootserver Falkenstein
-🟢 Mailserver Nürnberg
-🟢 Kundenportal Helsinki
+🔴 Gameserver Falkenstein
+
+**Objektspeicher**
+🔴 DNS Helsinki (Legacy)
+🔴 Objektspeicher Amsterdam
+🟢 Backup Wien (Beta)
+🔴 TeamSpeak Nürnberg
+🟢 DNS Amsterdam
+🟢 API Wien
+🔴 Webhosting Frankfurt
 
 **API**
-🟢 API Frankfurt
-🟢 Loadbalancer Frankfurt
-🟢 Gameserver Frankfurt (Beta)
-🔴 Kundenportal Nürnberg
-🔴 Objektspeicher Amsterdam
-🔴 Mailserver Amsterdam (Beta)
-🔴 TeamSpeak Amsterdam (v2)
+🟢 Loadbalancer Nürnberg (Legacy)
+🔴 Rootserver Frankfurt
+🟢 Kundenportal Helsinki (v2)
+🔴 Rootserver Nürnberg
+🔴 Gameserver Frankfurt (Beta)
+🟢 DNS Frankfurt
+🔴 Objektspeicher Helsinki (Legacy)
 
-**Mailserver**
-🔴 DNS Amsterdam
-🟢 Mailserver Nürnberg (Legacy)
-🟢 Backup Wien
-🔴 TeamSpeak Falkenstein
-🟢 Mailserver Falkenstein (Legacy)
-🟢 Webhosting Nürnberg
+**TeamSpeak**
+🔴 Webhosting Wien
+🟢 API Falkenstein (v2)
+🔴 Rootserver Wien (Legacy)
+🔴 Rootserver Helsinki
+🔴 API Helsinki
+🟢 Webhosting Amsterdam
 🔴 Loadbalancer Amsterdam
 
-**TeamSpeak**
-🔴 API Frankfurt
-🟢 Loadbalancer Wien
-🔴 TeamSpeak Frankfurt (Beta)
-🔴 Gameserver Helsinki
-🟢 TeamSpeak Frankfurt
-🟢 Mailserver Helsinki
-🟢 Kundenportal Nürnberg
-
-**DNS**
-🟢 Kundenportal Nürnberg
-🟢 Loadbalancer Frankfurt
-🔴 Loadbalancer Falkenstein
-🟢 Gameserver Frankfurt
-🟢 Objektspeicher Helsinki
-🔴 API Amsterdam
-🔴 Kundenportal Helsinki (Beta)
-
-**TeamSpeak**
-🟢 Loadbalancer Amsterdam
-🔴 Rootserver Helsinki
-🟢 Loadbalancer Wien
-🔴 Kundenportal Amsterdam (Beta)
-🟢 Objektspeicher Wien (Beta)
-🟢 DNS Wien
-🔴 Gameserver Falkenstein (Beta)
-
-**Rootserver**
-🟢 Gameserver Wien
-🔴 API Helsinki (Legacy)
-🟢 API Frankfurt
-🔴 Kundenportal Amsterdam
-🔴 Mailserver Amsterdam (Legacy)
-🟢 DNS Frankfurt (Legacy)
-🔴 Mailserver Nürnberg
+**Gameserver**
+🟢 Objektspeicher Frankfurt
+🟢 Loadbalancer Falkenstein
+🟢 DNS Nürnberg
+🔴 TeamSpeak Frankfurt
+🔴 Kundenportal Frankfurt
+🟢 Rootserver Helsinki
+🔴 Webhosting Nürnberg
 
 **API**
-🟢 Loadbalancer Helsinki (Beta)
-🔴 Backup Amsterdam
-🔴 Loadbalancer Wien
-🟢 Datenbank Wien (Legacy)
-🔴 Kundenportal Falkenstein (v2)
-🟢 DNS Wien
-🟢 TeamSpeak Falkenstein (v2)
+🔴 Datenbank Wien (Legacy)
+🔴 Webhosting Nürnberg
+🟢 Backup Nürnberg
+🔴 Backup Frankfurt
+🔴 Objektspeicher Helsinki
+🟢 Backup Helsinki (v2)
+🔴 API Nürnberg
+
+**Datenbank**
+🔴 API Amsterdam
+🔴 Gameserver Amsterdam (v2)
+🔴 Objektspeicher Nürnberg
+🟢 Mailserver Nürnberg (v2)
+🔴 Gameserver Frankfurt
+🔴 TeamSpeak Falkenstein
+🔴 API Frankfurt (v2)
+
+**Mailserver**
+🔴 Webhosting Wien (Legacy)
+🔴 Datenbank Helsinki
+🟢 TeamSpeak Helsinki
+🟢 API Helsinki
+🟢 Webhosting Falkenstein
+🔴 Webhosting Nürnberg (Beta)
+🟢 Rootserver Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -9997,48 +10720,48 @@ exports[`selfhosted-05-large.json OVERVIEW in de and en 1`] = `
         "color": 15965202,
         "description": "🟠 Teilweise Beeinträchtigungen
 \`\`\`diff
-- 24 Dienste ausgefallen
-+ 32 Dienste Betriebsbereit
+- 32 Dienste ausgefallen
++ 24 Dienste Betriebsbereit
 \`\`\`",
         "fields": [
           {
             "inline": true,
-            "name": "Loadbalancer",
-            "value": "🔴 6/7 • **1** ausgefallen",
+            "name": "Mailserver",
+            "value": "🔴 5/7 • **2** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Objektspeicher",
+            "value": "🔴 3/7 • **4** ausgefallen",
           },
           {
             "inline": true,
             "name": "API",
             "value": "🔴 3/7 • **4** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "TeamSpeak",
+            "value": "🔴 2/7 • **5** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "🔴 4/7 • **3** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "API",
+            "value": "🔴 2/7 • **5** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "Datenbank",
+            "value": "🔴 1/7 • **6** ausgefallen",
           },
           {
             "inline": true,
             "name": "Mailserver",
-            "value": "🔴 4/7 • **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "🔴 4/7 • **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "DNS",
-            "value": "🔴 4/7 • **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "🔴 4/7 • **3** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "Rootserver",
-            "value": "🔴 3/7 • **4** ausgefallen",
-          },
-          {
-            "inline": true,
-            "name": "API",
             "value": "🔴 4/7 • **3** ausgefallen",
           },
           {
@@ -10063,48 +10786,48 @@ exports[`selfhosted-05-large.json OVERVIEW in de and en 1`] = `
         "color": 15965202,
         "description": "🟠 Partial service degradation
 \`\`\`diff
-- 24 services down
-+ 32 services Operational
+- 32 services down
++ 24 services Operational
 \`\`\`",
         "fields": [
           {
             "inline": true,
-            "name": "Loadbalancer",
-            "value": "🔴 6/7 • **1** down",
+            "name": "Mailserver",
+            "value": "🔴 5/7 • **2** down",
+          },
+          {
+            "inline": true,
+            "name": "Objektspeicher",
+            "value": "🔴 3/7 • **4** down",
           },
           {
             "inline": true,
             "name": "API",
             "value": "🔴 3/7 • **4** down",
+          },
+          {
+            "inline": true,
+            "name": "TeamSpeak",
+            "value": "🔴 2/7 • **5** down",
+          },
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "🔴 4/7 • **3** down",
+          },
+          {
+            "inline": true,
+            "name": "API",
+            "value": "🔴 2/7 • **5** down",
+          },
+          {
+            "inline": true,
+            "name": "Datenbank",
+            "value": "🔴 1/7 • **6** down",
           },
           {
             "inline": true,
             "name": "Mailserver",
-            "value": "🔴 4/7 • **3** down",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "🔴 4/7 • **3** down",
-          },
-          {
-            "inline": true,
-            "name": "DNS",
-            "value": "🔴 4/7 • **3** down",
-          },
-          {
-            "inline": true,
-            "name": "TeamSpeak",
-            "value": "🔴 4/7 • **3** down",
-          },
-          {
-            "inline": true,
-            "name": "Rootserver",
-            "value": "🔴 3/7 • **4** down",
-          },
-          {
-            "inline": true,
-            "name": "API",
             "value": "🔴 4/7 • **3** down",
           },
           {
@@ -10132,77 +10855,77 @@ exports[`selfhosted-05-large.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🔴 Loadbalancer**
-    🟢 Backup Amsterdam (Beta)
-    🟢 TeamSpeak Falkenstein (v2)
+        "description": "**🔴 Mailserver**
+    🟢 Objektspeicher Frankfurt
+    🟢 Kundenportal Amsterdam
+    🟢 Objektspeicher Falkenstein
+    🟢 Webhosting Helsinki
+    🔴 Loadbalancer Frankfurt
     🟢 Loadbalancer Amsterdam
-    🔴 TeamSpeak Helsinki
-    🟢 Rootserver Falkenstein
-    🟢 Mailserver Nürnberg
-    🟢 Kundenportal Helsinki
+    🔴 Gameserver Falkenstein
+
+**🔴 Objektspeicher**
+    🔴 DNS Helsinki (Legacy)
+    🔴 Objektspeicher Amsterdam
+    🟢 Backup Wien (Beta)
+    🔴 TeamSpeak Nürnberg
+    🟢 DNS Amsterdam
+    🟢 API Wien
+    🔴 Webhosting Frankfurt
 
 **🔴 API**
-    🟢 API Frankfurt
-    🟢 Loadbalancer Frankfurt
-    🟢 Gameserver Frankfurt (Beta)
-    🔴 Kundenportal Nürnberg
-    🔴 Objektspeicher Amsterdam
-    🔴 Mailserver Amsterdam (Beta)
-    🔴 TeamSpeak Amsterdam (v2)
+    🟢 Loadbalancer Nürnberg (Legacy)
+    🔴 Rootserver Frankfurt
+    🟢 Kundenportal Helsinki (v2)
+    🔴 Rootserver Nürnberg
+    🔴 Gameserver Frankfurt (Beta)
+    🟢 DNS Frankfurt
+    🔴 Objektspeicher Helsinki (Legacy)
 
-**🔴 Mailserver**
-    🔴 DNS Amsterdam
-    🟢 Mailserver Nürnberg (Legacy)
-    🟢 Backup Wien
-    🔴 TeamSpeak Falkenstein
-    🟢 Mailserver Falkenstein (Legacy)
-    🟢 Webhosting Nürnberg
+**🔴 TeamSpeak**
+    🔴 Webhosting Wien
+    🟢 API Falkenstein (v2)
+    🔴 Rootserver Wien (Legacy)
+    🔴 Rootserver Helsinki
+    🔴 API Helsinki
+    🟢 Webhosting Amsterdam
     🔴 Loadbalancer Amsterdam
 
-**🔴 TeamSpeak**
-    🔴 API Frankfurt
-    🟢 Loadbalancer Wien
-    🔴 TeamSpeak Frankfurt (Beta)
-    🔴 Gameserver Helsinki
-    🟢 TeamSpeak Frankfurt
-    🟢 Mailserver Helsinki
-    🟢 Kundenportal Nürnberg
-
-**🔴 DNS**
-    🟢 Kundenportal Nürnberg
-    🟢 Loadbalancer Frankfurt
-    🔴 Loadbalancer Falkenstein
-    🟢 Gameserver Frankfurt
-    🟢 Objektspeicher Helsinki
-    🔴 API Amsterdam
-    🔴 Kundenportal Helsinki (Beta)
-
-**🔴 TeamSpeak**
-    🟢 Loadbalancer Amsterdam
-    🔴 Rootserver Helsinki
-    🟢 Loadbalancer Wien
-    🔴 Kundenportal Amsterdam (Beta)
-    🟢 Objektspeicher Wien (Beta)
-    🟢 DNS Wien
-    🔴 Gameserver Falkenstein (Beta)
-
-**🔴 Rootserver**
-    🟢 Gameserver Wien
-    🔴 API Helsinki (Legacy)
-    🟢 API Frankfurt
-    🔴 Kundenportal Amsterdam
-    🔴 Mailserver Amsterdam (Legacy)
-    🟢 DNS Frankfurt (Legacy)
-    🔴 Mailserver Nürnberg
+**🔴 Gameserver**
+    🟢 Objektspeicher Frankfurt
+    🟢 Loadbalancer Falkenstein
+    🟢 DNS Nürnberg
+    🔴 TeamSpeak Frankfurt
+    🔴 Kundenportal Frankfurt
+    🟢 Rootserver Helsinki
+    🔴 Webhosting Nürnberg
 
 **🔴 API**
-    🟢 Loadbalancer Helsinki (Beta)
-    🔴 Backup Amsterdam
-    🔴 Loadbalancer Wien
-    🟢 Datenbank Wien (Legacy)
-    🔴 Kundenportal Falkenstein (v2)
-    🟢 DNS Wien
-    🟢 TeamSpeak Falkenstein (v2)
+    🔴 Datenbank Wien (Legacy)
+    🔴 Webhosting Nürnberg
+    🟢 Backup Nürnberg
+    🔴 Backup Frankfurt
+    🔴 Objektspeicher Helsinki
+    🟢 Backup Helsinki (v2)
+    🔴 API Nürnberg
+
+**🔴 Datenbank**
+    🔴 API Amsterdam
+    🔴 Gameserver Amsterdam (v2)
+    🔴 Objektspeicher Nürnberg
+    🟢 Mailserver Nürnberg (v2)
+    🔴 Gameserver Frankfurt
+    🔴 TeamSpeak Falkenstein
+    🔴 API Frankfurt (v2)
+
+**🔴 Mailserver**
+    🔴 Webhosting Wien (Legacy)
+    🔴 Datenbank Helsinki
+    🟢 TeamSpeak Helsinki
+    🟢 API Helsinki
+    🟢 Webhosting Falkenstein
+    🔴 Webhosting Nürnberg (Beta)
+    🟢 Rootserver Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -10218,77 +10941,77 @@ exports[`selfhosted-05-large.json TREE in de and en 1`] = `
     {
       "embed": {
         "color": 15965202,
-        "description": "**🔴 Loadbalancer**
-    🟢 Backup Amsterdam (Beta)
-    🟢 TeamSpeak Falkenstein (v2)
+        "description": "**🔴 Mailserver**
+    🟢 Objektspeicher Frankfurt
+    🟢 Kundenportal Amsterdam
+    🟢 Objektspeicher Falkenstein
+    🟢 Webhosting Helsinki
+    🔴 Loadbalancer Frankfurt
     🟢 Loadbalancer Amsterdam
-    🔴 TeamSpeak Helsinki
-    🟢 Rootserver Falkenstein
-    🟢 Mailserver Nürnberg
-    🟢 Kundenportal Helsinki
+    🔴 Gameserver Falkenstein
+
+**🔴 Objektspeicher**
+    🔴 DNS Helsinki (Legacy)
+    🔴 Objektspeicher Amsterdam
+    🟢 Backup Wien (Beta)
+    🔴 TeamSpeak Nürnberg
+    🟢 DNS Amsterdam
+    🟢 API Wien
+    🔴 Webhosting Frankfurt
 
 **🔴 API**
-    🟢 API Frankfurt
-    🟢 Loadbalancer Frankfurt
-    🟢 Gameserver Frankfurt (Beta)
-    🔴 Kundenportal Nürnberg
-    🔴 Objektspeicher Amsterdam
-    🔴 Mailserver Amsterdam (Beta)
-    🔴 TeamSpeak Amsterdam (v2)
+    🟢 Loadbalancer Nürnberg (Legacy)
+    🔴 Rootserver Frankfurt
+    🟢 Kundenportal Helsinki (v2)
+    🔴 Rootserver Nürnberg
+    🔴 Gameserver Frankfurt (Beta)
+    🟢 DNS Frankfurt
+    🔴 Objektspeicher Helsinki (Legacy)
 
-**🔴 Mailserver**
-    🔴 DNS Amsterdam
-    🟢 Mailserver Nürnberg (Legacy)
-    🟢 Backup Wien
-    🔴 TeamSpeak Falkenstein
-    🟢 Mailserver Falkenstein (Legacy)
-    🟢 Webhosting Nürnberg
+**🔴 TeamSpeak**
+    🔴 Webhosting Wien
+    🟢 API Falkenstein (v2)
+    🔴 Rootserver Wien (Legacy)
+    🔴 Rootserver Helsinki
+    🔴 API Helsinki
+    🟢 Webhosting Amsterdam
     🔴 Loadbalancer Amsterdam
 
-**🔴 TeamSpeak**
-    🔴 API Frankfurt
-    🟢 Loadbalancer Wien
-    🔴 TeamSpeak Frankfurt (Beta)
-    🔴 Gameserver Helsinki
-    🟢 TeamSpeak Frankfurt
-    🟢 Mailserver Helsinki
-    🟢 Kundenportal Nürnberg
-
-**🔴 DNS**
-    🟢 Kundenportal Nürnberg
-    🟢 Loadbalancer Frankfurt
-    🔴 Loadbalancer Falkenstein
-    🟢 Gameserver Frankfurt
-    🟢 Objektspeicher Helsinki
-    🔴 API Amsterdam
-    🔴 Kundenportal Helsinki (Beta)
-
-**🔴 TeamSpeak**
-    🟢 Loadbalancer Amsterdam
-    🔴 Rootserver Helsinki
-    🟢 Loadbalancer Wien
-    🔴 Kundenportal Amsterdam (Beta)
-    🟢 Objektspeicher Wien (Beta)
-    🟢 DNS Wien
-    🔴 Gameserver Falkenstein (Beta)
-
-**🔴 Rootserver**
-    🟢 Gameserver Wien
-    🔴 API Helsinki (Legacy)
-    🟢 API Frankfurt
-    🔴 Kundenportal Amsterdam
-    🔴 Mailserver Amsterdam (Legacy)
-    🟢 DNS Frankfurt (Legacy)
-    🔴 Mailserver Nürnberg
+**🔴 Gameserver**
+    🟢 Objektspeicher Frankfurt
+    🟢 Loadbalancer Falkenstein
+    🟢 DNS Nürnberg
+    🔴 TeamSpeak Frankfurt
+    🔴 Kundenportal Frankfurt
+    🟢 Rootserver Helsinki
+    🔴 Webhosting Nürnberg
 
 **🔴 API**
-    🟢 Loadbalancer Helsinki (Beta)
-    🔴 Backup Amsterdam
-    🔴 Loadbalancer Wien
-    🟢 Datenbank Wien (Legacy)
-    🔴 Kundenportal Falkenstein (v2)
-    🟢 DNS Wien
-    🟢 TeamSpeak Falkenstein (v2)
+    🔴 Datenbank Wien (Legacy)
+    🔴 Webhosting Nürnberg
+    🟢 Backup Nürnberg
+    🔴 Backup Frankfurt
+    🔴 Objektspeicher Helsinki
+    🟢 Backup Helsinki (v2)
+    🔴 API Nürnberg
+
+**🔴 Datenbank**
+    🔴 API Amsterdam
+    🔴 Gameserver Amsterdam (v2)
+    🔴 Objektspeicher Nürnberg
+    🟢 Mailserver Nürnberg (v2)
+    🔴 Gameserver Frankfurt
+    🔴 TeamSpeak Falkenstein
+    🔴 API Frankfurt (v2)
+
+**🔴 Mailserver**
+    🔴 Webhosting Wien (Legacy)
+    🔴 Datenbank Helsinki
+    🟢 TeamSpeak Helsinki
+    🟢 API Helsinki
+    🟢 Webhosting Falkenstein
+    🔴 Webhosting Nürnberg (Beta)
+    🟢 Rootserver Helsinki
 ",
         "footer": {
           "icon_url": undefined,
@@ -10310,17 +11033,32 @@ exports[`selfhosted-05-large.json the snapshot the renderers were given 1`] = `
   "groups": [
     {
       "childrenTotal": null,
-      "name": "Loadbalancer",
+      "name": "Mailserver",
       "services": [
         {
-          "name": "Backup Amsterdam (Beta)",
+          "name": "Objektspeicher Frankfurt",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "TeamSpeak Falkenstein (v2)",
+          "name": "Kundenportal Amsterdam",
           "path": [],
           "status": "operational",
+        },
+        {
+          "name": "Objektspeicher Falkenstein",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Webhosting Helsinki",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Loadbalancer Frankfurt",
+          "path": [],
+          "status": "major_outage",
         },
         {
           "name": "Loadbalancer Amsterdam",
@@ -10328,49 +11066,19 @@ exports[`selfhosted-05-large.json the snapshot the renderers were given 1`] = `
           "status": "operational",
         },
         {
-          "name": "TeamSpeak Helsinki",
+          "name": "Gameserver Falkenstein",
           "path": [],
           "status": "major_outage",
-        },
-        {
-          "name": "Rootserver Falkenstein",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Mailserver Nürnberg",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Helsinki",
-          "path": [],
-          "status": "operational",
         },
       ],
       "status": "major_outage",
     },
     {
       "childrenTotal": null,
-      "name": "API",
+      "name": "Objektspeicher",
       "services": [
         {
-          "name": "API Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Loadbalancer Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Gameserver Frankfurt (Beta)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Nürnberg",
+          "name": "DNS Helsinki (Legacy)",
           "path": [],
           "status": "major_outage",
         },
@@ -10380,12 +11088,237 @@ exports[`selfhosted-05-large.json the snapshot the renderers were given 1`] = `
           "status": "major_outage",
         },
         {
-          "name": "Mailserver Amsterdam (Beta)",
+          "name": "Backup Wien (Beta)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "TeamSpeak Nürnberg",
           "path": [],
           "status": "major_outage",
         },
         {
-          "name": "TeamSpeak Amsterdam (v2)",
+          "name": "DNS Amsterdam",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "API Wien",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Webhosting Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+      ],
+      "status": "major_outage",
+    },
+    {
+      "childrenTotal": null,
+      "name": "API",
+      "services": [
+        {
+          "name": "Loadbalancer Nürnberg (Legacy)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Rootserver Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Kundenportal Helsinki (v2)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Rootserver Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Gameserver Frankfurt (Beta)",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "DNS Frankfurt",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Objektspeicher Helsinki (Legacy)",
+          "path": [],
+          "status": "major_outage",
+        },
+      ],
+      "status": "major_outage",
+    },
+    {
+      "childrenTotal": null,
+      "name": "TeamSpeak",
+      "services": [
+        {
+          "name": "Webhosting Wien",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "API Falkenstein (v2)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Rootserver Wien (Legacy)",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Rootserver Helsinki",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "API Helsinki",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Webhosting Amsterdam",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Loadbalancer Amsterdam",
+          "path": [],
+          "status": "major_outage",
+        },
+      ],
+      "status": "major_outage",
+    },
+    {
+      "childrenTotal": null,
+      "name": "Gameserver",
+      "services": [
+        {
+          "name": "Objektspeicher Frankfurt",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Loadbalancer Falkenstein",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "DNS Nürnberg",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "TeamSpeak Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Kundenportal Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Rootserver Helsinki",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Webhosting Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+      ],
+      "status": "major_outage",
+    },
+    {
+      "childrenTotal": null,
+      "name": "API",
+      "services": [
+        {
+          "name": "Datenbank Wien (Legacy)",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Webhosting Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Backup Nürnberg",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Backup Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Objektspeicher Helsinki",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Backup Helsinki (v2)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "API Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+      ],
+      "status": "major_outage",
+    },
+    {
+      "childrenTotal": null,
+      "name": "Datenbank",
+      "services": [
+        {
+          "name": "API Amsterdam",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Gameserver Amsterdam (v2)",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Objektspeicher Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Mailserver Nürnberg (v2)",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Gameserver Frankfurt",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "TeamSpeak Falkenstein",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "API Frankfurt (v2)",
           "path": [],
           "status": "major_outage",
         },
@@ -10397,247 +11330,37 @@ exports[`selfhosted-05-large.json the snapshot the renderers were given 1`] = `
       "name": "Mailserver",
       "services": [
         {
-          "name": "DNS Amsterdam",
+          "name": "Webhosting Wien (Legacy)",
           "path": [],
           "status": "major_outage",
         },
         {
-          "name": "Mailserver Nürnberg (Legacy)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Backup Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "TeamSpeak Falkenstein",
+          "name": "Datenbank Helsinki",
           "path": [],
           "status": "major_outage",
         },
         {
-          "name": "Mailserver Falkenstein (Legacy)",
+          "name": "TeamSpeak Helsinki",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Webhosting Nürnberg",
+          "name": "API Helsinki",
           "path": [],
           "status": "operational",
         },
         {
-          "name": "Loadbalancer Amsterdam",
+          "name": "Webhosting Falkenstein",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Webhosting Nürnberg (Beta)",
           "path": [],
           "status": "major_outage",
-        },
-      ],
-      "status": "major_outage",
-    },
-    {
-      "childrenTotal": null,
-      "name": "TeamSpeak",
-      "services": [
-        {
-          "name": "API Frankfurt",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Loadbalancer Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "TeamSpeak Frankfurt (Beta)",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Gameserver Helsinki",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "TeamSpeak Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Mailserver Helsinki",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Nürnberg",
-          "path": [],
-          "status": "operational",
-        },
-      ],
-      "status": "major_outage",
-    },
-    {
-      "childrenTotal": null,
-      "name": "DNS",
-      "services": [
-        {
-          "name": "Kundenportal Nürnberg",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Loadbalancer Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Loadbalancer Falkenstein",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Gameserver Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Objektspeicher Helsinki",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "API Amsterdam",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Kundenportal Helsinki (Beta)",
-          "path": [],
-          "status": "major_outage",
-        },
-      ],
-      "status": "major_outage",
-    },
-    {
-      "childrenTotal": null,
-      "name": "TeamSpeak",
-      "services": [
-        {
-          "name": "Loadbalancer Amsterdam",
-          "path": [],
-          "status": "operational",
         },
         {
           "name": "Rootserver Helsinki",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Loadbalancer Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Amsterdam (Beta)",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Objektspeicher Wien (Beta)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "DNS Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Gameserver Falkenstein (Beta)",
-          "path": [],
-          "status": "major_outage",
-        },
-      ],
-      "status": "major_outage",
-    },
-    {
-      "childrenTotal": null,
-      "name": "Rootserver",
-      "services": [
-        {
-          "name": "Gameserver Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "API Helsinki (Legacy)",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "API Frankfurt",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Amsterdam",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Mailserver Amsterdam (Legacy)",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "DNS Frankfurt (Legacy)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Mailserver Nürnberg",
-          "path": [],
-          "status": "major_outage",
-        },
-      ],
-      "status": "major_outage",
-    },
-    {
-      "childrenTotal": null,
-      "name": "API",
-      "services": [
-        {
-          "name": "Loadbalancer Helsinki (Beta)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Backup Amsterdam",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Loadbalancer Wien",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "Datenbank Wien (Legacy)",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "Kundenportal Falkenstein (v2)",
-          "path": [],
-          "status": "major_outage",
-        },
-        {
-          "name": "DNS Wien",
-          "path": [],
-          "status": "operational",
-        },
-        {
-          "name": "TeamSpeak Falkenstein (v2)",
           "path": [],
           "status": "operational",
         },
@@ -10822,5 +11545,343 @@ exports[`selfhosted-06-no-categories.json the snapshot the renderers were given 
   "groups": [],
   "locales": [],
   "overall": "operational",
+}
+`;
+
+exports[`selfhosted-07-every-state.json COMPACT in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15965202,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "┃ **1/5** Dienste
+┗━ 🔴 **1** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Dienste von corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15965202,
+        "fields": [
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "┃ **1/5** services
+┗━ 🔴 **1** down",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Services from corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`selfhosted-07-every-state.json DETAILED in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15965202,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **TeamSpeak Amsterdam**
+<a:status_down:1344187930499088394> **Gameserver Nürnberg**
+🟠 **Mailserver Wien**
+🔵 **Kundenportal Falkenstein**
+● **Gameserver Falkenstein (Beta)**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Dienste von corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15965202,
+        "fields": [
+          {
+            "inline": false,
+            "name": "Gameserver",
+            "value": "<a:status_up:1344187859921535047> **TeamSpeak Amsterdam**
+<a:status_down:1344187930499088394> **Gameserver Nürnberg**
+🟠 **Mailserver Wien**
+🔵 **Kundenportal Falkenstein**
+● **Gameserver Falkenstein (Beta)**",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Services from corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`selfhosted-07-every-state.json MINIMAL in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "**Gameserver**
+🟢 TeamSpeak Amsterdam
+🔴 Gameserver Nürnberg
+🟠 Mailserver Wien
+🔵 Kundenportal Falkenstein
+● Gameserver Falkenstein (Beta)
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Dienste von corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "**Gameserver**
+🟢 TeamSpeak Amsterdam
+🔴 Gameserver Nürnberg
+🟠 Mailserver Wien
+🔵 Kundenportal Falkenstein
+● Gameserver Falkenstein (Beta)
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Services from corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`selfhosted-07-every-state.json OVERVIEW in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "🟠 Teilweise Beeinträchtigungen
+\`\`\`diff
+- 4 Dienste ausgefallen
++ 1 Dienste Betriebsbereit
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "🔴 1/5 • **1** ausgefallen",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Dienste von corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "🟠 Partial service degradation
+\`\`\`diff
+- 4 services down
++ 1 services Operational
+\`\`\`",
+        "fields": [
+          {
+            "inline": true,
+            "name": "Gameserver",
+            "value": "🔴 1/5 • **1** down",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+          {
+            "inline": true,
+            "name": "​",
+            "value": "​",
+          },
+        ],
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Services from corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`selfhosted-07-every-state.json TREE in de and en 1`] = `
+{
+  "de": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "**🔴 Gameserver**
+    🟢 TeamSpeak Amsterdam
+    🔴 Gameserver Nürnberg
+    🟠 Mailserver Wien
+    🔵 Kundenportal Falkenstein
+    ● Gameserver Falkenstein (Beta)
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Dienste von corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+  "en": [
+    {
+      "embed": {
+        "color": 15965202,
+        "description": "**🔴 Gameserver**
+    🟢 TeamSpeak Amsterdam
+    🔴 Gameserver Nürnberg
+    🟠 Mailserver Wien
+    🔵 Kundenportal Falkenstein
+    ● Gameserver Falkenstein (Beta)
+",
+        "footer": {
+          "icon_url": undefined,
+          "text": "corpus",
+        },
+        "title": "Services from corpus",
+        "url": "https://corpus.example",
+      },
+      "type": "single",
+    },
+  ],
+}
+`;
+
+exports[`selfhosted-07-every-state.json the snapshot the renderers were given 1`] = `
+{
+  "alerts": [],
+  "defaultLocale": "en",
+  "groups": [
+    {
+      "childrenTotal": null,
+      "name": "Gameserver",
+      "services": [
+        {
+          "name": "TeamSpeak Amsterdam",
+          "path": [],
+          "status": "operational",
+        },
+        {
+          "name": "Gameserver Nürnberg",
+          "path": [],
+          "status": "major_outage",
+        },
+        {
+          "name": "Mailserver Wien",
+          "path": [],
+          "status": "degraded",
+        },
+        {
+          "name": "Kundenportal Falkenstein",
+          "path": [],
+          "status": "under_maintenance",
+        },
+        {
+          "name": "Gameserver Falkenstein (Beta)",
+          "path": [],
+          "status": "unknown",
+        },
+      ],
+      "status": "major_outage",
+    },
+  ],
+  "locales": [],
+  "overall": "degraded",
 }
 `;

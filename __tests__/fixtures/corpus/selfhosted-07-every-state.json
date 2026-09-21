@@ -1,0 +1,33 @@
+{
+  "c5d1d4c9-2f86-4b9d-be35-d7976ba956fb": {
+    "id": "c5d1d4c9-2f86-4b9d-be35-d7976ba956fb",
+    "name": "Gameserver",
+    "monitors": [
+      {
+        "id": "85a72992-6081-4a32-8787-5257f4d8863c",
+        "name": "TeamSpeak Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "ec47864f-2894-42c8-8f1d-f97d52e2e2af",
+        "name": "Gameserver Nürnberg",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "fcb61722-106c-454b-b716-0414d8098219",
+        "name": "Mailserver Wien",
+        "state": "DEGRADED"
+      },
+      {
+        "id": "34095b03-6845-42d0-9f34-0a89068a0072",
+        "name": "Kundenportal Falkenstein",
+        "state": "MAINTENANCE"
+      },
+      {
+        "id": "4b0ce248-50dc-479c-afbd-804afd8fa95d",
+        "name": "Gameserver Falkenstein (Beta)",
+        "state": "PENDING"
+      }
+    ]
+  }
+}
