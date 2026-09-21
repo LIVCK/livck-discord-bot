@@ -179,10 +179,10 @@ e2e('an incident from first report to resolution', () => {
         expect(all[0].kind).toBe('incident');
 
         const message = await fetchFresh(all[0].messageId);
-        // The parent carries the state, like every reply below it — so the top of a thread
-        // answers "where does this stand" without scrolling, and an alert that ends without a
-        // further update (a cancelled maintenance) ends visibly rather than silently.
-        expect(message.embeds[0].title).toBe('Störung er1.cgn1.as200482.net — Identifiziert');
+        // Plain title, state in the text — the Cloud's own feed builds its parent item the
+        // same way, and the suffix belongs to the updates below.
+        expect(message.embeds[0].title).toBe('Störung er1.cgn1.as200482.net');
+        expect(message.embeds[0].description).toContain('Status:');
         expect(message.reference).toBeNull(); // it is the parent
     }, 180000);
 
@@ -232,13 +232,15 @@ e2e('an incident from first report to resolution', () => {
         expect(reply.embeds[0].description).toContain('behoben');
     }, 180000);
 
-    test('the parent has followed the incident all the way to resolved', async () => {
-        // It began as "Identifiziert" and each transition edited it — one edit per change, and
-        // none in between, because the content hash moves exactly when the state does.
+    test('the announcement has followed the incident all the way to resolved', async () => {
+        // It began at "Identifiziert" and each transition edited its text — one edit per
+        // change and none in between, because the content hash moves exactly when the state
+        // does. An alert that ends without a further update ends visibly for the same reason.
         const all = await rows();
         const parent = await fetchFresh(all[0].messageId);
 
-        expect(parent.embeds[0].title).toBe('Störung er1.cgn1.as200482.net — Behoben');
+        expect(parent.embeds[0].title).toBe('Störung er1.cgn1.as200482.net');
+        expect(parent.embeds[0].description).toContain('Behoben');
     }, 180000);
 
     test('the thread reads in the order it happened', async () => {

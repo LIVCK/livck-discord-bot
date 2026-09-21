@@ -42,48 +42,86 @@ const alertColor = (alert) => {
 }
 
 /**
- * Headline for the alert's own message — the one at the top of the thread.
+ * The word for a state, in the page's own wording.
  *
- * IT CARRIES THE CURRENT STATE, like every reply below it does.
+ * Taken from the same i18n keys the Cloud's own feed reads, so the bot never phrases a state
+ * differently from the page it reports on. An unrecognised state has no word and returns null
+ * rather than printing its key.
+ */
+const stateLabel = (kind, state) => {
+    if (!state) return null;
+
+    const key = `messages.alerts.state.${kind}.${state}`;
+    const label = translation.trans(key);
+
+    return label === key ? null : label;
+};
+
+/**
+ * Headline for one message in a thread.
  *
- * Without that, an alert that ENDS without a further update ends invisibly. The clearest case
- * is a cancelled maintenance: the live payload only ever contains `in_progress` and
- * `scheduled` windows, so a cancelled one simply disappears, the close-out recovers it with
- * `state: 'cancelled'` — and nothing at all happened. The announcement went on standing in the
- * channel as though the window were still coming, and customers planned around downtime that
- * had been called off. The bot even had the word for it, "Abgesagt", with no way to ever show
- * it. Measured before the fix: announce, cancel, and the channel receives nothing.
+ * THE SUFFIX BELONGS TO UPDATES, NOT TO THE ANNOUNCEMENT. That is how the Cloud's own feed
+ * builds it (`server/utils/feed.ts`): the parent item carries the plain title and puts the
+ * status in its summary, while every later item — start, progress, completion, cancellation —
+ * is titled `${title} — ${statusLabel}`. Following that keeps a Discord thread and an RSS
+ * reader saying the same thing about the same event.
  *
- * Carrying the state also means the top of a thread always answers "where does this stand"
- * without scrolling, and the cost is one edit per transition — the content hash changes
- * exactly when the state does, and not otherwise.
+ * A self-hosted update writes its own headline and keeps it.
  */
 const headlineFor = (item, alert, snapshot, locale) => {
-    // An update with a headline of its own keeps it (self-hosted writes one).
-    if (item.title && item !== alert) {
+    const isParent = item === alert;
+
+    if (item.title && !isParent) {
         return resolveText(item.title, locale, snapshot.defaultLocale);
     }
 
     const base = resolveText(alert.title, locale, snapshot.defaultLocale);
-    const state = item === alert ? alert.state : item.state;
-    if (!state) return base;
+    if (isParent) return base;
 
-    const key = `messages.alerts.state.${alert.kind}.${state}`;
-    const label = translation.trans(key);
-
-    // An unknown state would print its key; the plain title is better than that.
-    return label === key ? base : `${base} — ${label}`;
+    const label = stateLabel(alert.kind, item.state);
+    return label ? `${base} — ${label}` : base;
 };
 
 /**
  * @param {object} item - an alert or one of its updates
  * @param {object} alert - the alert the item belongs to (for url and body format)
  */
+/**
+ * The announcement's text, with the alert's current state in front of it.
+ *
+ * The state has to be SOMEWHERE on the parent, or an alert that ends without a further update
+ * ends invisibly. The clearest case is a cancelled maintenance: the live payload carries only
+ * `in_progress` and `scheduled` windows, so a cancelled one disappears from it exactly as a
+ * resolved incident does, the close-out recovers it with `state: 'cancelled'` — and an
+ * operator usually cancels without writing an update, so there is nothing to deliver as a
+ * reply. Measured before this existed: announce a window, cancel it, and the channel received
+ * nothing at all. The announcement stood as though the window were still coming, while the bot
+ * held the word "Abgesagt" with no path that could ever show it.
+ *
+ * In the TEXT rather than the title, because that is where the Cloud's own feed puts it — its
+ * parent item is `title` plus a summary beginning `Status: …`. Putting it in the title instead
+ * would have made a Discord thread and an RSS reader describe the same event differently.
+ *
+ * It also moves the content hash exactly when the state does, so the announcement is edited
+ * once per transition and not otherwise.
+ */
+const alertBody = (item, alert, snapshot, locale) => {
+    const text = bodyToDiscord(resolveText(item.body, locale, snapshot.defaultLocale), alert.format);
+
+    if (item !== alert) return text;
+
+    const label = stateLabel(alert.kind, alert.state);
+    if (!label) return text;
+
+    const line = `**${translation.trans('messages.alerts.status_label')}:** ${label}`;
+    return text ? `${line}\n\n${text}` : line;
+};
+
 const buildAlertEmbed = (item, alert, snapshot, locale, footer, timestamp) => new EmbedBuilder()
     .setColor(alertColor(alert))
     .setTitle(truncate(headlineFor(item, alert, snapshot, locale), 256))
     // truncateMarkdown, not truncate: a plain cut leaves emphasis and code fences open.
-    .setDescription(truncateMarkdown(bodyToDiscord(resolveText(item.body, locale, snapshot.defaultLocale), alert.format), BODY_MAX))
+    .setDescription(truncateMarkdown(alertBody(item, alert, snapshot, locale), BODY_MAX))
     .setURL(alert.url)
     .setTimestamp(new Date(timestamp))
     .setFooter({ text: footer })

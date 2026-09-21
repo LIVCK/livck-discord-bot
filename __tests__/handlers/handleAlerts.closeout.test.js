@@ -543,17 +543,27 @@ describe('an alert that ends without a further update', () => {
                 fetch: async (id) => ({
                     id,
                     send: async () => ({ id: 'x' }),
-                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                    messages: {
+                        edit: async (_i, p) => {
+                            const e = p.embeds[0].toJSON();
+                            edited.push(`${e.title} | ${e.description}`);
+                            return {};
+                        },
+                    },
                 }),
             },
         });
 
-        expect(edited).toEqual(['Wartung Gameserver — Abgesagt']);
+        // The title stays plain and the state goes in the text — the Cloud's own feed builds
+        // its parent item the same way, so a Discord thread and an RSS reader say the same
+        // thing about the same event.
+        expect(edited).toHaveLength(1);
+        expect(edited[0]).toMatch(/^Wartung Gameserver \| \*\*Status:\*\* Abgesagt/);
+        expect(edited[0]).toContain('Am Freitag warten wir.');
     });
 
-    test('a resolved incident says so at the top of its thread too', async () => {
-        // The same property, for the case that does have replies: the top of a thread answers
-        // "where does this stand" without scrolling through it.
+    test('a resolved incident says so on the announcement too', async () => {
+        // The same property, for the case that does have replies.
         const edited = [];
         db.messages.push(trackedMessage('inc-1'));
         provider.closed['inc-1'] = incident({
@@ -566,12 +576,19 @@ describe('an alert that ends without a further update', () => {
                 fetch: async (id) => ({
                     id,
                     send: async (p) => { discord.sent.push(p); return { id: 'r' }; },
-                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                    messages: {
+                        edit: async (_i, p) => {
+                            const e = p.embeds[0].toJSON();
+                            edited.push(`${e.title} | ${e.description}`);
+                            return {};
+                        },
+                    },
                 }),
             },
         });
 
-        expect(edited).toEqual(['Störung — Behoben']);
+        // Announcement: plain title, state in the text. Reply: the suffix, as the feed does it.
+        expect(edited[0]).toMatch(/^Störung \| \*\*Status:\*\* Behoben/);
         expect(seen()).toEqual(['Störung — Behoben']);
     });
 

@@ -232,6 +232,7 @@
     },
     "alerts": {
       "view_button": "Ansehen",
+      "status_label": "Status",
       "update_button": "Zum Update",
       "state": {
         "incident": {
