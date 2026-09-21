@@ -179,7 +179,10 @@ e2e('an incident from first report to resolution', () => {
         expect(all[0].kind).toBe('incident');
 
         const message = await fetchFresh(all[0].messageId);
-        expect(message.embeds[0].title).toBe('Störung er1.cgn1.as200482.net');
+        // The parent carries the state, like every reply below it — so the top of a thread
+        // answers "where does this stand" without scrolling, and an alert that ends without a
+        // further update (a cancelled maintenance) ends visibly rather than silently.
+        expect(message.embeds[0].title).toBe('Störung er1.cgn1.as200482.net — Identifiziert');
         expect(message.reference).toBeNull(); // it is the parent
     }, 180000);
 
@@ -227,6 +230,15 @@ e2e('an incident from first report to resolution', () => {
         const reply = await fetchFresh(all[3].messageId);
         expect(reply.embeds[0].title).toBe('Störung er1.cgn1.as200482.net — Behoben');
         expect(reply.embeds[0].description).toContain('behoben');
+    }, 180000);
+
+    test('the parent has followed the incident all the way to resolved', async () => {
+        // It began as "Identifiziert" and each transition edited it — one edit per change, and
+        // none in between, because the content hash moves exactly when the state does.
+        const all = await rows();
+        const parent = await fetchFresh(all[0].messageId);
+
+        expect(parent.embeds[0].title).toBe('Störung er1.cgn1.as200482.net — Behoben');
     }, 180000);
 
     test('the thread reads in the order it happened', async () => {

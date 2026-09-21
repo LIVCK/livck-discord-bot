@@ -42,43 +42,51 @@ const alertColor = (alert) => {
 }
 
 /**
+ * Headline for the alert's own message — the one at the top of the thread.
+ *
+ * IT CARRIES THE CURRENT STATE, like every reply below it does.
+ *
+ * Without that, an alert that ENDS without a further update ends invisibly. The clearest case
+ * is a cancelled maintenance: the live payload only ever contains `in_progress` and
+ * `scheduled` windows, so a cancelled one simply disappears, the close-out recovers it with
+ * `state: 'cancelled'` — and nothing at all happened. The announcement went on standing in the
+ * channel as though the window were still coming, and customers planned around downtime that
+ * had been called off. The bot even had the word for it, "Abgesagt", with no way to ever show
+ * it. Measured before the fix: announce, cancel, and the channel receives nothing.
+ *
+ * Carrying the state also means the top of a thread always answers "where does this stand"
+ * without scrolling, and the cost is one edit per transition — the content hash changes
+ * exactly when the state does, and not otherwise.
+ */
+const headlineFor = (item, alert, snapshot, locale) => {
+    // An update with a headline of its own keeps it (self-hosted writes one).
+    if (item.title && item !== alert) {
+        return resolveText(item.title, locale, snapshot.defaultLocale);
+    }
+
+    const base = resolveText(alert.title, locale, snapshot.defaultLocale);
+    const state = item === alert ? alert.state : item.state;
+    if (!state) return base;
+
+    const key = `messages.alerts.state.${alert.kind}.${state}`;
+    const label = translation.trans(key);
+
+    // An unknown state would print its key; the plain title is better than that.
+    return label === key ? base : `${base} — ${label}`;
+};
+
+/**
  * @param {object} item - an alert or one of its updates
  * @param {object} alert - the alert the item belongs to (for url and body format)
  */
 const buildAlertEmbed = (item, alert, snapshot, locale, footer, timestamp) => new EmbedBuilder()
     .setColor(alertColor(alert))
-    .setTitle(truncate(resolveText(item.title, locale, snapshot.defaultLocale), 256))
+    .setTitle(truncate(headlineFor(item, alert, snapshot, locale), 256))
     // truncateMarkdown, not truncate: a plain cut leaves emphasis and code fences open.
     .setDescription(truncateMarkdown(bodyToDiscord(resolveText(item.body, locale, snapshot.defaultLocale), alert.format), BODY_MAX))
     .setURL(alert.url)
     .setTimestamp(new Date(timestamp))
     .setFooter({ text: footer })
-
-/**
- * Headline for one update inside a thread.
- *
- * A self-hosted sub-alert carries its own headline ("Hotline Störung behoben") and keeps it.
- * A Cloud update has none — only a state — so without this every message in a thread would
- * repeat the incident's title and a reader would have to open each one to find the resolution.
- *
- * The suffix mirrors the Cloud's own RSS feed (`${title} — ${statusLabel}` in feed.ts) using
- * the same wording as its i18n files, so the bot never phrases a state differently from the
- * page it reports on. A notice has no state and falls through unchanged.
- */
-const updateTitle = (update, alert, snapshot, locale) => {
-    if (update.title) {
-        return resolveText(update.title, locale, snapshot.defaultLocale);
-    }
-
-    const base = resolveText(alert.title, locale, snapshot.defaultLocale);
-    if (!update.state) return base;
-
-    const key = `messages.alerts.state.${alert.kind}.${update.state}`;
-    const label = translation.trans(key);
-
-    // An unknown state prints its key; better to keep the plain title than to show that.
-    return label === key ? base : `${base} — ${label}`;
-};
 
 const linkRow = (link, label) => new ActionRowBuilder().addComponents(
     new ButtonBuilder().setLabel(label).setStyle(ButtonStyle.Link).setURL(link)
@@ -150,7 +158,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
             record,
             payload: {
                 embeds: [buildAlertEmbed(
-                    { title: updateTitle(update, alert, snapshot, locale), body: update.body },
+                    { title: headlineFor(update, alert, snapshot, locale), body: update.body },
                     alert, snapshot, locale, footer, update.createdAt
                 )],
                 components: [linkRow(alert.url, updateLabel)],

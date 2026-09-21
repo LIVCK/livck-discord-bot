@@ -498,6 +498,130 @@ describe('thread headlines', () => {
     });
 });
 
+describe('an alert that ends without a further update', () => {
+    /** What a subscription sees after a cycle. */
+    const seen = () => discord.sent.map((p) => p.embeds[0].toJSON().title);
+
+    test('a cancelled maintenance is announced as cancelled', async () => {
+        // The live payload only ever carries `in_progress` and `scheduled` windows, so a
+        // cancelled one simply disappears — exactly like a resolved incident. The close-out
+        // recovers it with `state: 'cancelled'`, and because an operator usually cancels
+        // WITHOUT writing an update there is nothing to deliver as a reply. Before the parent
+        // carried its state, that meant nothing happened at all: the announcement stood in the
+        // channel as though the window were still coming, and the word "Abgesagt" existed in
+        // the bot with no way to ever be shown.
+        db.messages.push(trackedMessage('maint-1'));
+
+        provider.closed['maint-1'] = makeAlert({
+            id: 'maint-1', kind: ALERT_KIND.MAINTENANCE,
+            url: 'https://status.example.com/maintenances/maint-1',
+            title: { de: 'Wartung Gameserver' }, body: { de: 'Am Freitag warten wir.' },
+            format: BODY_FORMAT.MARKDOWN, state: 'cancelled',
+            startedAt: hoursAgo(2), window: { start: hoursAgo(2), end: null }, updates: [],
+        });
+
+        await handleAlerts(7, makeClient());
+
+        // Edited, not posted: the announcement itself now says what happened to it.
+        expect(discord.edits).toBe(1);
+        expect(discord.sent).toHaveLength(0);
+    });
+
+    test('and the edit is what a reader actually sees', async () => {
+        const edited = [];
+        db.messages.push(trackedMessage('maint-1'));
+        provider.closed['maint-1'] = makeAlert({
+            id: 'maint-1', kind: ALERT_KIND.MAINTENANCE,
+            url: 'https://status.example.com/maintenances/maint-1',
+            title: { de: 'Wartung Gameserver' }, body: { de: 'Am Freitag warten wir.' },
+            format: BODY_FORMAT.MARKDOWN, state: 'cancelled',
+            startedAt: hoursAgo(2), window: { start: hoursAgo(2), end: null }, updates: [],
+        });
+
+        await handleAlerts(7, {
+            channels: {
+                fetch: async (id) => ({
+                    id,
+                    send: async () => ({ id: 'x' }),
+                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                }),
+            },
+        });
+
+        expect(edited).toEqual(['Wartung Gameserver — Abgesagt']);
+    });
+
+    test('a resolved incident says so at the top of its thread too', async () => {
+        // The same property, for the case that does have replies: the top of a thread answers
+        // "where does this stand" without scrolling through it.
+        const edited = [];
+        db.messages.push(trackedMessage('inc-1'));
+        provider.closed['inc-1'] = incident({
+            state: 'resolved',
+            updates: [makeUpdate({ id: 'u-final', state: 'resolved', body: { de: 'Behoben.' }, createdAt: hoursAgo(1) })],
+        });
+
+        await handleAlerts(7, {
+            channels: {
+                fetch: async (id) => ({
+                    id,
+                    send: async (p) => { discord.sent.push(p); return { id: 'r' }; },
+                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                }),
+            },
+        });
+
+        expect(edited).toEqual(['Störung — Behoben']);
+        expect(seen()).toEqual(['Störung — Behoben']);
+    });
+
+    test('a notice has no state and keeps its plain title', async () => {
+        // A notice must never look like something that can be resolved.
+        const edited = [];
+        db.messages.push(trackedMessage('note-1'));
+        provider.closed['note-1'] = makeAlert({
+            id: 'note-1', kind: ALERT_KIND.NOTICE,
+            url: 'https://status.example.com/incidents/note-1',
+            title: { de: 'Hinweis zu Phishing' }, body: { de: 'Achtung.' },
+            format: BODY_FORMAT.MARKDOWN, severity: null, state: null,
+            startedAt: hoursAgo(2), updates: [],
+        });
+
+        await handleAlerts(7, {
+            channels: {
+                fetch: async (id) => ({
+                    id, send: async () => ({ id: 'x' }),
+                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                }),
+            },
+        });
+
+        for (const title of edited) expect(title).toBe('Hinweis zu Phishing');
+    });
+
+    test('an unknown state leaves the plain title rather than printing a key', async () => {
+        const edited = [];
+        db.messages.push(trackedMessage('maint-1'));
+        provider.closed['maint-1'] = makeAlert({
+            id: 'maint-1', kind: ALERT_KIND.MAINTENANCE,
+            url: 'https://status.example.com/maintenances/maint-1',
+            title: { de: 'Wartung' }, body: { de: 'x' }, format: BODY_FORMAT.MARKDOWN,
+            state: 'brand_new_state', startedAt: hoursAgo(2), updates: [],
+        });
+
+        await handleAlerts(7, {
+            channels: {
+                fetch: async (id) => ({
+                    id, send: async () => ({ id: 'x' }),
+                    messages: { edit: async (_i, p) => { edited.push(p.embeds[0].toJSON().title); return {}; } },
+                }),
+            },
+        });
+
+        for (const title of edited) expect(title).toBe('Wartung');
+    });
+});
+
 describe('idempotence', () => {
     test('a second cycle adds nothing', async () => {
         // The closing reply goes through the same syncMessage path as everything else, so its

@@ -20,7 +20,10 @@ import { KNOWN_STATUSES, toSnapshot as cloudSnapshot } from '../../providers/clo
 import { toSnapshot as selfHostedSnapshot, mapServiceState } from '../../providers/selfHosted.js';
 import Statuspage from '../../services/statuspage.js';
 import { STATUS } from '../../dto/statuspage.js';
-import { CLOUD_STATUSES, SELF_HOSTED_STATES } from '../fixtures/payloadFactory.js';
+import { CLOUD_STATUSES, SELF_HOSTED_STATES, INCIDENT_STATES, MAINTENANCE_STATES }
+    from '../fixtures/payloadFactory.js';
+import de from '../../lang/de.json' with { type: 'json' };
+import en from '../../lang/en.json' with { type: 'json' };
 import { getLayoutRenderer } from '../../messages/layoutRenderers.js';
 import { getStatusDot } from '../../config/emojis.js';
 
@@ -55,6 +58,36 @@ describe('the factory speaks the adapter language', () => {
         // must land on `unknown` rather than be assumed healthy.
         expect(mapped.sort()).toEqual(['AVAILABLE', 'DEGRADED', 'MAINTENANCE', 'UNAVAILABLE']);
         expect(unmapped.length).toBeGreaterThan(0);
+    });
+});
+
+describe('the bot has a word for every alert state', () => {
+    // The same drift as the component statuses, one layer up: a hand-typed list of states in
+    // the factory, and a hand-typed set of labels in the language files, with nothing
+    // comparing them. `cancelled` was in the enum and in the labels and in no payload, so the
+    // only state a maintenance can end in without a further update was never exercised.
+    const LABELS = de.messages.alerts.state;
+
+    test.each(INCIDENT_STATES)('an incident that is %s has a label', (state) => {
+        expect(LABELS.incident?.[state]).toBeTruthy();
+    });
+
+    test.each(MAINTENANCE_STATES)('a maintenance that is %s has a label', (state) => {
+        expect(LABELS.maintenance?.[state]).toBeTruthy();
+    });
+
+    test('and the factory offers every state the labels cover', () => {
+        // Either side growing without the other is how `cancelled` came to exist in the bot
+        // with no way of ever being shown.
+        expect([...MAINTENANCE_STATES].sort()).toEqual(Object.keys(LABELS.maintenance).sort());
+        expect([...INCIDENT_STATES].sort()).toEqual(Object.keys(LABELS.incident).sort());
+    });
+
+    test('both languages have the same alert-state labels', () => {
+        for (const kind of Object.keys(LABELS)) {
+            expect(Object.keys(en.messages.alerts.state[kind] ?? {}).sort())
+                .toEqual(Object.keys(LABELS[kind]).sort());
+        }
     });
 });
 

@@ -36,7 +36,14 @@ export const SELF_HOSTED_STATES = ['AVAILABLE', 'UNAVAILABLE', 'DEGRADED', 'MAIN
 
 export const INCIDENT_STATES = ['investigating', 'identified', 'monitoring', 'resolved'];
 export const INCIDENT_SEVERITIES = ['minor', 'major', 'critical'];
-export const MAINTENANCE_STATES = ['scheduled', 'in_progress', 'completed'];
+/**
+ * Every state `MaintenanceStatus` has, `cancelled` included.
+ *
+ * It was missing, and it is the one that only reaches the bot through the close-out: the live
+ * payload carries `in_progress` and `scheduled` windows only, so a cancelled one disappears
+ * from it exactly as a resolved incident does.
+ */
+export const MAINTENANCE_STATES = ['scheduled', 'in_progress', 'completed', 'cancelled'];
 
 /** Name shapes that a real status page produces, including the awkward ones. */
 export const NAME_SHAPES = {
