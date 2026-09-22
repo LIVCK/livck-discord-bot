@@ -1,0 +1,330 @@
+{
+  "bae9ba2d-e406-4f4e-8f2f-df0933abe8f9": {
+    "id": "bae9ba2d-e406-4f4e-8f2f-df0933abe8f9",
+    "name": "Mailserver",
+    "monitors": [
+      {
+        "id": "dd9a6f59-eb39-4d37-b6d0-d98de245d0cd",
+        "name": "Objektspeicher Frankfurt",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "9a41e9e7-402f-4f54-8981-b763ae1d994a",
+        "name": "Kundenportal Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "e128202d-3a93-4575-a948-4d7691e1a913",
+        "name": "Objektspeicher Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "bbec8289-0b1d-40fd-9377-4ba226b70260",
+        "name": "Webhosting Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "7d3a5fd5-6d89-4430-8529-a64eb47d06b4",
+        "name": "Loadbalancer Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "8a777347-1f3d-4d92-baa0-a7f7d470b222",
+        "name": "Loadbalancer Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "f4944d1c-4973-47da-be8a-296d2c567093",
+        "name": "Gameserver Falkenstein",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "61ca6f12-4bba-4844-949f-0f734d82fc5b": {
+    "id": "61ca6f12-4bba-4844-949f-0f734d82fc5b",
+    "name": "Objektspeicher",
+    "monitors": [
+      {
+        "id": "864d0cc4-e1b7-40bb-9300-f13218ccd7d5",
+        "name": "DNS Helsinki (Legacy)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "605213d1-2223-4109-b95b-33506f6bcf0b",
+        "name": "Objektspeicher Amsterdam",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "3390ed51-414a-4966-8f3e-0fd30d48bd7b",
+        "name": "Backup Wien (Beta)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "21c0c803-e62a-4e84-b1aa-aae66622f3a9",
+        "name": "TeamSpeak Nürnberg",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "9d2c6cca-1c02-4827-81d4-ada83d74aed6",
+        "name": "DNS Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "afff19c6-355b-4742-93fa-ded364308e03",
+        "name": "API Wien",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "b800c6b4-450d-45a4-8ad8-2772e6702b77",
+        "name": "Webhosting Frankfurt",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "9f6628fc-a045-4963-b744-681d5aab3503": {
+    "id": "9f6628fc-a045-4963-b744-681d5aab3503",
+    "name": "API",
+    "monitors": [
+      {
+        "id": "e5bae4da-42a7-4550-afa3-b61e933ee7bf",
+        "name": "Loadbalancer Nürnberg (Legacy)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "a34b9ee0-f958-4363-b9a0-9dc025831c16",
+        "name": "Rootserver Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "5deadb1d-0da9-4407-9b37-789e56589e31",
+        "name": "Kundenportal Helsinki (v2)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "eb1b1b1e-ae51-4ef8-baeb-8189d10cf061",
+        "name": "Rootserver Nürnberg",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "8f6132a2-29c6-4733-baa7-8ac865dc27d3",
+        "name": "Gameserver Frankfurt (Beta)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "fb3efeda-a221-4206-968f-1a9a6c975976",
+        "name": "DNS Frankfurt",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "9451085a-79dc-434d-9bae-d8987e296b36",
+        "name": "Objektspeicher Helsinki (Legacy)",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "34dec3fc-9d05-4100-acd9-60ea2729172f": {
+    "id": "34dec3fc-9d05-4100-acd9-60ea2729172f",
+    "name": "TeamSpeak",
+    "monitors": [
+      {
+        "id": "84be04b5-238d-4a66-b609-b6affa486ebe",
+        "name": "Webhosting Wien",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "cedca683-50fc-4b41-99c3-e1a8aafd9661",
+        "name": "API Falkenstein (v2)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "93827036-29b2-45fd-834e-cc9de8f8d951",
+        "name": "Rootserver Wien (Legacy)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "c32f04e4-be27-4690-aa45-d6dbe7379843",
+        "name": "Rootserver Helsinki",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "668ad93a-51ad-488d-8c2e-2300a8fb448f",
+        "name": "API Helsinki",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "d0fa80e6-5c72-4525-b294-f3e3e5ad524c",
+        "name": "Webhosting Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "54763ea0-3557-4cfc-8380-fb239c599420",
+        "name": "Loadbalancer Amsterdam",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "a2653c5c-639b-474c-adcc-c55e9bfed328": {
+    "id": "a2653c5c-639b-474c-adcc-c55e9bfed328",
+    "name": "Gameserver",
+    "monitors": [
+      {
+        "id": "fbf915c9-e2c2-4f91-9e1d-f3a90d15ddc1",
+        "name": "Objektspeicher Frankfurt",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "1c3b96ab-0a98-46f4-906c-f5f8cd6f25c6",
+        "name": "Loadbalancer Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "1ca2447a-e201-4a3f-92be-90d7d0dd6674",
+        "name": "DNS Nürnberg",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "07c611df-4969-468b-a1d5-fbdb23e8cd12",
+        "name": "TeamSpeak Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "2888894a-3f08-4ad9-8f73-d5172f7d54b7",
+        "name": "Kundenportal Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "d79376d2-f193-42e4-ac52-6ea4c9784e8a",
+        "name": "Rootserver Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "12384b57-f24b-48a3-987f-68c2c4c87b48",
+        "name": "Webhosting Nürnberg",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "9f87cfac-4cb5-4726-8140-61fa366118b4": {
+    "id": "9f87cfac-4cb5-4726-8140-61fa366118b4",
+    "name": "API",
+    "monitors": [
+      {
+        "id": "99b0403c-3d00-492e-8f1d-53dfd43e74aa",
+        "name": "Datenbank Wien (Legacy)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "288e47aa-a6e3-4601-beb9-5586e3f6e64e",
+        "name": "Webhosting Nürnberg",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "262df2a7-cc08-40a4-b61a-33389ccfa059",
+        "name": "Backup Nürnberg",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "4079e289-d681-4d80-9ca6-0a6afe68b45b",
+        "name": "Backup Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "71625c71-a868-4663-a1ce-f9728fc36daf",
+        "name": "Objektspeicher Helsinki",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "4a7b4d82-2b15-4aaf-9c81-121a24eb452e",
+        "name": "Backup Helsinki (v2)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "392689cd-43e0-46e6-a089-f83112d486d1",
+        "name": "API Nürnberg",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "d29ac185-9268-4450-b3bf-3514aac89550": {
+    "id": "d29ac185-9268-4450-b3bf-3514aac89550",
+    "name": "Datenbank",
+    "monitors": [
+      {
+        "id": "ee83d126-9ca1-4976-8dc4-9cfa9b115d6b",
+        "name": "API Amsterdam",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "aa5a23fc-eb3a-47e6-84c5-ff5f4127fdb3",
+        "name": "Gameserver Amsterdam (v2)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "c94c032e-34dc-4820-b110-f454c0248873",
+        "name": "Objektspeicher Nürnberg",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "34cbdaf1-980e-4e90-8b41-12920f31bf63",
+        "name": "Mailserver Nürnberg (v2)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "68260c1a-ae8f-45d7-b668-f5bc31fc37c0",
+        "name": "Gameserver Frankfurt",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "1aa12b1d-bc08-4d2f-a9a2-c833a713be2e",
+        "name": "TeamSpeak Falkenstein",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "ecd8bed9-42e7-4853-89bd-18c9c2c60d6e",
+        "name": "API Frankfurt (v2)",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  },
+  "51177058-58a6-4258-bdcf-04ae3e667c92": {
+    "id": "51177058-58a6-4258-bdcf-04ae3e667c92",
+    "name": "Mailserver",
+    "monitors": [
+      {
+        "id": "ab9478b7-f357-41a1-925b-937766a3028f",
+        "name": "Webhosting Wien (Legacy)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "6f222e86-0b56-47ac-8666-7541d1a8a2ce",
+        "name": "Datenbank Helsinki",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "3ad663b7-80a3-42d3-b4de-2fb69bdaf0bb",
+        "name": "TeamSpeak Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "270f588d-5b20-4da7-92c6-077e7143dc39",
+        "name": "API Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "ae35090c-d9fa-4a27-824d-423f71e101e9",
+        "name": "Webhosting Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "bf0cadb2-e297-45ee-afe8-b210bad74a58",
+        "name": "Webhosting Nürnberg (Beta)",
+        "state": "UNAVAILABLE"
+      },
+      {
+        "id": "4026e1a2-8a00-47c4-a13b-2c7dbd01e4ee",
+        "name": "Rootserver Helsinki",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

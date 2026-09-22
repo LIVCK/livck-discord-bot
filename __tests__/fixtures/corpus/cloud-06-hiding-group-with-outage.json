@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "id": "R4SUuULiYwP7HAEmdVqYt",
+    "name": {
+      "de": "Hirschberg, Ewald und Borrmann Status",
+      "en": "Bienias, Lufft und Daum Status"
+    },
+    "slug": "schumacher-kg",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "WSA04Ri0tUrZxdAy32iul",
+      "name": {
+        "de": "Kundenportal",
+        "en": "Customer portal"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": true,
+      "default_open": true,
+      "children": [
+        {
+          "id": "eucQcGlm2IRdI8VbxjeIa",
+          "name": {
+            "de": "Webhosting Helsinki (Beta)",
+            "en": "Web hosting Helsinki (Beta)"
+          },
+          "description": null,
+          "status": "major_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ],
+      "children_total": 56,
+      "children_hidden": 59
+    }
+  ],
+  "active_incidents": [
+    {
+      "id": "agiTFFXM7ekBNb1Jf3KyY",
+      "title": {
+        "de": "Störung: Backup",
+        "en": "Outage: Object storage"
+      },
+      "severity": "critical",
+      "status": "investigating",
+      "started_at": "2026-09-11T19:53:21.734Z",
+      "resolved_at": null,
+      "updates": [
+        {
+          "id": "gEO9Qfz3cbiOAdhnnkHOH",
+          "status": "investigating",
+          "message": {
+            "de": "Velit consequuntur ipsam saepe. Illo explicabo placeat iste.",
+            "en": "Excepturi officia quod modi consectetur soluta accusantium. Animi commodi quibusdam quae ex quidem."
+          },
+          "created_at": "2026-09-11T20:13:21.734Z"
+        }
+      ],
+      "affected_components": [],
+      "affected_services": [],
+      "attachments": [],
+      "postmortem": null
+    }
+  ],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

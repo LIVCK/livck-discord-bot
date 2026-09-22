@@ -3,8 +3,109 @@ import { Op } from "sequelize";
 import cache from "../../database/redis.js";
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
-import LIVCK from "../../api/livck.js";
+import LIVCKCloud from "../../api/livckCloud.js";
+import { detectSource } from "../../api/detect.js";
+import { SOURCE } from "../../dto/statuspage.js";
+import { classifyError } from "../../util/errors.js";
+import { DISCORD_LIMITS, joinWithinLimit, truncate } from "../../util/discordLimits.js";
+import logger from "../../util/logger.js";
 import translation from "../../util/Translation.js";
+
+/**
+ * Resolve a custom link, but only inside the guild that asked for it.
+ *
+ * Component and modal interactions carry their target's row id in the `custom_id`, which is a
+ * value the bot put there — not a claim the handler may take at face value. Every lookup driven
+ * by such an id is scoped to `interaction.guildId`, so a subscription, link or role mention can
+ * only ever be read or destroyed from the guild that owns it. The slash-command paths in this
+ * file already did this; the component paths did not.
+ */
+/**
+ * The languages a subscription can actually be delivered in.
+ *
+ * Built from the locale files that are LOADED, not from a hardcoded pair. Crowdin translates
+ * the whole of `lang/en.json` — including `messages.*`, which is what the status embeds and
+ * the incident threads are written from — into thirteen languages, and the sync workflow
+ * commits them into `lang/`. Every layer below this is already locale-agnostic: the column is
+ * a string, the renderer takes the locale as an argument, the fallback covers whatever a
+ * community translation has not reached yet.
+ *
+ * Only these select menus were not: they offered German and English and nothing else, so the
+ * other eleven languages could be translated, shipped and never chosen by anybody. With just
+ * `de` and `en` present — which is the state of this branch — the menu is byte-identical to
+ * what it was.
+ */
+const LOCALE_LABELS = {
+    de: '🇩🇪 Deutsch',
+    en: '🇬🇧 English',
+    fr: '🇫🇷 Français',
+    es: '🇪🇸 Español',
+    pt: '🇵🇹 Português',
+    nl: '🇳🇱 Nederlands',
+    it: '🇮🇹 Italiano',
+    pl: '🇵🇱 Polski',
+    tr: '🇹🇷 Türkçe',
+    ru: '🇷🇺 Русский',
+    ja: '🇯🇵 日本語',
+    ko: '🇰🇷 한국어',
+    zh: '🇨🇳 中文',
+};
+
+/** Discord allows 25 options in a select menu; thirteen languages sit well inside that. */
+const localeChoices = (current = null) => translation.getAvailableLocales()
+    .sort((a, b) => (a === 'de' ? -1 : b === 'de' ? 1 : a.localeCompare(b)))
+    .map((locale) => ({
+        label: LOCALE_LABELS[locale] || locale.toUpperCase(),
+        value: locale,
+        default: current === locale,
+    }));
+
+/** How much of a link's URL and label the management screen previews. */
+const LINK_URL_PREVIEW = 60;
+const LINK_LABEL_PREVIEW = 60;
+/** Room kept free for the heading the list is appended to. */
+const LINK_LIST_HEADROOM = 400;
+
+/**
+ * May this member change anything?
+ *
+ * `default_member_permissions` is a DEFAULT, not a lock: a server admin can hand `/livck` to
+ * any role under Server Settings → Integrations, and that is exactly why `execute()` re-checks
+ * ManageGuild for the write subcommands instead of trusting Discord's gate.
+ *
+ * The component and modal paths did not, and they are where the destructive actions actually
+ * live — unsubscribe, delete a subscription, remove a link or a role mention, replace a
+ * customer's API token. Anyone who could reach those buttons could press them. Guarding the
+ * whole handler rather than the individual ids means a button added later is covered by
+ * default instead of by remembering.
+ *
+ * `memberPermissions` first: it accounts for channel overwrites, and it is populated for every
+ * guild interaction even when the member is not cached.
+ */
+const mayManage = (interaction) => {
+    const permissions = interaction.memberPermissions ?? interaction.member?.permissions;
+    return Boolean(permissions?.has?.('ManageGuild'));
+};
+
+/** Reply and report true when the member may not act, so the caller just returns. */
+const denyWithoutPermission = async (interaction) => {
+    if (mayManage(interaction)) return false;
+
+    await interaction.reply({
+        content: translation.trans('errors.missing_permissions'),
+        flags: 64 // EPHEMERAL
+    });
+    return true;
+};
+
+const findGuildCustomLink = (models, linkId, interaction) => models.CustomLink.findOne({
+    where: { id: linkId },
+    include: [{
+        model: models.Subscription,
+        where: { guildId: interaction.guildId },
+        required: true,
+    }],
+});
 
 export default (models) => ({
     data: {
@@ -172,18 +273,7 @@ export default (models) => ({
                                         custom_id: 'locale',
                                         placeholder: translation.trans('commands.livck.subscribe.select_locale'),
                                         required: true,
-                                        options: [
-                                            {
-                                                label: '🇩🇪 Deutsch',
-                                                value: 'de',
-                                                default: userLocale === 'de'
-                                            },
-                                            {
-                                                label: '🇬🇧 English',
-                                                value: 'en',
-                                                default: userLocale === 'en'
-                                            }
-                                        ]
+                                        options: localeChoices(userLocale)
                                     }
                                 },
                                 // Layout String Select with Label
@@ -440,16 +530,10 @@ export default (models) => ({
                     const localeSelectMenu = new StringSelectMenuBuilder()
                         .setCustomId(`update_locale_${subscription.id}`)
                         .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                        .addOptions(
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel('🇩🇪 Deutsch')
-                                .setValue('de')
-                                .setDefault(subscription.locale === 'de'),
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel('🇬🇧 English')
-                                .setValue('en')
-                                .setDefault(subscription.locale === 'en')
-                        );
+                        .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
                     const layoutSelectMenu = new StringSelectMenuBuilder()
                         .setCustomId(`update_layout_${subscription.id}`)
@@ -556,7 +640,9 @@ export default (models) => ({
                         return;
                     }
 
-                    if (!statuspage.paused) {
+                    // A page can be waiting out a backoff without having been announced as
+                    // paused yet; `resume` is meaningful in both cases, so both are allowed.
+                    if (!statuspage.paused && !statuspage.nextAttemptAt) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.not_paused', { url }),
                             flags: 64
@@ -567,13 +653,17 @@ export default (models) => ({
                     // Import pause manager
                     const { default: StatuspagePauseManager } = await import('../../services/statuspagePauseManager.js');
 
-                    const result = await StatuspagePauseManager.resume(statuspage, true);
+                    // Read the reason BEFORE resuming — resume() clears it, so reading it
+                    // afterwards always reported "unknown".
+                    const pauseReason = statuspage.pauseReason || 'unknown';
+
+                    const result = await StatuspagePauseManager.resume(statuspage);
 
                     if (result.success) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.success', {
                                 url,
-                                reason: translation.trans(`commands.livck.resume.reasons.${statuspage.pauseReason || 'unknown'}`)
+                                reason: translation.trans(`commands.livck.resume.reasons.${pauseReason}`)
                             }),
                             flags: 64
                         });
@@ -609,88 +699,7 @@ export default (models) => ({
         const userLocale = interaction.locale?.split('-')[0] || 'de';
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
 
-        // Handle subscription select menu
-        if (interaction.customId === 'subscription_select') {
-            const subscriptionId = interaction.values[0].replace('sub_', '');
-            const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
-                include: [{ model: models.Statuspage }]
-            });
-
-            if (!subscription) {
-                await interaction.reply({
-                    content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
-                });
-                return;
-            }
-
-            const langFlag = subscription.locale === 'de' ? '🇩🇪' : '🇬🇧';
-            const events = Object.keys(subscription.eventTypes)
-                .filter(key => subscription.eventTypes[key])
-                .map(e => translation.trans(`commands.livck.choices.${e.toLowerCase()}`))
-                .join(', ');
-
-            // Create detail embed
-            const detailEmbed = {
-                title: subscription.Statuspage.name,
-                url: subscription.Statuspage.url,
-                color: 0x5865F2,
-                thumbnail: {
-                    url: `https://www.google.com/s2/favicons?domain=${new URL(subscription.Statuspage.url).hostname}&sz=128`
-                },
-                fields: [
-                    {
-                        name: translation.trans('commands.livck.list.channel_label'),
-                        value: `<#${subscription.channelId}>`,
-                        inline: true
-                    },
-                    {
-                        name: translation.trans('commands.livck.list.language_label'),
-                        value: `${langFlag} ${subscription.locale.toUpperCase()}`,
-                        inline: true
-                    },
-                    {
-                        name: translation.trans('commands.livck.list.events_label'),
-                        value: events,
-                        inline: true
-                    }
-                ],
-                footer: {
-                    text: `ID: ${subscription.id}`
-                }
-            };
-
-            // Create action buttons
-            const openButton = new ButtonBuilder()
-                .setLabel(translation.trans('commands.livck.list.open_button'))
-                .setStyle(ButtonStyle.Link)
-                .setURL(subscription.Statuspage.url)
-
-            const unsubButton = new ButtonBuilder()
-                .setCustomId(`unsub_${subscription.id}`)
-                .setLabel(translation.trans('commands.livck.list.unsubscribe_button'))
-                .setStyle(ButtonStyle.Danger)
-
-            const row = new ActionRowBuilder().addComponents(openButton, unsubButton);
-
-            await interaction.reply({
-                embeds: [detailEmbed],
-                components: [row],
-                ephemeral: true
-            });
-        }
-
-        // Handle refresh button
-        if (interaction.customId === 'refresh_list') {
-            await interaction.deferUpdate();
-            // Trigger list command logic again
-            // ... (re-fetch subscriptions and update message)
-            await interaction.editReply({
-                content: translation.trans('commands.livck.list.refreshed'),
-                components: interaction.message.components
-            });
-        }
+        if (await denyWithoutPermission(interaction)) return;
 
         // Handle delete button from list
         if (interaction.customId.startsWith('delete_sub_')) {
@@ -699,7 +708,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('delete_sub_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -712,76 +721,12 @@ export default (models) => ({
                 return;
             }
 
-            await models.Subscription.destroy({ where: { id: subscriptionId } });
+            await models.Subscription.destroy({ where: { id: subscriptionId, guildId: interaction.guildId } });
 
             await interaction.editReply({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
                 embeds: [],
                 components: []
-            });
-        }
-
-
-        // Handle edit button from list (old handler - can be removed)
-        if (interaction.customId.startsWith('edit_sub_')) {
-            const subscriptionId = interaction.customId.replace('edit_sub_', '');
-
-            const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
-                include: [{ model: models.Statuspage }]
-            });
-
-            if (!subscription) {
-                await interaction.reply({
-                    content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
-                });
-                return;
-            }
-
-            // Show current settings with select menus to edit
-            const eventSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`edit_events_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_events'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.all'))
-                        .setValue('ALL')
-                        .setDefault(subscription.eventTypes.STATUS && subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.status'))
-                        .setValue('STATUS')
-                        .setDefault(subscription.eventTypes.STATUS && !subscription.eventTypes.NEWS),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.choices.news'))
-                        .setValue('NEWS')
-                        .setDefault(!subscription.eventTypes.STATUS && subscription.eventTypes.NEWS)
-                );
-
-            const localeSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId(`edit_locale_${subscription.id}`)
-                .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
-
-            const eventRow = new ActionRowBuilder().addComponents(eventSelectMenu);
-            const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
-
-            await interaction.reply({
-                content: translation.trans('commands.livck.list.edit_prompt', {
-                    name: subscription.Statuspage.name,
-                    channelId: subscription.channelId
-                }),
-                components: [eventRow, localeRow],
-                ephemeral: true
             });
         }
 
@@ -796,16 +741,29 @@ export default (models) => ({
 
             await models.Subscription.update(
                 { locale: newLocale },
-                { where: { id: subscriptionId } }
+                { where: { id: subscriptionId, guildId: interaction.guildId } }
             );
 
             // Reload the edit interface with updated values
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
             // Trigger status page refresh with new locale (fire-and-forget)
+            // The lookup above is guild-scoped and correctly returns null for a stale or a
+            // foreign id, but the code below used it unconditionally. No attacker needed:
+            // open `/livck edit` twice, delete the subscription in one panel and act in the
+            // other, and the TypeError surfaces as the generic error notice instead of
+            // "subscription not found".
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             if (subscription && subscription.Statuspage) {
                 handleStatusPage(subscription.Statuspage.id, client).catch(error => {
                     console.error('[Locale Update] Failed to regenerate status message:', error);
@@ -815,16 +773,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const localeRow = new ActionRowBuilder().addComponents(localeSelectMenu);
 
@@ -908,16 +860,29 @@ export default (models) => ({
 
             await models.Subscription.update(
                 { layout: newLayout },
-                { where: { id: subscriptionId } }
+                { where: { id: subscriptionId, guildId: interaction.guildId } }
             );
 
             // Reload the edit interface with updated values
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
             // Trigger immediate status page refresh with new layout (fire-and-forget)
+            // The lookup above is guild-scoped and correctly returns null for a stale or a
+            // foreign id, but the code below used it unconditionally. No attacker needed:
+            // open `/livck edit` twice, delete the subscription in one panel and act in the
+            // other, and the TypeError surfaces as the generic error notice instead of
+            // "subscription not found".
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             if (subscription && subscription.Statuspage) {
                 handleStatusPage(subscription.Statuspage.id, client).then(() => {
                     console.log(`[Layout Update] Regenerated status message for subscription ${subscriptionId} with layout ${newLayout}`);
@@ -929,16 +894,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const layoutSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_layout_${subscription.id}`)
@@ -1015,11 +974,19 @@ export default (models) => ({
         if (interaction.customId.startsWith('manage_links_')) {
             const subscriptionId = interaction.customId.replace('manage_links_', '');
 
-            // Defer update immediately to prevent timeout
-            await interaction.deferUpdate();
+            // Only if nobody has answered yet. `delete_link_` defers and then RE-ENTERS this
+            // handler to redraw the list, and deferring a second time throws
+            // InteractionAlreadyReplied — so every single link deletion ended in "There was an
+            // error handling that interaction!" even though the link was gone from the
+            // database, and the stale list still offered a Delete button that then reported
+            // "link not found". `manage_roles_` has had this guard all along, which is why the
+            // role screens redraw and this one did not.
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferUpdate();
+            }
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1037,12 +1004,26 @@ export default (models) => ({
                 order: [['position', 'ASC']]
             });
 
-            // Build link list message with emoji preview
-            let linksList = customLinks.length > 0
-                ? customLinks.map((link, index) => {
-                    const emoji = link.emoji || '🔗';
-                    return `${index + 1}. ${emoji} **${link.label}** - \`${link.url}\``;
-                  }).join('\n')
+            // Build link list message with emoji preview.
+            //
+            // Bounded, because this is sent as message CONTENT and Discord caps that at 2000
+            // characters — `CustomLink.url` alone is a STRING(512). Over the cap Discord
+            // rejects the message whole and the handler throws, and since this screen is the
+            // ONLY route to the per-link edit and delete controls, a guild that crossed the
+            // line could never delete a link to get back under it. Twenty-four links with
+            // ordinary values was enough, while the Add button only locks at 25.
+            const linksList = customLinks.length > 0
+                ? joinWithinLimit(
+                    customLinks.map((link, index) => {
+                        const emoji = link.emoji || '🔗';
+                        const url = truncate(link.url, LINK_URL_PREVIEW);
+                        return `${index + 1}. ${emoji} **${truncate(link.label, LINK_LABEL_PREVIEW)}** - \`${url}\``;
+                    }),
+                    {
+                        max: DISCORD_LIMITS.MESSAGE_CONTENT - LINK_LIST_HEADROOM,
+                        more: (count) => translation.trans('commands.livck.custom_links.more_links', { count }, count),
+                    }
+                )
                 : translation.trans('commands.livck.custom_links.no_links');
 
             // Build buttons
@@ -1092,7 +1073,7 @@ export default (models) => ({
 
             // Reload edit menu - basically same as /livck edit
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1129,16 +1110,10 @@ export default (models) => ({
             const localeSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_locale_${subscription.id}`)
                 .setPlaceholder(translation.trans('commands.livck.list.edit_select_locale'))
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇩🇪 Deutsch')
-                        .setValue('de')
-                        .setDefault(subscription.locale === 'de'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('🇬🇧 English')
-                        .setValue('en')
-                        .setDefault(subscription.locale === 'en')
-                );
+                .addOptions(localeChoices(subscription.locale).map((choice) => new StringSelectMenuOptionBuilder()
+                        .setLabel(choice.label)
+                        .setValue(choice.value)
+                        .setDefault(choice.default)));
 
             const layoutSelectMenu = new StringSelectMenuBuilder()
                 .setCustomId(`update_layout_${subscription.id}`)
@@ -1212,7 +1187,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1221,14 +1196,26 @@ export default (models) => ({
                 return;
             }
 
+            // Derived from the LINK, which findGuildCustomLink already verified belongs to
+            // this guild — not from the id in the custom_id, which is only a value the bot
+            // put there. The two used to be read independently, so the link list below was
+            // fetched for whatever subscription the custom_id named.
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
+            if (!subscription || !subscription.Statuspage) {
+                await interaction.followUp({
+                    content: translation.trans('commands.livck.list.subscription_not_found'),
+                    flags: 64 // EPHEMERAL
+                });
+                return;
+            }
+
             // Get link position info
             const allLinks = await models.CustomLink.findAll({
-                where: { subscriptionId },
+                where: { subscriptionId: link.subscriptionId },
                 order: [['position', 'ASC']]
             });
 
@@ -1338,7 +1325,7 @@ export default (models) => ({
         if (interaction.customId.startsWith('edit_link_')) {
             const linkId = interaction.customId.replace('edit_link_', '');
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1403,7 +1390,7 @@ export default (models) => ({
         if (interaction.customId.startsWith('delete_link_')) {
             const linkId = interaction.customId.replace('delete_link_', '');
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1420,7 +1407,7 @@ export default (models) => ({
 
             // Trigger status page refresh asynchronously
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1442,7 +1429,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1466,7 +1453,7 @@ export default (models) => ({
 
                 // Trigger status page refresh
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -1484,7 +1471,7 @@ export default (models) => ({
             });
 
             const subscription = await models.Subscription.findOne({
-                where: { id: link.subscriptionId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1540,7 +1527,7 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
-            const link = await models.CustomLink.findByPk(linkId);
+            const link = await findGuildCustomLink(models, linkId, interaction);
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
@@ -1564,7 +1551,7 @@ export default (models) => ({
 
                 // Trigger status page refresh
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -1582,7 +1569,7 @@ export default (models) => ({
             });
 
             const subscription = await models.Subscription.findOne({
-                where: { id: link.subscriptionId },
+                where: { id: link.subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1641,7 +1628,7 @@ export default (models) => ({
             }
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1688,15 +1675,22 @@ export default (models) => ({
             const eventTypeSelect = new StringSelectMenuBuilder()
                 .setCustomId(`role_event_type_${subscriptionId}`)
                 .setPlaceholder(translation.trans('commands.livck.role_mentions.select_event_type'))
+                // NO "STATUS" OPTION. A role can only ever be pinged by an incident or a
+                // maintenance, because that is the only thing the bot POSTS — a status message
+                // is edited in place, and Discord does not notify anyone about an edit. The
+                // menu offered it anyway, so an admin could pick "status changes", see it
+                // saved, see it listed, and never be pinged when a page went down. A setting
+                // that silently does nothing is worse than one that is absent.
+                //
+                // Rows already stored as STATUS are left alone: they are inert today and stay
+                // inert, and nothing is deleted from a customer's configuration on an upgrade.
+                // Pinging on a status TRANSITION is a real feature and a separate piece of
+                // work — it needs a new message, since an edit cannot notify.
                 .addOptions(
                     new StringSelectMenuOptionBuilder()
                         .setLabel(translation.trans('commands.livck.role_mentions.event_type_all'))
                         .setValue('ALL')
-                        .setDefault(currentEventType === 'ALL'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(translation.trans('commands.livck.role_mentions.event_type_status'))
-                        .setValue('STATUS')
-                        .setDefault(currentEventType === 'STATUS'),
+                        .setDefault(currentEventType === 'ALL' || currentEventType === 'STATUS'),
                     new StringSelectMenuOptionBuilder()
                         .setLabel(translation.trans('commands.livck.role_mentions.event_type_news'))
                         .setValue('NEWS')
@@ -1755,6 +1749,15 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
+            // Ownership is decided on the subscription these role mentions hang off — the id
+            // came out of a custom_id and is not a claim this handler may act on unchecked.
+            const roleTarget = await models.Subscription.findOne({
+                where: { id: subscriptionId, guildId: interaction.guildId },
+            });
+            if (!roleTarget) {
+                return;
+            }
+
             // Get event type from Redis (default: 'ALL')
             const eventTypeKey = `role_event_type:${interaction.user.id}:${subscriptionId}`;
             const eventType = await cache.get(eventTypeKey) || 'ALL';
@@ -1805,6 +1808,14 @@ export default (models) => ({
 
             await interaction.deferUpdate();
 
+            // The role mentions hang off a subscription, so ownership is decided there.
+            const roleOwner = await models.Subscription.findOne({
+                where: { id: subscriptionId, guildId: interaction.guildId },
+            });
+            if (!roleOwner) {
+                return;
+            }
+
             await models.RoleMention.destroy({
                 where: {
                     id: { [Op.in]: roleMentionIds },
@@ -1822,7 +1833,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('edit_api_token_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId }
+                where: { id: subscriptionId, guildId: interaction.guildId }
             });
 
             if (!subscription) {
@@ -1879,7 +1890,7 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('unsub_', '');
 
             const subscription = await models.Subscription.findOne({
-                where: { id: subscriptionId },
+                where: { id: subscriptionId, guildId: interaction.guildId },
                 include: [{ model: models.Statuspage }]
             });
 
@@ -1891,7 +1902,7 @@ export default (models) => ({
                 return;
             }
 
-            await models.Subscription.destroy({ where: { id: subscriptionId } });
+            await models.Subscription.destroy({ where: { id: subscriptionId, guildId: interaction.guildId } });
 
             await interaction.update({
                 content: translation.trans('commands.livck.unsubscribe.success', { url: subscription.Statuspage.url }),
@@ -1907,17 +1918,30 @@ export default (models) => ({
 
         if (focusedOption.name === 'subscription') {
             try {
-                // Fetch all subscriptions for this guild
+                // Every subscription in the guild, NOT the first 25.
+                //
+                // The limit used to be applied in SQL, before the user's text was matched
+                // against anything — so the candidate set was the first 25 rows rather than
+                // the 25 best matches. In a guild with 40 subscriptions, typing the exact name
+                // of the 40th returned nothing, and since `subscription` is a required option
+                // whose id can only come from this list, subscriptions 26 and up could not be
+                // edited AT ALL: no layout, locale, link, role mention or token change, and no
+                // delete by that route. Discord's cap of 25 belongs on the RESULT, and it is
+                // already applied below.
                 const subscriptions = await models.Subscription.findAll({
                     where: { guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }],
-                    limit: 25
                 });
 
-                // Filter based on user input
-                const filtered = subscriptions.filter(sub =>
-                    sub.Statuspage.name.toLowerCase().includes(focusedOption.value.toLowerCase()) ||
-                    sub.Statuspage.url.toLowerCase().includes(focusedOption.value.toLowerCase())
+                const needle = focusedOption.value.toLowerCase();
+
+                // A row whose status page is gone would otherwise throw here and empty the
+                // whole suggestion list, taking every healthy subscription with it.
+                const filtered = subscriptions.filter((sub) =>
+                    sub.Statuspage && (
+                        (sub.Statuspage.name || '').toLowerCase().includes(needle) ||
+                        (sub.Statuspage.url || '').toLowerCase().includes(needle)
+                    )
                 );
 
                 // Format choices
@@ -1991,32 +2015,62 @@ export default (models) => ({
                 await interaction.deferReply({ flags: 64 }); // EPHEMERAL
             }
 
-            // IMPORTANT: Validate URL BEFORE creating anything
-            const livck = new LIVCK(url, 'v3', apiToken || null);
-            let isValid = false;
+            // IMPORTANT: Validate URL BEFORE creating anything.
+            // One request decides both questions at once: is this LIVCK, and which product?
+            // The answer is stored on the row so the update loop never probes again.
+            const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
 
+            let source;
             try {
-                isValid = await livck.ensureIsLIVCK();
+                source = await detectSource(url, { token: apiToken || null });
             } catch (error) {
-                console.error('[Subscribe] Error validating LIVCK URL:', error);
-                isValid = false;
-            }
-
-            if (!isValid) {
-                console.error('[Subscribe] Invalid LIVCK URL (not a LIVCK statuspage):', url);
-                const replyMethod = interaction.replied || interaction.deferred ? 'editReply' : 'reply';
+                // Unreachable is not the same as "not LIVCK". Telling someone their own status
+                // page is not a status page, because of a DNS blip on our side, is the kind of
+                // answer that costs a support ticket.
+                logger.failure('[Subscribe]', url, error);
                 await interaction[replyMethod]({
-                    content: translation.trans('commands.livck.subscribe.invalid_livck_url', {
-                        url
+                    content: translation.trans('commands.livck.subscribe.unreachable', {
+                        url,
+                        reason: translation.trans(`messages.pause.reason.${classifyError(error).kind}`),
                     }),
                     flags: 64 // EPHEMERAL flag
                 });
                 return;
             }
 
+            if (!source) {
+                logger.info(`[Subscribe] ${url} is not a LIVCK statuspage`);
+                await interaction[replyMethod]({
+                    content: translation.trans('commands.livck.subscribe.invalid_livck_url', { url }),
+                    flags: 64 // EPHEMERAL flag
+                });
+                return;
+            }
+
+            // A protected Cloud page answers 404 on every unauthenticated surface — the same
+            // as a page that does not exist. Saying so plainly beats a subscription that
+            // silently never posts anything.
+            if (source === SOURCE.CLOUD) {
+                try {
+                    await new LIVCKCloud(url).fetchStatus();
+                } catch (error) {
+                    logger.info(`[Subscribe] ${url} is a protected Cloud page: ${error.message}`);
+                    await interaction[replyMethod]({
+                        content: translation.trans('commands.livck.subscribe.protected_page', { url }),
+                        flags: 64 // EPHEMERAL flag
+                    });
+                    return;
+                }
+            }
+
             // Create statuspage if it doesn't exist
             if (!statuspage) {
-                statuspage = await models.Statuspage.create({ url, name: domainFromUrl(url) });
+                statuspage = await models.Statuspage.create({
+                    url,
+                    name: domainFromUrl(url),
+                    kind: source,
+                    detectedAt: new Date(),
+                });
             }
 
             // Create subscription
@@ -2065,6 +2119,8 @@ export default (models) => ({
     async handleModalSubmit(interaction, client) {
         const userLocale = interaction.locale?.split('-')[0] || 'de';
         translation.setLocale(['de', 'en'].includes(userLocale) ? userLocale : 'de');
+
+        if (await denyWithoutPermission(interaction)) return;
 
         if (interaction.customId === 'subscribe_complete_modal') {
             try {
@@ -2132,6 +2188,19 @@ export default (models) => ({
             const subscriptionId = interaction.customId.replace('add_link_submit_', '');
 
             try {
+                // The modal carried the id here from a component custom_id; verify it belongs
+                // to this guild before writing anything against it.
+                const linkTarget = await models.Subscription.findOne({
+                    where: { id: subscriptionId, guildId: interaction.guildId },
+                });
+                if (!linkTarget) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.list.subscription_not_found'),
+                        flags: 64 // EPHEMERAL
+                    });
+                    return;
+                }
+
                 // Extract form values
                 const label = interaction.fields.getTextInputValue('label');
                 const url = interaction.fields.getTextInputValue('url');
@@ -2176,7 +2245,7 @@ export default (models) => ({
 
                 // Trigger status page refresh asynchronously (don't await)
                 const subscription = await models.Subscription.findOne({
-                    where: { id: subscriptionId },
+                    where: { id: subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -2204,7 +2273,7 @@ export default (models) => ({
             const linkId = interaction.customId.replace('edit_link_submit_', '');
 
             try {
-                const link = await models.CustomLink.findByPk(linkId);
+                const link = await findGuildCustomLink(models, linkId, interaction);
                 if (!link) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
@@ -2242,7 +2311,7 @@ export default (models) => ({
 
                 // Trigger status page refresh asynchronously
                 const subscription = await models.Subscription.findOne({
-                    where: { id: link.subscriptionId },
+                    where: { id: link.subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 
@@ -2269,7 +2338,7 @@ export default (models) => ({
 
             try {
                 const subscription = await models.Subscription.findOne({
-                    where: { id: subscriptionId },
+                    where: { id: subscriptionId, guildId: interaction.guildId },
                     include: [{ model: models.Statuspage }]
                 });
 

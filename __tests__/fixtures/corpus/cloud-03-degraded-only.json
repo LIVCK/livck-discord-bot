@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "id": "0PcDM9IN6nTnbwmXVnpH7",
+    "name": {
+      "de": "Vogel AG Status",
+      "en": "Cors AG Status"
+    },
+    "slug": "trampeli-ag",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "wzbY55TIjAftkh63VzYZb",
+      "name": {
+        "de": "Datenbank",
+        "en": "Database"
+      },
+      "description": null,
+      "status": "degraded",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "cv0wARaQCpS20CoxDPIYy",
+          "name": {
+            "de": "Kundenportal Nürnberg (Beta)",
+            "en": "Customer portal Nürnberg (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "fGE4zN4of1Wwhjh7UNVPY",
+          "name": {
+            "de": "Gameserver Falkenstein (Legacy)",
+            "en": "Game servers Falkenstein (Legacy)"
+          },
+          "description": null,
+          "status": "degraded",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "TgsKzgdyJcpEGwlmE3R2b",
+          "name": {
+            "de": "TeamSpeak Wien",
+            "en": "TeamSpeak Wien"
+          },
+          "description": null,
+          "status": "degraded",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "9HiaPCeNir2nx2cjFgfqe",
+          "name": {
+            "de": "Mailserver Amsterdam",
+            "en": "Mail Amsterdam"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "uuJYpSECTP33WoP3eEMdz",
+          "name": {
+            "de": "Datenbank Amsterdam",
+            "en": "Database Amsterdam"
+          },
+          "description": null,
+          "status": "degraded",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "7i1BV3zKJTMDR7VWNRSq7",
+          "name": {
+            "de": "Datenbank Wien",
+            "en": "Database Wien"
+          },
+          "description": null,
+          "status": "degraded",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

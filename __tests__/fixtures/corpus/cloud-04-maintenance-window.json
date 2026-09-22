@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "id": "OUMrh3umNGO3Cdh9S6qsG",
+    "name": {
+      "de": "Knut AG Status",
+      "en": "Weyel-Schildhauer Status"
+    },
+    "slug": "janke-sander",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "SHgGSHtgrJOGUdIxMD7v6",
+      "name": {
+        "de": "Objektspeicher",
+        "en": "Object storage"
+      },
+      "description": null,
+      "status": "under_maintenance",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "rou1GmmLIkL9QAPzYDMAX",
+          "name": {
+            "de": "Webhosting Helsinki (v2)",
+            "en": "Web hosting Helsinki (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "Es4jdh4pKzyQ9V4EJChDG",
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "NmKxr2HGJourO8C0EnFzf",
+          "name": {
+            "de": "Loadbalancer Amsterdam",
+            "en": "Load balancer Amsterdam"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [
+      {
+        "id": "WDiNNAk0PV0TTy0ANsvmq",
+        "title": {
+          "de": "Wartung: Gameserver",
+          "en": "Maintenance: Game servers"
+        },
+        "status": "in_progress",
+        "scheduled_start": "2026-09-15T00:34:56.586Z",
+        "scheduled_end": "2026-09-15T02:34:56.586Z",
+        "started_at": "2026-09-15T00:34:56.586Z",
+        "completed_at": null,
+        "updates": [
+          {
+            "id": "o24FWdbOHAN3jLdplxGpc",
+            "status": "in_progress",
+            "message": {
+              "de": "Ipsa excepturi quae cupiditate labore autem.",
+              "en": "Porro doloribus necessitatibus quae porro laboriosam ad maxime officiis."
+            },
+            "created_at": "2026-09-15T00:34:56.586Z"
+          }
+        ],
+        "affected_components": [],
+        "affected_services": []
+      }
+    ],
+    "scheduled": []
+  },
+  "metrics": []
+}

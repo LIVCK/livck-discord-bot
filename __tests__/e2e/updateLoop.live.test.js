@@ -1,0 +1,441 @@
+/**
+ * End-to-end: the update loop itself.
+ *
+ * The loop is where the backoff, the pause manager and the Redis lock actually meet, and until
+ * this file it was the one part of the bot that had never executed — it lived inside server.js
+ * behind `await bot(models)`, so testing it required a Discord token. Extracting it into
+ * services/updateLoop.js is what made this possible.
+ *
+ * Real database, real Redis, real network. Only Discord is recorded instead of called.
+ *
+ *   docker exec mariadb mariadb -u root -e "CREATE DATABASE IF NOT EXISTS livck_bot_e2e"
+ *   DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_e2e DB_USERNAME=root DB_PASSWORD= node migrate.js
+ *   LIVCK_E2E=1 DB_HOST=127.0.0.1 DB_DATABASE=livck_bot_e2e DB_USERNAME=root DB_PASSWORD= \
+ *     REDIS_HOST=127.0.0.1 REDIS_PORT=6379 npm test -- __tests__/e2e/updateLoop.live.test.js
+ *
+ * Never point it at a database you care about: it truncates every table it uses.
+ *
+ * The two e2e suites share one database, so run them WITH `--runInBand` when running both.
+ * In parallel workers they truncate each other's tables mid-test and the failures look like
+ * real bugs.
+ */
+
+import { createRequire } from 'module';
+
+const deLang = createRequire(import.meta.url)('../../lang/de.json');
+
+const e2e = process.env.LIVCK_E2E === '1' ? describe : describe.skip;
+
+/** Reserved by RFC 6761 to never resolve, so the failure is DNS and never someone else's server. */
+const DEAD_URL = 'https://livck-does-not-exist.invalid';
+const SECOND_DEAD_URL = 'https://livck-also-does-not-exist.invalid';
+const LIVE_URL = 'https://status.livck.com';
+/** The page a recovered row is pointed at — a different product, so detection reruns too. */
+const RECOVERY_URL = 'https://cloud.statuspage.de';
+
+e2e('the update loop', () => {
+    let models;
+    let runCycle;
+    let cache;
+    let StatuspagePauseManager;
+    let NOTIFY_AT_LEVEL;
+    let BACKOFF_LADDER_MS;
+
+    /** Everything the bot would have sent, per channel. */
+    let sent = [];
+
+    /** Channel ids Discord refuses, mapped to the error code it answers with. */
+    const refused = new Map();
+
+    const client = {
+        channels: {
+            fetch: async (id) => {
+                if (refused.has(id)) {
+                    throw Object.assign(new Error(`refused ${id}`), { code: refused.get(id) });
+                }
+                return {
+                    id,
+                    send: async (payload) => { sent.push({ channelId: id, payload }); return { id: `msg-${sent.length}` }; },
+                    messages: { edit: async (_id, payload) => { sent.push({ channelId: id, edit: true, payload }); return {}; } },
+                };
+            },
+        },
+    };
+
+    /** Text of every embed sent so far, flattened, so assertions read like the channel does. */
+    const textOf = () => sent.flatMap(({ payload }) =>
+        (payload.embeds ?? []).map((e) => {
+            const json = typeof e.toJSON === 'function' ? e.toJSON() : e;
+            return `${json.title ?? ''}\n${json.description ?? ''}`;
+        })
+    );
+
+    const seed = async (url, name) => models.Statuspage.create({ url, name });
+
+    const subscribe = async (statuspageId, channelId) => models.Subscription.create({
+        guildId: 'loop-guild',
+        channelId,
+        statuspageId,
+        layout: 'COMPACT',
+        locale: 'de',
+        eventTypes: { STATUS: true, NEWS: true },
+        interval: 60,
+        createdAt: new Date('2020-01-01'),
+    });
+
+    /**
+     * Pretend the backoff window elapsed. Advancing the clock is the only thing a test cannot
+     * do honestly here — waiting out the real ladder would take 21 minutes.
+     */
+    const expireBackoff = async (row) => {
+        await row.reload();
+        if (row.nextAttemptAt) await row.update({ nextAttemptAt: new Date(Date.now() - 1000) });
+    };
+
+    /** The Redis lock is a real 20s key; a test that wants a fresh cycle has to drop it. */
+    const dropLock = async (id) => cache.del(`dc-bot:statuspage:${id}`);
+
+    beforeAll(async () => {
+        models = (await import('../../models/index.js')).default;
+        ({ runCycle } = await import('../../services/updateLoop.js'));
+        cache = (await import('../../database/redis.js')).default;
+        ({ default: StatuspagePauseManager, NOTIFY_AT_LEVEL, BACKOFF_LADDER_MS } =
+            await import('../../services/statuspagePauseManager.js'));
+
+        await models.Message.destroy({ where: {}, truncate: true, cascade: true });
+        await models.CustomLink.destroy({ where: {}, truncate: true, cascade: true });
+        await models.RoleMention.destroy({ where: {}, truncate: true, cascade: true });
+        await models.Subscription.destroy({ where: {} });
+        await models.Statuspage.destroy({ where: {} });
+    }, 60000);
+
+    afterAll(async () => {
+        if (models) await models.database.close();
+        if (cache?.isOpen) await cache.quit();
+    });
+
+    beforeEach(() => { sent = []; });
+
+    describe('a page that answers', () => {
+        let page;
+
+        beforeAll(async () => {
+            page = await seed(LIVE_URL, 'status.livck.com');
+            await subscribe(page.id, 'loop-live');
+        }, 60000);
+
+        test('is processed, detected and posted in the first cycle', async () => {
+            await dropLock(page.id);
+            const summary = await runCycle(client);
+
+            expect(summary.updated).toBeGreaterThanOrEqual(1);
+            expect(summary.failed).toBe(0);
+
+            await page.reload();
+            expect(page.kind).toBe('SELF_HOSTED');
+            expect(sent.filter((m) => m.channelId === 'loop-live')).toHaveLength(1);
+        }, 120000);
+
+        test('is skipped while its claim is still held', async () => {
+            // Back-to-back, which is the overlap case the claim exists for. NOT the case of
+            // the next scheduled cycle: the TTL is deliberately shorter than the 15s interval,
+            // because a claim that outlives the interval made half of all cycles skip their
+            // own work and turned a documented 15-second loop into a 30-second one.
+            const summary = await runCycle(client);
+
+            expect(summary.skipped).toBeGreaterThanOrEqual(1);
+            expect(sent).toHaveLength(0);
+        }, 120000);
+
+        test('sends nothing once the lock expires, because nothing changed', async () => {
+            await dropLock(page.id);
+            const summary = await runCycle(client);
+
+            expect(summary.updated).toBeGreaterThanOrEqual(1);
+            expect(sent).toHaveLength(0);
+        }, 120000);
+    });
+
+    describe('a page that does not resolve', () => {
+        let dead;
+
+        beforeAll(async () => {
+            dead = await seed(DEAD_URL, 'dead.invalid');
+            await subscribe(dead.id, 'loop-dead');
+        }, 60000);
+
+        test('climbs one rung per cycle and is quiet until the threshold', async () => {
+            for (let level = 1; level < NOTIFY_AT_LEVEL; level += 1) {
+                await dropLock(dead.id);
+                await expireBackoff(dead);
+                await runCycle(client);
+                await dead.reload();
+
+                expect(dead.backoffLevel).toBe(level);
+                expect(dead.failureCount).toBe(level);
+                expect(dead.paused).toBe(false);
+                expect(dead.pauseReason).toBe('DNS');
+                expect(new Date(dead.nextAttemptAt).getTime())
+                    .toBeGreaterThan(Date.now() + BACKOFF_LADDER_MS[level - 1] - 5000);
+            }
+
+            // Nothing was said to the channel on the way up: a blip must not page anyone.
+            expect(sent.filter((m) => m.channelId === 'loop-dead')).toHaveLength(0);
+        }, 180000);
+
+        test('is not even loaded while its penalty is still running', async () => {
+            // Backoff is enforced in the WHERE clause; a few hundred dead pages must cost
+            // nothing per cycle, not one request each.
+            await dropLock(dead.id);
+            await dead.reload();
+            const before = { level: dead.backoffLevel, count: dead.failureCount };
+
+            await runCycle(client);
+            await dead.reload();
+
+            expect(dead.backoffLevel).toBe(before.level);
+            expect(dead.failureCount).toBe(before.count);
+        }, 60000);
+
+        test('marks the message it already posted, without posting a new one', async () => {
+            // An outage is the absence of news, not news. It used to post its own embed into
+            // every subscribed channel — and the recovery posted a second one — so a page
+            // having a bad night meant two notifications per channel about something nobody
+            // asked to be told. The status message that is already there gains one line in
+            // its footer instead, once, and says nothing when it comes back.
+            await dropLock(dead.id);
+            await expireBackoff(dead);
+            // Nothing to annotate: this page has never been reachable, so it never rendered
+            // a status message. Nothing at all reaches the channel.
+            const summary = await runCycle(client);
+            expect(summary.marked).toBe(0);
+
+            await dead.reload();
+            expect(dead.backoffLevel).toBe(NOTIFY_AT_LEVEL);
+            expect(dead.paused).toBe(true);
+
+            // This page never rendered anything (it has never been reachable), so there is no
+            // message to annotate and therefore nothing at all in the channel.
+            expect(sent.filter((m) => m.channelId === 'loop-dead')).toHaveLength(0);
+        }, 60000);
+
+        test('does not repeat itself on the cycles after', async () => {
+            for (let i = 0; i < 2; i += 1) {
+                await dropLock(dead.id);
+                await expireBackoff(dead);
+                await runCycle(client);
+            }
+
+            expect(sent.filter((m) => m.channelId === 'loop-dead')).toHaveLength(0);
+
+            await dead.reload();
+            expect(dead.paused).toBe(true);
+        }, 120000);
+
+        test('settles at the top rung instead of growing without bound', async () => {
+            await dead.reload();
+            while (dead.backoffLevel < BACKOFF_LADDER_MS.length + 2) {
+                await dropLock(dead.id);
+                await expireBackoff(dead);
+                await runCycle(client);
+                await dead.reload();
+                if (dead.backoffLevel === BACKOFF_LADDER_MS.length) break;
+            }
+
+            expect(dead.backoffLevel).toBe(BACKOFF_LADDER_MS.length);
+
+            await dropLock(dead.id);
+            await expireBackoff(dead);
+            await runCycle(client);
+            await dead.reload();
+
+            // Still capped, and the wait is the top rung — 4 requests a day, not 5760.
+            expect(dead.backoffLevel).toBe(BACKOFF_LADDER_MS.length);
+            expect(new Date(dead.nextAttemptAt).getTime())
+                .toBeGreaterThan(Date.now() + BACKOFF_LADDER_MS.at(-1) - 5000);
+        }, 180000);
+
+        test('comes back by itself, and says so, as soon as it answers', async () => {
+            // No human, no `/livck resume`: the page recovers on its own next successful cycle.
+            await dead.update({ url: RECOVERY_URL, kind: null, externalId: null });
+            await dropLock(dead.id);
+            await expireBackoff(dead);
+
+            const summary = await runCycle(client);
+            expect(summary.failed).toBe(0);
+
+            await dead.reload();
+            expect(dead.paused).toBe(false);
+            expect(dead.pauseReason).toBeNull();
+            expect(dead.backoffLevel).toBe(0);
+            expect(dead.failureCount).toBe(0);
+            expect(dead.nextAttemptAt).toBeNull();
+
+            const notices = sent.filter((m) => m.channelId === 'loop-dead');
+            // The resume notice, plus the status message this channel never got while dead.
+            expect(notices.length).toBeGreaterThanOrEqual(1);
+            expect(textOf().join('\n')).not.toMatch(/messages\.(pause|resume)\./);
+        }, 120000);
+    });
+
+    describe('two cycles that overlap', () => {
+        test('only one of them posts', async () => {
+            // The claim used to be a check-then-act with the ENTIRE cycle in between: read the
+            // key first, write it only after the handlers had finished. Two overlapping cycles
+            // therefore both saw no key, both ran, both found no Message row and both POSTED —
+            // two status embeds in the customer's channel, two rows for one subscription, and
+            // the second message frozen at its first content for ever, because findOne only
+            // ever returns the first row again. A redeploy where the new process starts before
+            // the old one drains is enough to hit it.
+            const page = await models.Statuspage.findOne({ where: { url: LIVE_URL } });
+            const subscription = await subscribe(page.id, 'loop-overlap');
+
+            for (const row of await models.Statuspage.findAll()) await dropLock(row.id);
+
+            await Promise.all([runCycle(client), runCycle(client)]);
+
+            expect(sent.filter((m) => m.channelId === 'loop-overlap')).toHaveLength(1);
+
+            const rows = await models.Message.findAll({ where: { subscriptionId: subscription.id } });
+            expect(rows).toHaveLength(1);
+        }, 120000);
+    });
+
+    describe('the heartbeat', () => {
+        test('advances the row, so it fires again in fifteen minutes and not in fifteen seconds', async () => {
+            // The bug only exists against a real database. `record.update({contentHash})` with
+            // an UNCHANGED hash — which is exactly what a heartbeat on unchanged content is —
+            // makes Sequelize find nothing dirty and issue no SQL at all, so `updatedAt` never
+            // moves, the row stays past the staleness threshold, and the heartbeat re-fires on
+            // every single cycle. Every green status subscription would then be edited every
+            // 15 SECONDS instead of every 15 minutes, for ever: sixty times the intended
+            // traffic against a 50 requests/second budget. Every unit test mocked it away.
+            const page = await models.Statuspage.findOne({ where: { url: LIVE_URL } });
+            const record = await models.Message.findOne({
+                where: { category: 'STATUS' },
+                include: [{ model: models.Subscription, where: { statuspageId: page.id }, required: true }],
+            });
+            expect(record).not.toBeNull();
+
+            // Age the row past the heartbeat threshold, the way fifteen quiet minutes would.
+            await models.database.query(
+                'UPDATE Messages SET updatedAt = DATE_SUB(NOW(), INTERVAL 60 MINUTE) WHERE id = ?',
+                { replacements: [record.id] }
+            );
+            await record.reload();
+            const stale = new Date(record.updatedAt).getTime();
+
+            const { syncMessage } = await import('../../util/messageSync.js');
+            const payload = { embeds: [], content: 'unchanged' };
+
+            const channel = {
+                edits: 0,
+                send: async () => ({ id: 'x' }),
+                messages: { edit: async () => { channel.edits += 1; return {}; } },
+            };
+
+            // The heartbeat cycle: content identical, but the row is stale, so it refreshes.
+            const first = await syncMessage({
+                channel, record, payload, models, create: {}, heartbeat: true,
+            });
+            expect(first).toBe('updated');
+
+            await record.reload();
+            expect(new Date(record.updatedAt).getTime()).toBeGreaterThan(stale);
+
+            // The cycle right after: still identical, and now no longer stale — so silent.
+            const second = await syncMessage({
+                channel, record, payload, models, create: {}, heartbeat: true,
+            });
+
+            expect(second).toBe('skipped');
+            expect(channel.edits).toBe(1);
+        }, 60000);
+    });
+
+    describe('a status page nobody subscribes to', () => {
+        // A real, reachable Cloud page, so "was it fetched?" is answered by whether the bot
+        // detected its product — not by whether it happened to fail.
+        const UNWATCHED_URL = 'https://status.emeraldhost.de';
+        let orphan;
+
+        test('is not fetched at all', async () => {
+            // Nothing deletes a Statuspage — not `/livck unsubscribe`, not the automatic
+            // removal of a subscription whose channel is gone. Every page the bot has ever
+            // been pointed at was polled for ever, with nobody left to receive the result.
+            orphan = await seed(UNWATCHED_URL, 'unwatched');
+
+            await dropLock(orphan.id);
+            await runCycle(client);
+            await orphan.reload();
+
+            // Detection is the first thing a fetch does, so a null kind means no request.
+            expect(orphan.kind).toBeNull();
+            expect(orphan.failureCount).toBe(0);
+            expect(orphan.nextAttemptAt).toBeNull();
+        }, 60000);
+
+        test('is picked up again the moment somebody does', async () => {
+            // Filtering, not deleting: the row is still there with everything the bot had
+            // already learned about it, so subscribing again costs nothing extra.
+            await subscribe(orphan.id, 'loop-revived');
+
+            await dropLock(orphan.id);
+            await runCycle(client);
+            await orphan.reload();
+
+            expect(orphan.kind).toBe('CLOUD');
+            expect(sent.filter((m) => m.channelId === 'loop-revived')).toHaveLength(1);
+        }, 120000);
+    });
+
+    describe('a channel the bot may not post in', () => {
+        test('does not pause the status page for everybody else', async () => {
+            // The failure that is NOT the status page's fault. One guild revoking "Send
+            // Messages" used to escape the handler, advance the page's backoff and — four
+            // cycles later — announce "unreachable" in every OTHER guild watching that page.
+            const page = await seed('https://fc-status.net', 'fc-status.net');
+            await subscribe(page.id, 'loop-refused');
+            await subscribe(page.id, 'loop-allowed');
+            refused.set('loop-refused', 50013);
+
+            try {
+                await dropLock(page.id);
+                await runCycle(client);
+                await page.reload();
+
+                expect(page.backoffLevel).toBe(0);
+                expect(page.failureCount).toBe(0);
+                expect(page.paused).toBe(false);
+                expect(page.nextAttemptAt).toBeNull();
+
+                // And the healthy channel in the same guild was still served. Not an exact
+                // count: these pages are live, and one of them publishing an incident adds a
+                // news parent and a reply per update on top of the status message.
+                expect(sent.filter((m) => m.channelId === 'loop-allowed').length).toBeGreaterThan(0);
+                expect(sent.filter((m) => m.channelId === 'loop-refused')).toHaveLength(0);
+            } finally {
+                refused.clear();
+            }
+        }, 120000);
+    });
+
+    describe('one broken page among healthy ones', () => {
+        test('does not stop the others from being processed', async () => {
+            // Promise.allSettled, not Promise.all: a single dead domain must not take the
+            // whole cycle down with it.
+            const broken = await seed(SECOND_DEAD_URL, 'second-dead.invalid');
+            await subscribe(broken.id, 'loop-dead-2');
+
+            for (const row of await models.Statuspage.findAll()) {
+                await dropLock(row.id);
+                if (row.nextAttemptAt) await row.update({ nextAttemptAt: new Date(Date.now() - 1000) });
+            }
+
+            const summary = await runCycle(client);
+
+            expect(summary.failed).toBe(1);
+            expect(summary.updated).toBe(summary.due - 1);
+        }, 120000);
+    });
+});

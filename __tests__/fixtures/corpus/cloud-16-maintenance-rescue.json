@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "id": "yK5UdOLp25rZOnGdqzsAa",
+    "name": {
+      "de": "Loogen AG Status",
+      "en": "Best, Zanner und Bremser Status"
+    },
+    "slug": "poge-munch-und-haverney",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "xWeDkaueptReJx7UT23EM",
+      "name": {
+        "de": "Rootserver",
+        "en": "Root servers"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "WrKP5zIBsjRdY4kcic0qf",
+          "name": {
+            "de": "API Falkenstein (Beta)",
+            "en": "API Falkenstein (Beta)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "R6n6xGlH5YQHQSOWIYXFb",
+          "name": {
+            "de": "Mailserver Falkenstein",
+            "en": "Mail Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "XeSfwMnrk8HEmgdhSTyOW",
+          "name": {
+            "de": "Mailserver Frankfurt",
+            "en": "Mail Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "QKVWKO65ns7ic5pWmQc7u",
+          "name": {
+            "de": "Objektspeicher Falkenstein",
+            "en": "Object storage Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [
+      {
+        "id": "4qJWDWu3AnEE68ylvZW0w",
+        "title": {
+          "de": "Wartung: Kundenportal",
+          "en": "Maintenance: DNS"
+        },
+        "status": "in_progress",
+        "scheduled_start": "2026-09-12T19:32:45.960Z",
+        "scheduled_end": "2026-09-12T21:32:45.960Z",
+        "started_at": "2026-09-12T19:32:45.960Z",
+        "completed_at": null,
+        "updates": [
+          {
+            "id": "Hfj9TzbsO8Le2yiPFZvpr",
+            "status": "in_progress",
+            "message": {
+              "de": "Temporibus nulla nihil eos earum animi.",
+              "en": "Architecto maiores soluta corrupti sed aliquid."
+            },
+            "created_at": "2026-09-12T19:32:45.960Z"
+          }
+        ],
+        "affected_components": [],
+        "affected_services": []
+      }
+    ],
+    "scheduled": []
+  },
+  "metrics": []
+}

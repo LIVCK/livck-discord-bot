@@ -1,0 +1,28 @@
+{
+  "42fc323d-c735-4623-8a1f-4a7885d51420": {
+    "id": "42fc323d-c735-4623-8a1f-4a7885d51420",
+    "name": "Datenbank",
+    "monitors": [
+      {
+        "id": "68bab8c8-dede-4fb4-a76b-ceb920e70437",
+        "name": "API Wien (Legacy)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "8b81679c-f85e-4857-bf88-e38535e0d54d",
+        "name": "Mailserver Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "cb9c2ee2-d17f-460b-8477-400cb769fdf8",
+        "name": "Objektspeicher Amsterdam",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "139ee4e1-5481-4c85-91c8-f5d579bfeea8",
+        "name": "Kundenportal Wien (Legacy)",
+        "state": "UNAVAILABLE"
+      }
+    ]
+  }
+}

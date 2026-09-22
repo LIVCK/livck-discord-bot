@@ -5,6 +5,124 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+LIVCK Cloud support, plus the groundwork it needed — several fixes that affect self-hosted
+status pages just as much.
+
+### Added
+
+- **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
+  first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
+- **Threads are finished when their alert ends.** The Cloud drops an incident from
+  `active_incidents` the moment it resolves, so a Discord thread used to keep "we are
+  monitoring" for ever. The closing update is now fetched from the detail endpoint and posted
+  as one more reply. Needs no backend change — the endpoints already exist. When the page
+  will not confirm the ending (`show_incident_history` off → 404) the thread is left on its
+  last legitimate state rather than being given an invented one, and it is never re-queried
+  beyond the reporting window.
+- Cloud component trees nest up to five levels; Discord offers two. The tree is folded onto
+  top-level groups and the remaining depth becomes typography inside the field — a sub-heading,
+  or a breadcrumb once indentation stops being readable.
+- Groups that hide their healthy children render as their own status rather than "no services
+  available" — which is what an unaware renderer would have shown for four of the six groups on
+  status.emeraldhost.de. The bot states a count only when the statuspage itself would (i.e.
+  when something is affected), so it never discloses a fleet size the operator keeps off their
+  own page.
+- Cloud incidents, maintenance windows and standing advisories arrive as three separate concepts
+  and are rendered as one alert stream. An advisory is never coloured like an outage and never
+  pings a role: it carries no severity at all, so that cannot be got wrong.
+- Alert bodies are Markdown on the Cloud and HTML on self-hosted; `util/markdown.js` handles
+  both. Discord speaks Markdown, so the Cloud path mostly removes what Discord cannot render
+  (images, tables, rules, stray HTML).
+- Protected Cloud pages are rejected at subscribe time with an explanation, rather than
+  producing a subscription that silently never posts.
+- New modules: `dto/statuspage.js`, `providers/`, `api/detect.js`, `api/livckCloud.js`,
+  `util/errors.js`, `util/logger.js`, `util/discordLimits.js`, `util/messageSync.js`,
+  `util/markdown.js`, `util/subscriptionGroups.js`.
+- Golden-output snapshot tests pinning every layout, so a refactor cannot silently change what
+  customers see. Contract tests run against a stubbed `fetch`; live checks against
+  `cloud.statuspage.de` and `status.livck.com` are opt-in via `LIVCK_LIVE_TESTS=1`, so a
+  third-party outage no longer fails CI.
+
+### Fixed
+
+- **Automatic pausing never triggered.** Two independent causes: `LIVCK.get()` returned
+  `{data: []}` on every error instead of throwing (so an unreachable page looked like an empty
+  one), and `server.js` did not load `failureCount`/`lastFailure`, leaving the counter
+  `undefined` — `undefined + 1` is `NaN`, and `NaN >= 3` is never true.
+- **No Discord limit guards.** Layouts could exceed 25 fields, 1024 characters per field or the
+  6000-character message budget. Discord rejects such a message wholesale, so an affected status
+  page posted nothing at all.
+- **A transient fetch failure wiped the status message**, replacing a good embed with "no
+  categories available". The last known good content is now kept.
+- Requests had no deadline; a stalled connection could hold up a cycle for minutes without ever
+  surfacing as an error. Now capped by `LIVCK_TIMEOUT_MS` (default 10s).
+- `/livck resume` always reported the pause reason as "unknown", because it read the field after
+  clearing it.
+
+### Changed
+
+- **Status messages are only edited when they actually change.** Each `Message` stores a hash of
+  its last payload. Combined with dropping the redundant `channel.messages.fetch()` before every
+  edit, this removes almost all Discord API traffic in steady state — the bot previously spent
+  two calls per subscription per cycle against a 50 req/s account-wide budget, which capped it
+  near 375 subscriptions. A heartbeat edit still refreshes the timestamp every
+  `STATUS_REFRESH_MINUTES` (default 15).
+- **Pausing is now a backoff ladder** (30s → 1m → 5m → 15m → 1h → 6h) instead of a dead end.
+  Subscribers are notified once, roughly 22 minutes into a sustained outage, and the page resumes
+  by itself — with a recovery notice — as soon as it answers again. A dead domain drops from 5760
+  attempts a day to nine. `/livck resume` still forces an immediate retry.
+- Pause and resume notifications are sent in each subscription's own language instead of one
+  bilingual embed.
+- Everything downstream of a fetch reads one internal model (`dto/statuspage.js`) rather than a
+  backend-specific payload. The self-hosted rendering is unchanged — 21 golden snapshots prove
+  it byte for byte.
+- `handleStatusPage` and `handleAlerts` share one fetch per cycle instead of each making their
+  own, which also removes a redundant alerts request self-hosted pages were already paying.
+- The Discord channel is resolved only when a message is actually going to be sent. discord.js
+  serves it from the gateway cache in steady state, but that cache is cold right after a
+  restart — resolving it eagerly meant one REST call per subscription in the very first cycle,
+  which is when the bot can least afford them.
+- `Statuspage.pauseReason` is a `VARCHAR(32)` rather than an `ENUM`, and covers the full failure
+  vocabulary (`TIMEOUT`, `DNS`, `REFUSED`, `TLS`, `HTTP_4XX`, `HTTP_5XX`, `RATE_LIMITED`,
+  `NOT_LIVCK`, `NETWORK`, `UNKNOWN`).
+- **Logging is leveled** via `LOG_LEVEL` (default `info`). Per-statuspage chatter moved to
+  `debug`, leaving one summary line per cycle. Expected network failures log a single line with
+  no stack trace, and repeats for the same page are suppressed until the message changes — a
+  dead domain went from ~5760 log entries a day to roughly ten.
+- Discord rate limiting is now reported through a `rateLimited` listener; previously discord.js
+  queued silently and the only symptom was updates arriving later and later.
+
+### Security
+
+- **Component and modal interactions did not check guild ownership.** Twenty-nine lookups
+  resolved a subscription, custom link or role mention straight from the id carried in a
+  `custom_id` — a value the bot put there, not a claim to act on unchecked. `delete_sub_`
+  destroyed a subscription and `edit_api_token_` read and wrote a status page API token that
+  way. Every id-driven path is now scoped to `interaction.guildId`, matching what the
+  slash-command paths already did.
+- Discord's `invalidRequestWarning` is now armed (`invalidRequestWarningInterval: 250`). It was
+  disabled by default, and it is the only advance warning before Discord blocks a bot's IP at
+  the Cloudflare layer for accumulating 401/403/429 responses — which the bot produces whenever
+  a channel is deleted or its permissions are withdrawn.
+
+### Removed
+
+- `messages/messageHelper.js` — nothing had imported it for some time, and it referenced the old
+  status vocabulary, so it was both dead and wrong.
+
+### Migration required
+
+```bash
+node migrate.js
+```
+
+Adds `Messages.contentHash`, `Statuspages.backoffLevel`, `Statuspages.nextAttemptAt`,
+`Statuspages.kind`, `Statuspages.externalId` and `Statuspages.detectedAt`, and converts
+`Statuspages.pauseReason` from `ENUM` to `VARCHAR(32)`. Existing rows need no backfill — a page
+with `kind = NULL` is detected on its first cycle after deploy.
+
 ## [1.1.0] - 2026-02-24
 
 ### Added

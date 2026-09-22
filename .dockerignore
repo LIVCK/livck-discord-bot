@@ -1,0 +1,35 @@
+# EVERYTHING IN THE BUILD CONTEXT ENDS UP IN THE IMAGE.
+#
+# The Dockerfile does `COPY . /opt/app`, and the image is pushed to a registry by CI. Without
+# this file a local build baked `.env` — the Discord bot token and the database credentials —
+# plus `.env.prod` and every `.env.backup-*` straight into a published layer, where deleting
+# the file later does not remove it. CI is spared only because `.env` is gitignored and a
+# checkout never has it; a developer building on their own machine is not.
+
+# Secrets. The example is the only one that may ship.
+.env
+.env.*
+!.env.example
+
+# History, including anything ever committed.
+.git
+.gitignore
+.github
+
+# Installed fresh inside the image, and copying the host's build is both slower and wrong when
+# the platform differs. package-lock.json deliberately DOES ship: it is the only thing pinning
+# discord.js to the version whose source the postinstall patch knows how to rewrite.
+node_modules
+
+# Nothing the running bot reads.
+__tests__
+coverage
+.jest
+*.log
+logs
+.idea
+crowdin.yml
+README.md
+CHANGELOG.md
+RELEASE.md
+CLAUDE.md

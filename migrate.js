@@ -36,6 +36,12 @@ const umzug = new Umzug({
         console.log('Migrated successfully.');
     } catch (error) {
         console.error('Error migrating:', error);
+
+        // The README tells operators to run `node migrate.js` and then start the bot. Exiting
+        // 0 on failure makes a failed or half-applied migration indistinguishable from success
+        // in any `migrate && start` chain, entrypoint or CI step — on precisely the deploy that
+        // adds the columns the update loop now selects unconditionally.
+        process.exitCode = 1;
     } finally {
         await sequelize.close();
     }

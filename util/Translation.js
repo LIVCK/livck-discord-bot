@@ -1,6 +1,33 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { AsyncLocalStorage } from 'async_hooks';
+
+/**
+ * The selected language, per concurrent flow.
+ *
+ * WHY THIS EXISTS
+ *
+ * `setLocale()` used to write to a field on a module singleton, and every caller sets the
+ * locale and then AWAITS before rendering: a database read, a fetch, a Discord call. The
+ * update loop runs 100 status pages at a time and both handlers concurrently per page, so
+ * whichever subscription resumes last wins the language for all of them.
+ *
+ * Reproduced in two lines: render one snapshot for `de` and one for `en` concurrently, and
+ * BOTH come back English. In production that is a German channel receiving an English
+ * incident thread — and because the interleaving differs from cycle to cycle, the content
+ * hash flips with it and the message is edited back and forth for ever.
+ *
+ * An AsyncLocalStorage store follows a flow across its awaits and stays invisible to every
+ * other flow, so the fix does not require threading a locale argument through every one of
+ * the several hundred `trans()` calls. Entry points open a scope (see `withLocale`); a call
+ * made outside any scope keeps the old global behaviour, which is what the slash-command
+ * paths and the tests rely on.
+ */
+const localeScope = new AsyncLocalStorage();
+
+/** Discord's cap on a command or option description, localizations included. */
+const DISCORD_DESCRIPTION_LIMIT = 100;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,12 +74,41 @@ class Translation {
      * @param {string} locale - Locale code (e.g., 'de', 'en')
      */
     setLocale(locale) {
-        if (this.translations[locale]) {
-            this.currentLocale = locale;
-        } else {
+        const resolved = this.translations[locale] ? locale : this.fallbackLocale;
+
+        if (!this.translations[locale]) {
             console.warn(`[Translation] Locale '${locale}' not found, using fallback '${this.fallbackLocale}'`);
-            this.currentLocale = this.fallbackLocale;
         }
+
+        // Inside a scope this is private to the current flow; outside one it is the old
+        // process-wide setting, so nothing that never opens a scope changes behaviour.
+        const store = localeScope.getStore();
+        if (store) {
+            store.locale = resolved;
+            return;
+        }
+
+        this.currentLocale = resolved;
+    }
+
+    /** The locale in force for the calling flow. */
+    get locale() {
+        return localeScope.getStore()?.locale ?? this.currentLocale;
+    }
+
+    /**
+     * Run `fn` with its own locale slot, so anything it renders after an `await` still gets
+     * the language it asked for even while other flows are rendering other languages.
+     *
+     * @param {string|null} locale - the initial locale, or null to inherit and isolate only
+     * @param {() => T} fn
+     * @returns {T}
+     */
+    withLocale(locale, fn) {
+        return localeScope.run({ locale: this.locale }, () => {
+            if (locale) this.setLocale(locale);
+            return fn();
+        });
     }
 
     /**
@@ -62,7 +118,7 @@ class Translation {
      * @returns {string|null} - Translation string or null if not found
      */
     get(key, locale = null) {
-        const targetLocale = locale || this.currentLocale;
+        const targetLocale = locale || this.locale;
         const keys = key.split('.');
         let value = this.translations[targetLocale];
 
@@ -139,7 +195,7 @@ class Translation {
 
         // If not found, return key as fallback
         if (text === null) {
-            console.warn(`[Translation] Missing key: ${key} (locale: ${locale || this.currentLocale})`);
+            console.warn(`[Translation] Missing key: ${key} (locale: ${locale || this.locale})`);
             return key;
         }
 
@@ -235,6 +291,17 @@ class Translation {
         delete localizations[defaultLocale];
         delete localizations[shortLocale];
 
+        // CLAMPED, because these go into the slash-command registration and Discord rejects
+        // the WHOLE command set over one oversized string — leaving a bot with no commands at
+        // all. Community translations arrive from Crowdin without anyone here reading them,
+        // and a language that needs more words than English is the normal case, not the
+        // exception. One truncated description beats no commands.
+        for (const [locale, text] of Object.entries(localizations)) {
+            if (typeof text === 'string' && text.length > DISCORD_DESCRIPTION_LIMIT) {
+                localizations[locale] = `${text.slice(0, DISCORD_DESCRIPTION_LIMIT - 1)}…`;
+            }
+        }
+
         return localizations;
     }
 }
@@ -246,3 +313,6 @@ export default translation;
 // Named export for trans() shorthand
 export const trans = (key, replacements, count, locale) =>
     translation.trans(key, replacements, count, locale);
+
+/** See Translation#withLocale — the entry points wrap their work in this. */
+export const withLocale = (locale, fn) => translation.withLocale(locale, fn);

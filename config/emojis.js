@@ -9,11 +9,16 @@
  * Format: <:name:id> or <a:name:id> for animated
  */
 
+import { STATUS } from '../dto/statuspage.js';
+
 export const STATUS_EMOJIS = {
     // Status dots for compact layout
     GREEN_DOT: process.env.EMOJI_GREEN_DOT || '🟢',      // Fallback to Unicode
     RED_DOT: process.env.EMOJI_RED_DOT || '🔴',          // Fallback to Unicode
     ORANGE_DOT: process.env.EMOJI_ORANGE_DOT || '🟠',    // Fallback to Unicode
+    // Only the Cloud has a maintenance state; there is no uploadable asset for it, so this
+    // stays Unicode-only rather than adding a fourth EMOJI_* variable nobody would set.
+    BLUE_DOT: process.env.EMOJI_BLUE_DOT || '🔵',
 
     // Animated status indicators (from existing bot config)
     STATUS_UP: '<a:status_up:1344187859921535047>',
@@ -21,18 +26,27 @@ export const STATUS_EMOJIS = {
 };
 
 /**
- * Get status dot emoji based on status
- * @param {string} status - AVAILABLE, UNAVAILABLE, or DEGRADED
+ * Get status dot emoji based on a DTO status.
+ *
+ * `partial_outage` shares amber with `degraded` on purpose: a self-hosted page has only three
+ * states, and folding the Cloud's extra one into the same colour keeps a page that migrates
+ * from self-hosted to Cloud looking the same.
+ *
+ * @param {string} status - one of dto/statuspage.js STATUS
  * @returns {string} Emoji string
  */
 export function getStatusDot(status) {
     switch (status) {
-        case 'AVAILABLE':
+        case STATUS.OPERATIONAL:
             return STATUS_EMOJIS.GREEN_DOT;
-        case 'UNAVAILABLE':
+        case STATUS.MAJOR_OUTAGE:
             return STATUS_EMOJIS.RED_DOT;
-        case 'DEGRADED':
+        case STATUS.DEGRADED:
+        case STATUS.PARTIAL_OUTAGE:
             return STATUS_EMOJIS.ORANGE_DOT;
+        case STATUS.UNDER_MAINTENANCE:
+        case STATUS.MAINTENANCE:
+            return STATUS_EMOJIS.BLUE_DOT;
         default:
             return '●';
     }

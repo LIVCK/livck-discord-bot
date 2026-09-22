@@ -1,7 +1,11 @@
 .idea
 .env
+# Any local variant too — a `git add -A` swept .env.prod into a commit once.
+.env.*
+!.env.example
 node_modules
-package-lock.json
+# package-lock.json is deliberately NOT ignored: `npm ci` needs it, and it is the only thing
+# pinning discord.js to the version whose source scripts/patch-discordjs.js knows.
 
 # Test coverage
 coverage/

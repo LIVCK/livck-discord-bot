@@ -87,7 +87,9 @@
         "select_events": "Event-Typen auswählen",
         "select_locale": "Sprache auswählen",
         "select_layout": "Layout auswählen",
-        "select_channel_final": "Wähle nun den Channel für **:url**"
+        "select_channel_final": "Wähle nun den Channel für **:url**",
+        "protected_page": "Die Statusseite **:url** ist passwort- oder zugangsgeschützt. Der Bot kann nur öffentliche Seiten abrufen.",
+        "unreachable": "⚠️ **:url** war gerade nicht erreichbar (:reason).\n\nDie Adresse sieht in Ordnung aus – wahrscheinlich ist die Seite kurzzeitig offline. Versuche es in ein paar Minuten noch einmal."
       },
       "unsubscribe": {
         "success": "Abonnement für **:url** erfolgreich entfernt.",
@@ -135,6 +137,7 @@
         "modal_label_url": "URL (muss mit https:// beginnen)",
         "modal_label_emoji": "Emoji (optional, z.B. 🔗)",
         "no_links": "Keine Custom Links vorhanden.",
+        "more_links": "… und :count weitere",
         "list_item": "**:label**",
         "select_placeholder": "Link auswählen...",
         "link_details": "Link Details für **:name**",
@@ -181,8 +184,17 @@
         "reasons": {
           "TIMEOUT": "Verbindungs-Timeout",
           "NOT_LIVCK": "Keine LIVCK-Statusseite mehr",
+          "NOT_JSON": "Die Seite antwortet nicht mit Daten (Bot-Schutz oder Wartungsseite)",
           "MANUAL": "Manuell pausiert",
-          "unknown": "Unbekannt"
+          "unknown": "Unbekannt",
+          "DNS": "Domain nicht auflösbar",
+          "REFUSED": "Verbindung abgelehnt",
+          "TLS": "TLS-/Zertifikatsfehler",
+          "HTTP_4XX": "Client-Fehler der Statusseite",
+          "HTTP_5XX": "Server-Fehler der Statusseite",
+          "RATE_LIMITED": "Zu viele Anfragen",
+          "NETWORK": "Netzwerkfehler",
+          "UNKNOWN": "Unbekannter Fehler"
         }
       }
     }
@@ -208,11 +220,50 @@
       "overview_footer": "Übersicht • Zuletzt aktualisiert",
       "compact_footer": "Kompaktansicht",
       "detailed_footer": "Detailliert",
-      "tree_footer": "Baumansicht"
+      "tree_footer": "Baumansicht",
+      "more_services": ":count weitere …",
+      "more_categories": ":count weitere Kategorien",
+      "more_categories_field": {
+        "name": "Weitere",
+        "value": "Noch :count Kategorien — auf der Statusseite ansehen."
+      },
+      "ungrouped": "Weitere Dienste",
+      "group_summary": "keine Systeme|:total System · :affected betroffen|:total Systeme · :affected betroffen"
     },
     "alerts": {
       "view_button": "Ansehen",
-      "update_button": "Zum Update"
+      "status_label": "Status",
+      "update_button": "Zum Update",
+      "state": {
+        "incident": {
+          "investigating": "Wird untersucht",
+          "identified": "Identifiziert",
+          "monitoring": "Wird überwacht",
+          "resolved": "Behoben"
+        },
+        "maintenance": {
+          "scheduled": "Geplant",
+          "in_progress": "Läuft",
+          "completed": "Abgeschlossen",
+          "cancelled": "Abgesagt"
+        }
+      }
+    },
+    "pause": {
+      "footer": "inaktiv",
+      "reason": {
+        "TIMEOUT": "Zeitüberschreitung bei der Verbindung",
+        "DNS": "Domain nicht auflösbar",
+        "REFUSED": "Verbindung abgelehnt",
+        "TLS": "TLS-/Zertifikatsfehler",
+        "HTTP_4XX": "Die Statusseite antwortet mit einem Client-Fehler",
+        "HTTP_5XX": "Die Statusseite antwortet mit einem Server-Fehler",
+        "RATE_LIMITED": "Zu viele Anfragen (Rate Limit)",
+        "NOT_LIVCK": "Keine LIVCK-Statusseite mehr",
+        "NOT_JSON": "Die Seite antwortet nicht mit Daten (Bot-Schutz oder Wartungsseite)",
+        "NETWORK": "Netzwerkfehler",
+        "UNKNOWN": "Unbekannter Fehler"
+      }
     }
   },
   "errors": {

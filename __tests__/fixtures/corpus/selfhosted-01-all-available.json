@@ -1,0 +1,54 @@
+{
+  "f8a233e7-16c9-4573-9807-f774a155aa70": {
+    "id": "f8a233e7-16c9-4573-9807-f774a155aa70",
+    "name": "Kundenportal",
+    "monitors": [
+      {
+        "id": "8c1f930e-a56c-4307-a48c-23094e68fd80",
+        "name": "Datenbank Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "3fe1863c-e3a3-49d0-bfe4-fadfdb88e9af",
+        "name": "Rootserver Helsinki",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "de531dab-e43b-47f2-ba17-13f7c7b0f804",
+        "name": "TeamSpeak Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "1710180c-6dd2-4dd6-886f-26aa934131de",
+        "name": "DNS Amsterdam (Legacy)",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "44c7e5f7-ed51-4e70-8220-a0fe0675a32a",
+        "name": "TeamSpeak Helsinki",
+        "state": "AVAILABLE"
+      }
+    ]
+  },
+  "48b4146b-8f1a-4409-b578-76773d8b5001": {
+    "id": "48b4146b-8f1a-4409-b578-76773d8b5001",
+    "name": "Mailserver",
+    "monitors": [
+      {
+        "id": "63843e96-dceb-4085-9717-f92196722320",
+        "name": "Kundenportal Nürnberg",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "eb720f9d-dd4b-4216-8506-3c2a7a9fbae4",
+        "name": "TeamSpeak Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "33409179-5d22-4979-9db5-a60614958dc4",
+        "name": "Backup Helsinki",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

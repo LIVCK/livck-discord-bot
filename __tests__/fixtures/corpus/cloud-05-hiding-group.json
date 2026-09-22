@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "id": "dIX188Rz6Xso3BYtHStlD",
+    "name": {
+      "de": "Neupert, Huber und Naubert Status",
+      "en": "Flore GmbH & Co. KG Status"
+    },
+    "slug": "brehmer-sagafe-und-hentel",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "oR22srXTaxPyY2IgfMhSu",
+      "name": {
+        "de": "Backup",
+        "en": "Backup"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": true,
+      "default_open": true,
+      "children": [],
+      "children_total": 80,
+      "children_hidden": 54
+    },
+    {
+      "id": "9REgnutcgSSSdFZoSWGkf",
+      "name": {
+        "de": "Rootserver",
+        "en": "Root servers"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "yHVYa382YkD2I6kj8in2B",
+          "name": {
+            "de": "Mailserver Falkenstein",
+            "en": "Mail Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "QHrah59DmeYoXVfXlmXgM",
+          "name": {
+            "de": "Rootserver Amsterdam (v2)",
+            "en": "Root servers Amsterdam (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "4t3nOpqTZL5pwisJXc2ne",
+          "name": {
+            "de": "Loadbalancer Nürnberg",
+            "en": "Load balancer Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

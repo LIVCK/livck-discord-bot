@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "id": "pwB84FKRPF0Q3AeovMUaM",
+    "name": {
+      "de": "Döring AG Status",
+      "en": "Kubera KG Status"
+    },
+    "slug": "hofmann-ohg",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "bGD5kFfsDllPd34Qmca46",
+      "name": {
+        "de": "Loadbalancer",
+        "en": "Load balancer"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "9YCz0XzkeQEwlB54csWRT",
+          "name": {
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "3vJdat0vDQARXLOBubE7g",
+          "name": {
+            "de": "Datenbank Frankfurt",
+            "en": "Database Frankfurt"
+          },
+          "description": null,
+          "status": "degraded",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "K9olPNnkrK4C49aVp56cA",
+          "name": {
+            "de": "DNS Wien (Beta)",
+            "en": "DNS Wien (Beta)"
+          },
+          "description": null,
+          "status": "partial_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "yFxK5t18ORGZwAmAlQccC",
+          "name": {
+            "de": "Gameserver Wien",
+            "en": "Game servers Wien"
+          },
+          "description": null,
+          "status": "major_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "5EdoqrqiggAypv6QcbK5J",
+          "name": {
+            "de": "DNS Frankfurt",
+            "en": "DNS Frankfurt"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "WIyiOko4DVobU4qzwPXCp",
+          "name": {
+            "de": "Datenbank Nürnberg",
+            "en": "Database Nürnberg"
+          },
+          "description": null,
+          "status": "unknown",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

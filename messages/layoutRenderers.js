@@ -1,6 +1,104 @@
 import { EmbedBuilder } from "discord.js";
 import translation from "../util/Translation.js";
 import { getStatusDot } from "../config/emojis.js";
+import { STATUS, resolveText } from "../dto/statuspage.js";
+import {
+    DISCORD_LIMITS,
+    capFields,
+    embedLength,
+    enforceMessageBudget,
+    joinWithinLimit,
+    padInlineRows,
+    truncate,
+} from "../util/discordLimits.js";
+
+/**
+ * Overflow helpers.
+ *
+ * Every one of these is a no-op while the content fits — Discord's limits are only reached
+ * by unusually large status pages, and the ordinary output must stay byte-identical (see
+ * __tests__/messages/layoutRenderers.golden.test.js).
+ */
+
+/** "+N more" line inside a field value or description. */
+const moreServicesLine = (count) => translation.trans('messages.status.more_services', { count });
+
+/** Final field standing in for the categories that did not fit. */
+const moreCategoriesField = (count) => ({
+    name: translation.trans('messages.status.more_categories_field.name'),
+    value: translation.trans('messages.status.more_categories_field.value', { count }),
+    inline: false,
+});
+
+/** Join service lines into one field value, dropping the tail that does not fit. */
+const serviceLines = (lines) => joinWithinLimit(lines, {
+    max: DISCORD_LIMITS.EMBED_FIELD_VALUE,
+    more: moreServicesLine,
+});
+
+/**
+ * Clamp a built description to Discord's limit.
+ *
+ * The layouts build their description by concatenation and must keep producing exactly that
+ * string while it fits; only an over-long one is rebuilt line by line.
+ */
+const clampDescription = (description) => {
+    if (description.length <= DISCORD_LIMITS.EMBED_DESCRIPTION) return description;
+    return joinWithinLimit(description.split('\n'), {
+        max: DISCORD_LIMITS.EMBED_DESCRIPTION,
+        more: moreServicesLine,
+    });
+};
+
+/**
+ * Cap the field list, bring the embed under the per-message budget, and report the total
+ * number of categories that did not make it.
+ *
+ * Two stages can drop fields — the 25-field cap and the 6000-character budget — so neither
+ * of them writes the overflow marker: each would only know about its own losses and the
+ * reader would be told "+6 more" when 54 are missing. The count is summed here and written
+ * once, and the marker itself is added only if it still fits (dropping one more field to
+ * make room if needed).
+ *
+ * Padding runs last, so the zero-width filler is never mistaken for a dropped category.
+ */
+const finalizeEmbed = (embed, fields, { inline = false } = {}) => {
+    const capped = capFields(fields);
+    let hidden = fields.length - capped.length;
+
+    embed.setFields(capped);
+    enforceMessageBudget([embed]);
+    hidden += capped.length - (embed.toJSON().fields || []).length;
+
+    if (hidden > 0) {
+        let current = embed.toJSON().fields || [];
+        let marker = moreCategoriesField(hidden);
+
+        // Cost of the marker measured arithmetically rather than by building a probe embed:
+        // EmbedBuilder validates on construction, and this runs on already-clamped input.
+        const fits = () => embedLength(embed.toJSON()) + marker.name.length + marker.value.length
+            <= DISCORD_LIMITS.MESSAGE_EMBED_TOTAL
+            && current.length + 1 <= DISCORD_LIMITS.EMBED_FIELDS;
+
+        while (current.length > 0 && !fits()) {
+            // No room for the marker: give up one more category and say so.
+            current = current.slice(0, -1);
+            embed.setFields(current);
+            hidden += 1;
+            marker = moreCategoriesField(hidden);
+        }
+
+        if (fits()) embed.setFields([...current, marker]);
+    }
+
+    if (inline) {
+        // The budget is passed in: padding must not be what pushes the message over 6000.
+        const json = embed.toJSON();
+        embed.setFields(padInlineRows(json.fields || [], { used: embedLength(json) }));
+    }
+
+    return embed;
+};
 
 /**
  * Get status emoji for a monitor
@@ -9,12 +107,25 @@ import { getStatusDot } from "../config/emojis.js";
  */
 export const getStatusEmoji = (status) => {
     switch (status) {
-        case 'AVAILABLE':
+        case STATUS.OPERATIONAL:
             return '<a:status_up:1344187859921535047>';
-        case 'UNAVAILABLE':
+        case STATUS.MAJOR_OUTAGE:
             return '<a:status_down:1344187930499088394>';
         default:
-            return '❔';
+            // THE COLOURED DOT, not a question mark.
+            //
+            // Custom animated emoji exist for exactly two states. Everything else fell through
+            // to `❔`, which put FIVE distinct statuses on one symbol in the default layout:
+            // degraded, partial_outage, under_maintenance, unknown and the page-level
+            // maintenance. A reader could not tell a planned maintenance window from a service
+            // the bot knows nothing about, and neither from a partial failure.
+            //
+            // `getStatusDot` has carried the right staffing all along — amber for degraded and
+            // partial, blue for maintenance, a plain dot for unknown — and the compact and tree
+            // layouts have been using it correctly. This is the same vocabulary, reached from
+            // here too, so the two states that DO have an icon keep it and the rest stop
+            // pretending to be the same thing.
+            return getStatusDot(status);
     }
 };
 
@@ -25,468 +136,401 @@ export const getStatusEmoji = (status) => {
  */
 export const getEmbedColor = (status) => {
     switch (status) {
-        case 'AVAILABLE':
+        case STATUS.OPERATIONAL:
             return 0x2ecc71; // Green
-        case 'UNAVAILABLE':
+        case STATUS.MAJOR_OUTAGE:
             return 0xe74c3c; // Red
-        case 'DEGRADED':
+        case STATUS.DEGRADED:
+        case STATUS.PARTIAL_OUTAGE:
             return 0xf39c12; // Yellow/Orange
+        case STATUS.UNDER_MAINTENANCE:
+        case STATUS.MAINTENANCE:
+            return 0x3498db; // Blue
         default:
             return 0x95a5a6; // Gray
     }
 };
 
 /**
- * Calculate overall status for a category
- * @param {Array} monitors - Array of monitors
- * @returns {string} Overall status (AVAILABLE, UNAVAILABLE, or DEGRADED)
+ * Resolve a page/group/service name for this locale, falling back to the translated
+ * placeholder when the source has none. Self-hosted names are plain strings and pass through
+ * unchanged; Cloud names are locale maps.
  */
-const getCategoryStatus = (monitors) => {
-    if (!monitors || monitors.length === 0) return 'AVAILABLE';
-
-    const hasUnavailable = monitors.some(m => m.state === 'UNAVAILABLE');
-    const allAvailable = monitors.every(m => m.state === 'AVAILABLE');
-
-    if (allAvailable) return 'AVAILABLE';
-    if (hasUnavailable) return 'UNAVAILABLE';
-    return 'DEGRADED';
-};
+const nameOf = (value, snapshot, locale, fallbackKey = 'messages.status.unknown_category') =>
+    resolveText(value, locale, snapshot.defaultLocale) || translation.trans(fallbackKey);
 
 /**
- * Calculate overall status across all categories
- * RED: All monitors down
- * YELLOW: Some monitors down (partial outage)
- * GREEN: All monitors up
+ * A group's display name.
  *
- * @param {Array} categories - Array of categories with monitors
- * @returns {string} Overall status (AVAILABLE, UNAVAILABLE, or DEGRADED)
+ * A group the bot invented (the bucket for components with no group of their own) carries a
+ * translation key instead of a name, because one snapshot is rendered once per subscription
+ * and those subscriptions are in different languages — a string resolved in the adapter would
+ * show German in an English channel.
  */
-const getOverallStatus = (categories) => {
-    if (!categories || categories.length === 0) return 'AVAILABLE';
+const groupName = (group, snapshot, locale) =>
+    (group.labelKey ? translation.trans(group.labelKey) : nameOf(group.name, snapshot, locale));
 
-    // Collect all monitors across all categories
-    const allMonitors = categories.reduce((acc, cat) => {
-        const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
-        return acc.concat(monitors);
-    }, []);
+/** Services in a group that are fully up / fully down. */
+const countUp = (services) => services.filter((s) => s.status === STATUS.OPERATIONAL).length;
+const countDown = (services) => services.filter((s) => s.status === STATUS.MAJOR_OUTAGE).length;
 
-    if (allMonitors.length === 0) return 'AVAILABLE';
+/**
+ * Service counts for a group, and whether the bot may state them.
+ *
+ * A Cloud group with `hide_operational_children` ships only its AFFECTED children and reports
+ * how many healthy ones it left out. The statuspage renders that summary under exactly one
+ * condition — `isGroup && collapseOperational && affectedCount > 0` in HorizonComponentItem.vue
+ * — so while everything behind such a group is healthy, the page states NO number at all.
+ *
+ * The bot mirrors that. Printing "66 services operational" for a quiet group would disclose a
+ * fleet size the operator deliberately keeps off their own page, and the bot must never show
+ * more than the page it reports on.
+ *
+ * `disclose` is false only for a hiding group with nothing affected. A normal group has
+ * `childrenTotal === null` and always discloses, which is what keeps self-hosted unchanged.
+ */
+const groupCounts = (group) => {
+    const visibleUp = countUp(group.services);
+    const down = countDown(group.services);
 
-    const availableCount = allMonitors.filter(m => m.state === 'AVAILABLE').length;
-    const totalCount = allMonitors.length;
+    // The page's own rule: count what is actually non-neutral rather than `total - hidden`,
+    // which would treat a healthy kept sub-group as affected forever.
+    const affected = group.services.filter(
+        (s) => s.status !== STATUS.OPERATIONAL && s.status !== STATUS.UNKNOWN
+    ).length;
 
-    // GREEN: All monitors operational
-    if (availableCount === totalCount) return 'AVAILABLE';
+    if (group.childrenTotal === null || group.childrenTotal === undefined) {
+        return { up: visibleUp, down, total: group.services.length, affected, disclose: true };
+    }
 
-    // RED: All monitors down
-    if (availableCount === 0) return 'UNAVAILABLE';
+    return {
+        up: visibleUp + (group.childrenHidden ?? 0),
+        down,
+        total: group.childrenTotal,
+        affected,
+        disclose: affected > 0,
+    };
+};
 
-    // YELLOW: Partial outage (some down, some up)
-    return 'DEGRADED';
+/** Human label for a status, for wherever a group shows no numbers. */
+const describeStatus = (status) => {
+    if (status === STATUS.OPERATIONAL) return translation.trans('messages.status.operational');
+    if (status === STATUS.MAJOR_OUTAGE) return translation.trans('messages.status.critical');
+    return translation.trans('messages.status.degraded');
 };
 
 /**
- * Get category status emoji
- * @param {string} status - Category status
- * @returns {string} Status emoji
+ * The service lines for a group's field value.
+ *
+ * Three things happen here that only ever apply to a Cloud page:
+ *  - a nested sub-group becomes a bold heading, so five levels of tree survive as two levels
+ *    of Discord structure (see providers/cloud.js);
+ *  - beyond one level of nesting the ancestors become a breadcrumb instead of indentation,
+ *    which stops being readable inside a 1024-character field;
+ *  - hidden healthy children are summarised rather than omitted.
  */
-const getCategoryStatusEmoji = (status) => {
-    switch (status) {
-        case 'AVAILABLE':
-            return '✅';
-        case 'UNAVAILABLE':
-            return '❌';
-        case 'DEGRADED':
-            return '⚠️';
-        default:
-            return '❔';
+const groupBody = (group, snapshot, locale) => {
+    const { total, affected, disclose } = groupCounts(group);
+    const lines = [];
+    let lastPath = null;
+
+    for (const service of group.services) {
+        const path = service.path ?? [];
+        const key = path.map((p) => resolveText(p, locale, snapshot.defaultLocale)).join(' / ');
+
+        if (key !== lastPath) {
+            if (key !== '') lines.push(`**${key}**`);
+            lastPath = key;
+        }
+
+        const emoji = getStatusEmoji(service.status);
+        const prefix = key === '' ? '' : '┗━ ';
+        lines.push(`${prefix}${emoji} **${nameOf(service.name, snapshot, locale)}**`);
+    }
+
+    // Only when the page itself would show it — see groupCounts.
+    if (disclose && group.childrenTotal !== null && group.childrenTotal !== undefined) {
+        lines.push(translation.trans('messages.status.group_summary', { total, affected }, total));
+    }
+
+    // A hiding group with nothing affected lists nothing and states no number: just its own
+    // status, which is all the page shows there too.
+    if (lines.length === 0 && !disclose) {
+        return `${getStatusDot(group.status)} ${describeStatus(group.status)}`;
+    }
+
+    return serviceLines(lines) || translation.trans('messages.status.no_services');
+};
+
+/** The embed every layout falls back to when a page lists nothing. */
+/**
+ * The page's own name, in this embed's title and footer.
+ *
+ * CLAMPED, because EmbedBuilder validates on construction and throws — and this was the one
+ * string in the module that reached `setTitle` unclamped. `Statuspage.name` is a VARCHAR(255)
+ * while the title breaks at 245, and a Cloud page's name is not length-bounded by the bot at
+ * all, so a long enough name made every layout throw. The handler catches it per subscription,
+ * which means the status message would simply freeze on its last content for ever, for every
+ * subscriber of that page, with one log line and nothing a reader could see.
+ */
+/** The host, which is always meaningful and never a translation. */
+const hostOf = (url) => {
+    try {
+        return new URL(url).hostname;
+    } catch {
+        return url || '';
     }
 };
 
+const titleFor = (snapshot, locale) => {
+    // The HOST as the last resort, not the word "error".
+    //
+    // A page whose name resolves to nothing rendered as "Dienste von Fehler", which reads as
+    // though something had gone wrong rather than as the name of a page. The adapters already
+    // fall back to the stored name when the API omits one, but `??` does not catch a name that
+    // is present and EMPTY — a translation cleared to null is stored, not removed. The
+    // hostname is right in every one of those cases and needs no translation.
+    const pageName = resolveText(snapshot.name, locale, snapshot.defaultLocale) || hostOf(snapshot.url);
+    return {
+        title: truncate(translation.trans('messages.status.title', { name: pageName }), DISCORD_LIMITS.EMBED_TITLE),
+        footer: truncate(pageName, DISCORD_LIMITS.EMBED_FOOTER_TEXT),
+    };
+};
+
+const emptyEmbed = (snapshot, locale) => {
+    const { title, footer } = titleFor(snapshot, locale);
+    return [{
+        embed: new EmbedBuilder()
+            .setTitle(title)
+            .setDescription(translation.trans('messages.status.no_categories'))
+            .setURL(snapshot.url)
+            .setTimestamp(new Date())
+            .setFooter({ text: footer }),
+        type: 'single'
+    }];
+};
+
+/** Title/URL/footer/timestamp — identical across every layout. */
+const baseEmbed = (snapshot, locale, color) => {
+    const { title, footer } = titleFor(snapshot, locale);
+    return new EmbedBuilder()
+        .setTitle(title)
+        .setColor(color)
+        .setURL(snapshot.url)
+        .setTimestamp(new Date())
+        .setFooter({ text: footer });
+};
+
 /**
- * Detailed Layout - Shows all monitors grouped by categories
- * This is the default layout with full monitor details
+ * Detailed Layout - every service, grouped.
  *
- * @param {Object} statuspageService - Statuspage service instance
- * @param {Object} statuspage - Statuspage record
- * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with single embed (for consistency with other layouts)
+ * @param {Object} snapshot - dto/statuspage.js snapshot
+ * @param {string} locale - the subscription's locale
+ * @returns {Array<Object>} one entry per embed
  */
-export const renderDetailedLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderDetailedLayout = (snapshot, locale = 'de') => {
     translation.setLocale(locale);
 
-    const categories = statuspageService.categories || [];
+    const groups = snapshot.groups || [];
+    if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    if (categories.length === 0) {
-        return [{
-            embed: new EmbedBuilder()
-                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-                .setDescription(translation.trans('messages.status.no_categories'))
-                .setURL(statuspage.url)
-                .setTimestamp(new Date())
-                .setFooter({ text: statuspage.name }),
-            type: 'single'
-        }];
-    }
+    const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall));
 
-    // Calculate overall status for embed color
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
+    const fields = groups.map((group) => ({
+        name: groupName(group, snapshot, locale),
+        value: groupBody(group, snapshot, locale),
+        inline: false // Default layout - full width, straight down
+    }));
 
-    const fields = categories.map((category) => {
-        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const monitorList = monitors
-            .map((monitor) => {
-                const emoji = getStatusEmoji(monitor.state);
-                return `${emoji} **${monitor.name}**`;
-            })
-            .join('\n') || translation.trans('messages.status.no_services');
-
-        return {
-            name: category.name || translation.trans('messages.status.unknown_category'),
-            value: monitorList,
-            inline: false // Default layout - full width, straight down
-        };
-    });
-
-    const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setColor(embedColor)
-        .setFields(fields)
-        .setURL(statuspage.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+    finalizeEmbed(embed, fields);
 
     return [{ embed, type: 'single' }];
 };
 
 /**
- * Compact Layout - Shows monitors in a condensed format with status counts
- * Shows category status and count instead of listing all monitors
- *
- * @param {Object} statuspageService - Statuspage service instance
- * @param {Object} statuspage - Statuspage record
- * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with single embed
+ * Compact Layout - one tile per group with a counter instead of the service list.
  */
-export const renderCompactLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderCompactLayout = (snapshot, locale = 'de') => {
     translation.setLocale(locale);
 
-    const categories = statuspageService.categories || [];
+    const groups = snapshot.groups || [];
+    if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    if (categories.length === 0) {
-        return [{
-            embed: new EmbedBuilder()
-                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-                .setDescription(translation.trans('messages.status.no_categories'))
-                .setURL(statuspage.url)
-                .setTimestamp(new Date())
-                .setFooter({ text: statuspage.name }),
-            type: 'single'
-        }];
-    }
+    const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall));
 
-    // Calculate overall status for embed color
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
+    const fields = groups.map((group) => {
+        const { up, down, total, disclose } = groupCounts(group);
 
-    const fields = categories.map((category, index) => {
-        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const categoryStatus = getCategoryStatus(monitors);
+        const statusDot = getStatusDot(group.status);
+        const statusLabel = describeStatus(group.status);
 
-        // Count by status
-        const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
-        const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
-        const totalCount = monitors.length;
-
-        // Status indicator with custom emoji dot
-        const statusDot = getStatusDot(categoryStatus);
-        let statusLabel;
-        if (categoryStatus === 'AVAILABLE') {
-            statusLabel = translation.trans('messages.status.operational');
-        } else if (categoryStatus === 'UNAVAILABLE') {
-            statusLabel = translation.trans('messages.status.critical');
+        // A hiding group with nothing affected gets no fraction — the count is the very thing
+        // the page withholds there — and no second line, which would only repeat the label.
+        let statusText;
+        if (!disclose) {
+            statusText = `┃ ${statusDot} ${statusLabel}`;
         } else {
-            statusLabel = translation.trans('messages.status.degraded');
-        }
-
-        let statusText = `┃ **${availableCount}/${totalCount}** ${translation.trans('messages.status.services')}`;
-        if (unavailableCount > 0) {
-            statusText += `\n┗━ ${statusDot} **${unavailableCount}** ${translation.trans('messages.status.down')}`;
-        } else {
-            statusText += `\n┗━ ${statusDot} ${statusLabel}`;
+            statusText = `┃ **${up}/${total}** ${translation.trans('messages.status.services')}`;
+            statusText += down > 0
+                ? `\n┗━ ${statusDot} **${down}** ${translation.trans('messages.status.down')}`
+                : `\n┗━ ${statusDot} ${statusLabel}`;
         }
 
         return {
-            name: category.name || translation.trans('messages.status.unknown_category'),
+            name: groupName(group, snapshot, locale),
             value: statusText || translation.trans('messages.status.no_services'),
             inline: true
         };
     });
 
-    // Fill incomplete rows with empty fields (3 per row)
-    const remainder = fields.length % 3;
-    if (remainder !== 0) {
-        const emptyFieldsNeeded = 3 - remainder;
-        for (let i = 0; i < emptyFieldsNeeded; i++) {
-            fields.push({
-                name: '\u200B', // Zero-width space
-                value: '\u200B',
-                inline: true
-            });
-        }
-    }
-
-    const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setColor(embedColor)
-        .setFields(fields)
-        .setURL(statuspage.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+    finalizeEmbed(embed, fields, { inline: true });
 
     return [{ embed, type: 'single' }];
 };
 
 /**
- * Overview Layout - Shows only categories with overall status
- * Useful for high-level monitoring without monitor details
- *
- * @param {Object} statuspageService - Statuspage service instance
- * @param {Object} statuspage - Statuspage record
- * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with single embed
+ * Overview Layout - page summary plus one compact tile per group.
  */
-export const renderOverviewLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderOverviewLayout = (snapshot, locale = 'de') => {
     translation.setLocale(locale);
 
-    const categories = statuspageService.categories || [];
+    const groups = snapshot.groups || [];
+    if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    if (categories.length === 0) {
-        return [{
-            embed: new EmbedBuilder()
-                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-                .setDescription(translation.trans('messages.status.no_categories'))
-                .setURL(statuspage.url)
-                .setTimestamp(new Date())
-                .setFooter({ text: statuspage.name }),
-            type: 'single'
-        }];
-    }
+    // The page-wide total must not smuggle hidden systems back in through the summary line.
+    const totals = groups.reduce((acc, group) => {
+        const { up, total, disclose } = groupCounts(group);
+        return disclose
+            ? { up: acc.up + up, total: acc.total + total }
+            : { up: acc.up + group.services.length, total: acc.total + group.services.length };
+    }, { up: 0, total: 0 });
+    const totalAvailable = totals.up;
+    const totalUnavailable = totals.total - totalAvailable;
 
-    // Calculate overall status for embed color and summary
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
-
-    // Calculate totals for description
-    const totalMonitors = categories.reduce((sum, cat) => {
-        const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
-        return sum + monitors.length;
-    }, 0);
-
-    const totalAvailable = categories.reduce((sum, cat) => {
-        const monitors = Array.isArray(cat.monitors) ? cat.monitors : [];
-        return sum + monitors.filter(m => m.state === 'AVAILABLE').length;
-    }, 0);
-
-    const totalUnavailable = totalMonitors - totalAvailable;
-    const overallPercentage = totalMonitors > 0 ? Math.round((totalAvailable / totalMonitors) * 100) : 100;
-
-    // Create overall status indicator
-    const overallStatusDot = getStatusDot(overallStatus);
+    const overallStatusDot = getStatusDot(snapshot.overall);
     let statusSummary;
-    if (overallStatus === 'AVAILABLE') {
+    if (snapshot.overall === STATUS.OPERATIONAL) {
         statusSummary = `${overallStatusDot} ${translation.trans('messages.status.all_systems_operational')}`;
-    } else if (overallStatus === 'UNAVAILABLE') {
+    } else if (snapshot.overall === STATUS.MAJOR_OUTAGE) {
         statusSummary = `${overallStatusDot} ${translation.trans('messages.status.system_issues_detected')}`;
     } else {
         statusSummary = `${overallStatusDot} ${translation.trans('messages.status.partial_degradation')}`;
     }
 
-    // Create description with clean status summary
     let description = `${statusSummary}`;
     if (totalUnavailable > 0) {
         description += `\n\`\`\`diff\n- ${totalUnavailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.down')}\n+ ${totalAvailable} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
     } else {
-        description += `\n\`\`\`diff\n+ ${totalAvailable}/${totalMonitors} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
+        description += `\n\`\`\`diff\n+ ${totalAvailable}/${totals.total} ${translation.trans('messages.status.services')} ${translation.trans('messages.status.operational')}\n\`\`\``;
     }
 
-    // Build fields for each category with cleaner layout
-    const fields = categories.map((category) => {
-        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const categoryStatus = getCategoryStatus(monitors);
-        const categoryName = category.name || translation.trans('messages.status.unknown_category');
+    const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall))
+        .setDescription(clampDescription(description));
 
-        // Count monitors by status
-        const totalMonitors = monitors.length;
-        const availableCount = monitors.filter(m => m.state === 'AVAILABLE').length;
-        const unavailableCount = monitors.filter(m => m.state === 'UNAVAILABLE').length;
+    const fields = groups.map((group) => {
+        const { up, down, total, disclose } = groupCounts(group);
 
-        // Use custom emoji dots
-        const statusDot = getStatusDot(categoryStatus);
-
-        // Build clean status line
-        let statusText = `${statusDot} ${availableCount}/${totalMonitors}`;
-        if (unavailableCount > 0) {
-            statusText += ` • **${unavailableCount}** ${translation.trans('messages.status.down')}`;
+        let statusText = disclose
+            ? `${getStatusDot(group.status)} ${up}/${total}`
+            : `${getStatusDot(group.status)} ${describeStatus(group.status)}`;
+        if (down > 0) {
+            statusText += ` • **${down}** ${translation.trans('messages.status.down')}`;
         }
 
         return {
-            name: categoryName,
+            name: groupName(group, snapshot, locale),
             value: statusText,
             inline: true
         };
     });
 
-    // Fill incomplete rows with empty fields (3 per row)
-    const remainder = fields.length % 3;
-    if (remainder !== 0) {
-        const emptyFieldsNeeded = 3 - remainder;
-        for (let i = 0; i < emptyFieldsNeeded; i++) {
-            fields.push({
-                name: '\u200B', // Zero-width space
-                value: '\u200B',
-                inline: true
-            });
-        }
-    }
-
-    const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
-        .setColor(embedColor)
-        .setFields(fields)
-        .setURL(statuspage.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+    finalizeEmbed(embed, fields, { inline: true });
 
     return [{ embed, type: 'single' }];
 };
 
 /**
- * Tree Layout - Shows categories and services in a hierarchical tree structure
- * Uses visual separators between categories for better readability
+ * Tree Layout - group headers with their services indented underneath.
  *
- * @param {Object} statuspageService - Statuspage service instance
- * @param {Object} statuspage - Statuspage record
- * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with single embed
+ * The service dot is deliberately binary here (up or down) rather than the group's three-way
+ * dot: that is how this layout has always rendered, and the golden snapshots pin it.
  */
-export const renderTreeLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderTreeLayout = (snapshot, locale = 'de') => {
     translation.setLocale(locale);
 
-    const categories = statuspageService.categories || [];
+    const groups = snapshot.groups || [];
+    if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    if (categories.length === 0) {
-        return [{
-            embed: new EmbedBuilder()
-                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-                .setDescription(translation.trans('messages.status.no_categories'))
-                .setURL(statuspage.url)
-                .setTimestamp(new Date())
-                .setFooter({ text: statuspage.name }),
-            type: 'single'
-        }];
-    }
-
-    // Calculate overall status
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
-
-    // Build tree as description with better formatting
     let description = '';
 
-    categories.forEach((category, catIndex) => {
-        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const categoryName = category.name || translation.trans('messages.status.unknown_category');
-        const categoryStatus = getCategoryStatus(monitors);
-        const categoryDot = getStatusDot(categoryStatus);
+    groups.forEach((group, index) => {
+        description += `**${getStatusDot(group.status)} ${groupName(group, snapshot, locale)}**\n`;
 
-        // Add category header with bold text
-        description += `**${categoryDot} ${categoryName}**\n`;
-
-        // Add monitors under category with indentation
-        monitors.forEach((monitor, monIndex) => {
-            const monitorDot = getStatusDot(monitor.state === 'AVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE');
-            description += `    ${monitorDot} ${monitor.name}\n`;
+        group.services.forEach((service) => {
+            // The service's OWN status. Collapsing everything non-operational to major_outage
+            // painted a planned maintenance window and a degraded service the same red as a
+            // total failure — which reads as worse than it is, and is the one direction a
+            // status page must never err in.
+            const dot = getStatusDot(service.status);
+            description += `    ${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
-        // Add visual separator between categories (except last one)
-        if (catIndex < categories.length - 1) {
+        // ANY group with nothing under it, not just a hiding one. A bare heading reads as
+        // broken rather than as healthy, and the earlier version only covered the Cloud's
+        // hiding groups: an ordinary empty category — a self-hosted one with no monitors yet,
+        // or a Cloud group whose children are all invisible — has no `childrenTotal`, so
+        // `disclose` is true, the guard was skipped and the heading was emitted alone. If it
+        // is the only category, the whole description is one bold word.
+        if (group.services.length === 0) {
+            description += `    ${describeStatus(group.status)}\n`;
+        }
+
+        if (index < groups.length - 1) {
             description += '\n';
         }
     });
 
-    const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
-        .setColor(embedColor)
-        .setURL(statuspage.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+    const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall))
+        .setDescription(clampDescription(description));
 
     return [{ embed, type: 'single' }];
 };
 
 /**
- * Minimal Layout - Ultra-clean display with only status dots and names
- * No counts, no extra info - just pure status overview
- *
- * @param {Object} statuspageService - Statuspage service instance
- * @param {Object} statuspage - Statuspage record
- * @param {string} locale - User's locale
- * @returns {Array<Object>} Array with single embed
+ * Minimal Layout - names and dots, nothing else.
  */
-export const renderMinimalLayout = (statuspageService, statuspage, locale = 'de') => {
+export const renderMinimalLayout = (snapshot, locale = 'de') => {
     translation.setLocale(locale);
 
-    const categories = statuspageService.categories || [];
+    const groups = snapshot.groups || [];
+    if (groups.length === 0) return emptyEmbed(snapshot, locale);
 
-    if (categories.length === 0) {
-        return [{
-            embed: new EmbedBuilder()
-                .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-                .setDescription(translation.trans('messages.status.no_categories'))
-                .setURL(statuspage.url)
-                .setTimestamp(new Date())
-                .setFooter({ text: statuspage.name }),
-            type: 'single'
-        }];
-    }
-
-    // Calculate overall status
-    const overallStatus = getOverallStatus(categories);
-    const embedColor = getEmbedColor(overallStatus);
-
-    // Build description with minimal formatting
     let description = '';
 
-    categories.forEach((category, catIndex) => {
-        const monitors = Array.isArray(category.monitors) ? category.monitors : [];
-        const categoryName = category.name || translation.trans('messages.status.unknown_category');
+    groups.forEach((group, index) => {
+        description += `**${groupName(group, snapshot, locale)}**\n`;
 
-        // Category name without status indicator
-        description += `**${categoryName}**\n`;
-
-        // Just monitor name with dot - nothing else
-        monitors.forEach((monitor) => {
-            const monitorDot = getStatusDot(monitor.state === 'AVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE');
-            description += `${monitorDot} ${monitor.name}\n`;
+        group.services.forEach((service) => {
+            // The service's OWN status. Collapsing everything non-operational to major_outage
+            // painted a planned maintenance window and a degraded service the same red as a
+            // total failure — which reads as worse than it is, and is the one direction a
+            // status page must never err in.
+            const dot = getStatusDot(service.status);
+            description += `${dot} ${nameOf(service.name, snapshot, locale)}\n`;
         });
 
-        // Single line break between categories
-        if (catIndex < categories.length - 1) {
+        // See the tree layout: no group may render as an empty heading, hiding or not.
+        if (group.services.length === 0) {
+            description += `${getStatusDot(group.status)} ${describeStatus(group.status)}\n`;
+        }
+
+        if (index < groups.length - 1) {
             description += '\n';
         }
     });
 
-    const embed = new EmbedBuilder()
-        .setTitle(translation.trans('messages.status.title', { name: statuspage.name }))
-        .setDescription(description)
-        .setColor(embedColor)
-        .setURL(statuspage.url)
-        .setTimestamp(new Date())
-        .setFooter({ text: statuspage.name });
+    const embed = baseEmbed(snapshot, locale, getEmbedColor(snapshot.overall))
+        .setDescription(clampDescription(description));
 
     return [{ embed, type: 'single' }];
 };

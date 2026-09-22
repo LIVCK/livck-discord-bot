@@ -1,0 +1,247 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`cloud-01-all-green.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-02-single-outage.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-03-degraded-only.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-04-maintenance-window.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-05-hiding-group.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-06-hiding-group-with-outage.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-07-nested-two-deep.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-08-large-fleet.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-09-ungrouped-services.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-10-everything-at-once.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-11-notice-only.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-12-empty-page.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-13-resolved-incident.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-14-many-small-groups.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-15-partial-across-groups.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-16-maintenance-rescue.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;
+
+exports[`cloud-17-every-status.json the decisions across three cycles, written down 1`] = `
+{
+  "cycle1": [
+    "send",
+    "send",
+  ],
+  "cycle2": [],
+  "cycle3": [
+    "edit",
+    "edit",
+  ],
+  "rows": 2,
+}
+`;

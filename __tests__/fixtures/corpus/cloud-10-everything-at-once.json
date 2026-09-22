@@ -1,0 +1,200 @@
+{
+  "meta": {
+    "id": "NKnxkHsKP7hikDooesxpA",
+    "name": {
+      "de": "Priemer-Dies Status",
+      "en": "Bigdeli AG Status"
+    },
+    "slug": "kupprion-holzner",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "kztDqtgOyoDFjqqWpj9RT",
+      "name": {
+        "de": "Kundenportal",
+        "en": "Customer portal"
+      },
+      "description": null,
+      "status": "major_outage",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "WhDOJf4UQdQXQldT7DvsA",
+          "name": {
+            "de": "Rootserver Nürnberg",
+            "en": "Root servers Nürnberg"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "53TUpLTpcaPk1UuUQIgyR",
+          "name": {
+            "de": "Backup Nürnberg",
+            "en": "Backup Nürnberg"
+          },
+          "description": null,
+          "status": "major_outage",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "PhrOInZO2jOQ6489PgNQc",
+          "name": {
+            "de": "Datenbank Helsinki",
+            "en": "Database Helsinki"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "5kKHayP9vG4UrUcXsEOfb",
+          "name": {
+            "de": "Kundenportal Falkenstein",
+            "en": "Customer portal Falkenstein"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "oN3qKITpophjR2Rucpiio",
+          "name": {
+            "de": "Rootserver Amsterdam",
+            "en": "Root servers Amsterdam"
+          },
+          "description": null,
+          "status": "under_maintenance",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [
+    {
+      "id": "NOkZsa4rzMSdyTStZeXpl",
+      "title": {
+        "de": "Störung: DNS",
+        "en": "Outage: Web hosting"
+      },
+      "severity": "major",
+      "status": "monitoring",
+      "started_at": "2026-09-11T20:35:02.934Z",
+      "resolved_at": null,
+      "updates": [
+        {
+          "id": "kiPs0LKF1gEZIYmjbpRZk",
+          "status": "investigating",
+          "message": {
+            "de": "Ad sapiente quia rerum. Voluptatem quo modi.",
+            "en": "Nemo quisquam voluptatum. Sunt adipisci enim mollitia laudantium dolor."
+          },
+          "created_at": "2026-09-11T20:55:02.934Z"
+        },
+        {
+          "id": "3plgLORmZMHlMsCpleJV6",
+          "status": "identified",
+          "message": {
+            "de": "Suscipit ea nesciunt adipisci incidunt qui. Quia temporibus eligendi voluptas recusandae dolorum iste nostrum laborum quo.",
+            "en": "Nam nihil voluptatibus illo in ipsum aperiam architecto sequi. Voluptatem expedita praesentium beatae dicta cum quo magni deserunt quae."
+          },
+          "created_at": "2026-09-11T21:15:02.934Z"
+        },
+        {
+          "id": "QzzxGrFp5YLtlNqxT2I5Z",
+          "status": "monitoring",
+          "message": {
+            "de": "Magnam repellendus distinctio ratione. Tempora perferendis ab.",
+            "en": "Vel exercitationem rerum dicta sit autem. Eligendi quia nobis nulla reprehenderit."
+          },
+          "created_at": "2026-09-11T21:35:02.934Z"
+        }
+      ],
+      "affected_components": [],
+      "affected_services": [],
+      "attachments": [],
+      "postmortem": null
+    }
+  ],
+  "notices": [
+    {
+      "id": "e2Dobq7zUTN0vtB3LGF4T",
+      "title": {
+        "de": "Hinweis zu Phishing-Mails",
+        "en": "Notice about phishing mails"
+      },
+      "started_at": "2026-09-12T02:19:50.720Z",
+      "updates": [],
+      "affected_components": []
+    }
+  ],
+  "maintenances": {
+    "active": [
+      {
+        "id": "tWBC9EGNAHu7piAg3uuX0",
+        "title": {
+          "de": "Wartung: TeamSpeak",
+          "en": "Maintenance: Load balancer"
+        },
+        "status": "in_progress",
+        "scheduled_start": "2026-09-12T15:13:05.920Z",
+        "scheduled_end": "2026-09-12T17:13:05.920Z",
+        "started_at": "2026-09-12T15:13:05.920Z",
+        "completed_at": null,
+        "updates": [],
+        "affected_components": [],
+        "affected_services": []
+      }
+    ],
+    "scheduled": [
+      {
+        "id": "h5QYeICJlPKjBC2S7aaw8",
+        "title": {
+          "de": "Wartung: Mailserver",
+          "en": "Maintenance: Web hosting"
+        },
+        "status": "scheduled",
+        "scheduled_start": "2026-09-13T21:57:23.417Z",
+        "scheduled_end": "2026-09-13T23:57:23.417Z",
+        "started_at": null,
+        "completed_at": null,
+        "updates": [],
+        "affected_components": [],
+        "affected_services": []
+      }
+    ]
+  },
+  "metrics": []
+}

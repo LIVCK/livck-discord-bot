@@ -1,102 +1,47 @@
 import dotenv from 'dotenv';
-import models from './models/index.js';
-import bot from './discord/bot.js';
-import { handleStatusPage } from "./handlers/handleStatuspage.js";
-import { handleAlerts } from "./handlers/handleAlerts.js";
-import cache from './database/redis.js';
-import StatuspagePauseManager from './services/statuspagePauseManager.js';
 
 dotenv.config();
 
-const client = await bot(models)
+// BEFORE anything else is imported. `models/index.js` opens a database connection and the
+// command modules open a Redis one at import time, and a missing variable there surfaces as
+// `TypeError: Invalid URL` from inside node-redis rather than as the name of what is missing.
+const { requireEnv } = await import('./util/env.js');
+requireEnv();
 
-const BATCH_SIZE = 100;
-const LOCK_TTL = 20;
-const INTERVAL = 15 * 1000;
+const models = (await import('./models/index.js')).default;
 
-const scheduleStatusPageUpdates = async (client) => {
-    try {
-        const statuspages = await models.Statuspage.findAll({
-            attributes: ['id', 'url', 'paused', 'pauseReason']
-        });
+// Before the loop touches a single column. Forgetting to migrate is not a loud failure — the
+// loop selects columns that do not exist, every query fails, and the process stays up looking
+// healthy. See util/migrateOnStart.js.
+const { migrateOnStart } = await import('./util/migrateOnStart.js');
+try {
+    const applied = await migrateOnStart();
+    if (applied.length === 0) console.log('[Migrate] Schema is up to date.');
+} catch (error) {
+    console.error('[Migrate] Failed, refusing to start:', error);
+    process.exit(1);
+}
 
-        const activePages = statuspages.filter(sp => !sp.paused);
-        const pausedPages = statuspages.filter(sp => sp.paused);
+const bot = (await import('./discord/bot.js')).default;
+const { startUpdateLoop, stopUpdateLoop } = await import('./services/updateLoop.js');
 
-        console.log(`[UpdateLoop] Starting update for ${activePages.length} active statuspages (${pausedPages.length} paused)`);
-
-        for (let i = 0; i < activePages.length; i += BATCH_SIZE) {
-            const batch = activePages.slice(i, i + BATCH_SIZE);
-            console.log(`[UpdateLoop] Processing batch ${i / BATCH_SIZE + 1} (${batch.length} pages)`);
-
-            const results = await Promise.allSettled(batch.map(async (statuspage) => {
-                let cacheKey = `dc-bot:statuspage:${statuspage.id}`;
-                let cacheValue = await cache.get(cacheKey) || false;
-                if (cacheValue) {
-                    console.log(`[UpdateLoop] Skipping ${statuspage.url} (cached)`);
-                    return { skipped: true };
-                }
-
-                console.log(`[UpdateLoop] Updating ${statuspage.url}`);
-                const startTime = Date.now();
-
-                try {
-                    await Promise.all([
-                        handleStatusPage(statuspage.id, client),
-                        handleAlerts(statuspage.id, client)
-                    ]);
-
-                    // Reset failure count on success
-                    if (statuspage.failureCount > 0) {
-                        statuspage.failureCount = 0;
-                        statuspage.lastFailure = null;
-                        await statuspage.save();
-                    }
-
-                    await cache.set(cacheKey, 'true', { EX: LOCK_TTL });
-
-                    const duration = Date.now() - startTime;
-                    console.log(`[UpdateLoop] Completed ${statuspage.url} in ${duration}ms`);
-
-                    return { updated: true, duration };
-                } catch (error) {
-                    console.error(`[UpdateLoop] Error updating ${statuspage.url}:`, error.message);
-
-                    // Handle failure and potentially pause
-                    const wasPaused = await StatuspagePauseManager.handleFailure(statuspage, error, client, models);
-
-                    return {
-                        failed: true,
-                        paused: wasPaused,
-                        error: error.message
-                    };
-                }
-            }));
-
-            const updated = results.filter(r => r.status === 'fulfilled' && r.value?.updated).length;
-            const skipped = results.filter(r => r.status === 'fulfilled' && r.value?.skipped).length;
-            const failed = results.filter(r => r.status === 'fulfilled' && r.value?.failed).length;
-            const paused = results.filter(r => r.status === 'fulfilled' && r.value?.paused).length;
-
-            console.log(`[UpdateLoop] Batch complete: ${updated} updated, ${skipped} skipped, ${failed} failed, ${paused} newly paused`);
-        }
-    } catch (error) {
-        console.error(`[UpdateLoop] Error scheduling status page updates`, error);
-    }
-};
-
-const startUpdateLoop = async (client) => {
-    try {
-        console.log(`[UpdateLoop] Loop iteration starting at ${new Date().toISOString()}`);
-        await scheduleStatusPageUpdates(client);
-        console.log(`[UpdateLoop] Loop iteration completed at ${new Date().toISOString()}`);
-    } catch (error) {
-        console.error("[UpdateLoop] Critical error in update loop:", error.message);
-        console.error("[UpdateLoop] Stack:", error.stack);
-    } finally {
-        console.log(`[UpdateLoop] Scheduling next iteration in ${INTERVAL}ms`);
-        setTimeout(() => startUpdateLoop(client), INTERVAL);
-    }
-};
+const client = await bot(models);
 
 startUpdateLoop(client);
+
+// Stopping on request rather than being killed — see util/shutdown.js.
+const { createShutdown } = await import('./util/shutdown.js');
+const cache = (await import('./database/redis.js')).default;
+
+const shutdown = createShutdown({
+    stopLoop: stopUpdateLoop,
+    close: [
+        () => client.destroy(),
+        () => models.database.close(),
+        () => (cache.isOpen ? cache.quit() : Promise.resolve()),
+    ],
+});
+
+for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, () => { shutdown(signal); });
+}

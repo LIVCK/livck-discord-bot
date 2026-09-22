@@ -1,0 +1,28 @@
+{
+  "b60e88f6-1cdb-4281-b1f3-9a0d13862c8d": {
+    "id": "b60e88f6-1cdb-4281-b1f3-9a0d13862c8d",
+    "name": "Gameserver",
+    "monitors": [
+      {
+        "id": "e0a91f35-54bd-474f-9c1c-c8c922bb872f",
+        "name": "Kundenportal Falkenstein",
+        "state": "AVAILABLE"
+      },
+      {
+        "id": "ba52f949-4077-4980-9d33-ce6916762338",
+        "name": "Loadbalancer Frankfurt",
+        "state": "MAINTENANCE"
+      },
+      {
+        "id": "60dccf75-7421-4e07-a69d-14cf2e8b801a",
+        "name": "Gameserver Frankfurt (Beta)",
+        "state": "MAINTENANCE"
+      },
+      {
+        "id": "12c79f85-f936-4a90-9a84-3097489aa8d4",
+        "name": "DNS Helsinki",
+        "state": "AVAILABLE"
+      }
+    ]
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "meta": {
+    "id": "QfwQf8CUaFHF4GUTsbiNx",
+    "name": {
+      "de": "Best, Holinski und Koderisch Status",
+      "en": "Bultmann-Hirt Status"
+    },
+    "slug": "reiber-prange-und-kinzel",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "EhlUdsy6SFWbxolaZn0Ns",
+      "name": {
+        "de": "Kundenportal",
+        "en": "Customer portal"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "v0QR33IXFSHEYiEfv8lQP",
+          "name": {
+            "de": "DNS Nürnberg (v2)",
+            "en": "DNS Nürnberg (v2)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "AhjeplHhfIwm1uhnYcMVx",
+          "name": {
+            "de": "Rootserver Nürnberg",
+            "en": "Root servers Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "L2yGZEXROsGmos4sH5KFu",
+          "name": {
+            "de": "API Falkenstein",
+            "en": "API Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "SpT159YUksTaA5cvDM1VU",
+          "name": {
+            "de": "Kundenportal Falkenstein",
+            "en": "Customer portal Falkenstein"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [
+    {
+      "id": "u8To1qeTxKO1eymzkkMXk",
+      "title": {
+        "de": "Störung: Kundenportal",
+        "en": "Outage: DNS"
+      },
+      "severity": "major",
+      "status": "resolved",
+      "started_at": "2026-09-12T03:38:41.985Z",
+      "resolved_at": "2026-09-12T04:38:41.985Z",
+      "updates": [
+        {
+          "id": "omLMn0f2cQsxfwfsHHY20",
+          "status": "investigating",
+          "message": {
+            "de": "Maiores sit harum eius. Sit blanditiis repellat eveniet velit.",
+            "en": "Maxime perferendis cupiditate temporibus dolor perspiciatis nesciunt quisquam architecto nam. Praesentium totam animi quidem omnis doloribus sunt dolorem."
+          },
+          "created_at": "2026-09-12T03:58:41.985Z"
+        },
+        {
+          "id": "THA558MAQ0QLe7sHCq9Qm",
+          "status": "identified",
+          "message": {
+            "de": "Voluptatibus quas qui reiciendis voluptas et. Libero placeat mollitia deserunt harum nesciunt dolorem iste fugit sequi.",
+            "en": "Harum officia consectetur suscipit ipsam tempore nulla praesentium qui rem. Deleniti magni magnam exercitationem laudantium."
+          },
+          "created_at": "2026-09-12T04:18:41.985Z"
+        },
+        {
+          "id": "rEAof1j5INMxi0Ekm6oIP",
+          "status": "monitoring",
+          "message": {
+            "de": "Dolor modi nesciunt nostrum harum voluptate consequuntur debitis quidem. Assumenda minus accusantium laborum consequuntur possimus.",
+            "en": "Exercitationem ullam quo reprehenderit quas quae voluptatibus impedit tenetur. Placeat qui distinctio accusantium ducimus pariatur enim."
+          },
+          "created_at": "2026-09-12T04:38:41.985Z"
+        }
+      ],
+      "affected_components": [],
+      "affected_services": [],
+      "attachments": [],
+      "postmortem": null
+    }
+  ],
+  "notices": [],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}

@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "id": "v3zerMsqlQp4gSbuWwaQl",
+    "name": {
+      "de": "Raabe GmbH & Co. KG Status",
+      "en": "Bielert-Dittmer Status"
+    },
+    "slug": "rangen-pitschugin-und-gabius",
+    "supported_locales": [
+      "de",
+      "en"
+    ],
+    "default_locale": "de",
+    "show_incident_history": true,
+    "access_type": "public"
+  },
+  "components": [
+    {
+      "id": "2pRjT3FYVLvN48uhcS0GQ",
+      "name": {
+        "de": "Gameserver",
+        "en": "Game servers"
+      },
+      "description": null,
+      "status": "operational",
+      "is_visible": true,
+      "is_group": true,
+      "show_uptime_bars": false,
+      "hide_operational_children": false,
+      "default_open": true,
+      "children": [
+        {
+          "id": "1vtzNVwUOcMhOyl50CIf6",
+          "name": {
+            "de": "Mailserver Nürnberg",
+            "en": "Mail Nürnberg"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "ikIdegy1r8eMaFwMy9vNC",
+          "name": {
+            "de": "Loadbalancer Frankfurt",
+            "en": "Load balancer Frankfurt"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        },
+        {
+          "id": "JSaKhKJ27ZgpyO0FLWs0o",
+          "name": {
+            "de": "Datenbank Amsterdam (Legacy)",
+            "en": "Database Amsterdam (Legacy)"
+          },
+          "description": null,
+          "status": "operational",
+          "is_visible": true,
+          "is_group": false,
+          "show_uptime_bars": false,
+          "hide_operational_children": false,
+          "default_open": true
+        }
+      ]
+    }
+  ],
+  "active_incidents": [],
+  "notices": [
+    {
+      "id": "eD87WXHz3D63H2HepoCBz",
+      "title": {
+        "de": "Hinweis zu Phishing-Mails",
+        "en": "Notice about phishing mails"
+      },
+      "started_at": "2026-09-11T22:14:36.945Z",
+      "updates": [],
+      "affected_components": []
+    }
+  ],
+  "maintenances": {
+    "active": [],
+    "scheduled": []
+  },
+  "metrics": []
+}
