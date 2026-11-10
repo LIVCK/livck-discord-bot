@@ -264,6 +264,12 @@ let nextCycle = null;
 let stopping = false;
 /** The cycle running right now, so a shutdown can wait for it. */
 let current = null;
+let databaseDown = false;
+
+/** Sequelize's names for "could not reach the database at all", as opposed to a bad query. */
+const isDatabaseUnavailable = (error) =>
+    /^Sequelize(Connection|ConnectionRefused|ConnectionTimedOut|ConnectionAcquireTimeout|HostNotFound|HostNotReachable|InvalidConnection|AccessDenied)Error$/
+        .test(String(error?.name));
 
 /** Run forever, one cycle every INTERVAL. A cycle never brings the process down. */
 export const startUpdateLoop = async (client) => {
@@ -272,8 +278,25 @@ export const startUpdateLoop = async (client) => {
     try {
         current = runCycle(client);
         await current;
+        if (databaseDown) {
+            databaseDown = false;
+            logger.resetOnce('loop:database');
+            logger.info('[UpdateLoop] Database reachable again');
+        }
     } catch (error) {
-        logger.error('[UpdateLoop] Critical error in update loop:', error);
+        if (isDatabaseUnavailable(error)) {
+            // One line for the whole outage. The full Sequelize error is some forty lines of
+            // stack and was printed every cycle, four times a minute, for as long as the
+            // database stayed away; it says nothing the first line does not.
+            databaseDown = true;
+            logger.once(
+                'loop:database', 'error',
+                `[UpdateLoop] Database unavailable (${error.name}: ${error.message}); ` +
+                `trying again every ${INTERVAL / 1000}s`
+            );
+        } else {
+            logger.error('[UpdateLoop] Critical error in update loop:', error);
+        }
     } finally {
         current = null;
         if (!stopping) {
