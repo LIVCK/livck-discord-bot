@@ -18,7 +18,9 @@
  * 2. Nothing says which requests are refused. discord.js warns every 250 invalid requests
  *    with a count and nothing else. The `response` listener below collects 401/403/429 by
  *    route and Discord error code and writes one line per minute while there are any, so the
- *    channel behind a warning can be found from the log.
+ *    channel behind a warning can be found from the log. Waits the client predicted itself
+ *    (`rateLimited`) go into the same summary: discord.js emits one per bucket that has to
+ *    wait, and a heartbeat across a few hundred channels used to write a line for each.
  */
 
 /**
@@ -52,6 +54,8 @@ export const createRestPolicy = ({ log = (line) => console.warn(line) } = {}) =>
     const tooMany = new Map();
     /** `${status} ${METHOD} ${path} ${code}` → count since the last summary */
     const refused = new Map();
+    /** `global` or the bucket route → { count, longest } since the last summary */
+    const waited = new Map();
 
     const rejectOnRateLimit = (data) => {
         const path = pathOf(data.url);
@@ -92,8 +96,33 @@ export const createRestPolicy = ({ log = (line) => console.warn(line) } = {}) =>
             .then((body) => count(body?.code), () => count(null));
     };
 
+    const onRateLimited = (info) => {
+        const key = info.global ? 'global' : info.route;
+        const entry = waited.get(key) ?? { count: 0, longest: 0 };
+        entry.count += 1;
+        entry.longest = Math.max(entry.longest, Number(info.timeToReset) || 0);
+        waited.set(key, entry);
+    };
+
+    const summarizeWaits = () => {
+        if (waited.size === 0) return null;
+
+        const entries = [...waited.entries()].sort((a, b) => b[1].count - a[1].count);
+        const total = entries.reduce((sum, [, { count }]) => sum + count, 0);
+        waited.clear();
+
+        const top = entries.slice(0, 8)
+            .map(([key, { count, longest }]) => `${key} ×${count} (up to ${(longest / 1000).toFixed(1)}s)`)
+            .join(', ');
+        const more = entries.length > 8 ? `, and ${entries.length - 8} more` : '';
+        const line = `[Discord] Waited for rate limits ${total} time(s) in the last minute: ${top}${more}`;
+        log(line);
+        return line;
+    };
+
     const summarize = () => {
-        if (refused.size === 0) return null;
+        const waits = summarizeWaits();
+        if (refused.size === 0) return waits;
 
         const entries = [...refused.entries()].sort((a, b) => b[1] - a[1]);
         const total = entries.reduce((sum, [, n]) => sum + n, 0);
@@ -121,6 +150,7 @@ export const createRestPolicy = ({ log = (line) => console.warn(line) } = {}) =>
         /** Start listening on a client's REST manager. */
         attach(rest) {
             rest.on('response', onResponse);
+            rest.on('rateLimited', onRateLimited);
             timer = setInterval(summarize, SUMMARY_INTERVAL_MS);
             timer.unref?.();
             return this;

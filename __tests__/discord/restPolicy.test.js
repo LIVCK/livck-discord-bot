@@ -13,10 +13,11 @@ const respond = (policy, rest, status, body = {}) => rest.emit(
 );
 
 const fakeRest = () => {
-    const listeners = [];
+    const listeners = { response: [], rateLimited: [] };
     return {
-        on: (event, fn) => { if (event === 'response') listeners.push(fn); },
-        emit: (...args) => listeners.forEach((fn) => fn(...args)),
+        on: (event, fn) => { listeners[event]?.push(fn); },
+        emit: (...args) => listeners.response.forEach((fn) => fn(...args)),
+        waited: (info) => listeners.rateLimited.forEach((fn) => fn(info)),
     };
 };
 
@@ -87,6 +88,27 @@ describe('the refused-request summary', () => {
         expect(lines).toEqual([
             '[Discord] 3 refused request(s) in the last minute: ' +
             '403 POST /channels/123/messages (50013) ×2, 429 POST /channels/123/messages ×1',
+        ]);
+    });
+
+    test('waits the client sat out are counted, not logged one by one', () => {
+        // discord.js emits rateLimited once per wait, per bucket. A heartbeat over a few
+        // hundred channels at once wrote a line for every one of them.
+        const lines = [];
+        const policy = createRestPolicy({ log: (line) => lines.push(line) });
+        const rest = fakeRest();
+        policy.attach(rest);
+
+        rest.waited({ global: false, route: '/channels/:id/messages', timeToReset: 4000 });
+        rest.waited({ global: false, route: '/channels/:id/messages', timeToReset: 1000 });
+        rest.waited({ global: true, route: '/channels/:id/messages/:id', timeToReset: 300 });
+
+        policy.summarize();
+        policy.stop();
+
+        expect(lines).toEqual([
+            '[Discord] Waited for rate limits 3 time(s) in the last minute: ' +
+            '/channels/:id/messages ×2 (up to 4.0s), global ×1 (up to 0.3s)',
         ]);
     });
 

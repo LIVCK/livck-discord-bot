@@ -75,19 +75,6 @@ const initializeBot = async (commandsFolder, models) => {
     });
 
     /**
-     * Discord allows a bot 50 requests per second overall, plus per-route buckets keyed by
-     * channel. discord.js queues rather than throwing when a limit is reached, so the only
-     * symptom used to be status updates quietly arriving later and later — with nothing in
-     * the logs. This surfaces it.
-     */
-    client.rest.on('rateLimited', (info) => {
-        console.warn(
-            `[Discord] Rate limited: ${info.global ? 'global' : info.route} — waiting ${info.timeToReset}ms ` +
-            `(limit ${info.limit}, method ${info.method})`
-        );
-    });
-
-    /**
      * The one that actually gets a bot banned.
      *
      * Discord counts 401, 403 and 429 responses as INVALID REQUESTS and blocks the bot's IP at

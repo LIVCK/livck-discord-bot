@@ -70,6 +70,9 @@ status pages just as much.
   per outage now, and one when the database is back.
 - `DB_PORT` and `DB_DIALECT` were honoured by `migrate.js` but ignored by the bot itself, so
   a database outside port 3306 was migrated and then never reached.
+- Waits discord.js sits out by itself were logged one line each, so a heartbeat across a
+  few hundred channels wrote a few hundred lines. They are counted per route now and appear
+  in the once-a-minute Discord summary, next to the refused requests.
 - **Automatic pausing never triggered.** Two independent causes: `LIVCK.get()` returned
   `{data: []}` on every error instead of throwing (so an unreachable page looked like an empty
   one), and `server.js` did not load `failureCount`/`lastFailure`, leaving the counter
@@ -114,8 +117,9 @@ status pages just as much.
   `debug`, leaving one summary line per cycle. Expected network failures log a single line with
   no stack trace, and repeats for the same page are suppressed until the message changes — a
   dead domain went from ~5760 log entries a day to roughly ten.
-- Discord rate limiting is now reported through a `rateLimited` listener; previously discord.js
-  queued silently and the only symptom was updates arriving later and later.
+- Discord rate limiting is now reported: waits per route, and refused requests per route and
+  Discord error code, in one line per minute. Previously discord.js queued silently and the
+  only symptom was updates arriving later and later.
 
 ### Security
 
