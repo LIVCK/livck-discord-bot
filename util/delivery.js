@@ -210,10 +210,16 @@ export const logDeliverySuccess = (lane, subscription) => {
     logger.resetOnce(`deliver:${subscription.id}:${lane}`);
 };
 
+/**
+ * Resolves once every delivery still out has settled — including ones that outlived their
+ * deadline. For shutdown: see util/shutdown.js.
+ */
+export const drainDeliveries = () => Promise.allSettled([...inFlight.values()]);
+
 /** For tests. */
 export const resetDelivery = () => {
     inFlight.clear();
     failures.clear();
 };
 
-export default { deliver, deliveryState, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };
+export default { deliver, deliveryState, drainDeliveries, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };

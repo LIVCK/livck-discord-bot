@@ -15,6 +15,8 @@
 /**
  * @param {object} options
  * @param {() => void} options.stopLoop - stop scheduling further cycles
+ * @param {Array<() => Promise<unknown>>} [options.drain] - work to let finish first: the cycle
+ *   in flight, and deliveries that outlived it
  * @param {Array<() => Promise<unknown>>} options.close - connections to let go of
  * @param {number} [options.deadlineMs] - leave anyway after this
  * @param {(code: number) => void} [options.exit]
@@ -23,6 +25,7 @@
  */
 export const createShutdown = ({
     stopLoop,
+    drain = [],
     close = [],
     deadlineMs = Number(process.env.SHUTDOWN_DEADLINE_MS || 5000),
     exit = (code) => process.exit(code),
@@ -46,6 +49,22 @@ export const createShutdown = ({
         deadline.unref?.();
 
         stopLoop?.();
+
+        // Let what is in flight finish BEFORE the connections go. A delivery that reaches
+        // Discord after the database has closed is posted without the row that remembers it,
+        // and the next process, finding no row, posts it a second time. Bounded to part of the
+        // deadline, so the connections are still closed properly when something never ends.
+        if (drain.length > 0) {
+            let timer;
+            await Promise.race([
+                Promise.allSettled(drain.map((wait) => wait())),
+                new Promise((resolve) => {
+                    timer = setTimeout(resolve, Math.floor(deadlineMs * 0.6));
+                    timer.unref?.();
+                }),
+            ]);
+            clearTimeout(timer);
+        }
 
         // allSettled: one connection refusing to close must not strand the others.
         await Promise.allSettled(close.map((closer) => closer()));

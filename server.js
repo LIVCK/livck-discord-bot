@@ -23,7 +23,8 @@ try {
 }
 
 const bot = (await import('./discord/bot.js')).default;
-const { startUpdateLoop, stopUpdateLoop } = await import('./services/updateLoop.js');
+const { startUpdateLoop, stopUpdateLoop, whenCycleDone } = await import('./services/updateLoop.js');
+const { drainDeliveries } = await import('./util/delivery.js');
 
 const client = await bot(models);
 
@@ -35,6 +36,8 @@ const cache = (await import('./database/redis.js')).default;
 
 const shutdown = createShutdown({
     stopLoop: stopUpdateLoop,
+    // The cycle first, then whatever it left running: see util/shutdown.js.
+    drain: [async () => { await whenCycleDone(); await drainDeliveries(); }],
     close: [
         () => client.destroy(),
         () => models.database.close(),

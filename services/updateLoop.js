@@ -262,16 +262,20 @@ export const runCycle = async (client) => {
 /** The timer for the next cycle, so a shutdown can cancel it instead of being killed. */
 let nextCycle = null;
 let stopping = false;
+/** The cycle running right now, so a shutdown can wait for it. */
+let current = null;
 
 /** Run forever, one cycle every INTERVAL. A cycle never brings the process down. */
 export const startUpdateLoop = async (client) => {
     if (stopping) return;
 
     try {
-        await runCycle(client);
+        current = runCycle(client);
+        await current;
     } catch (error) {
         logger.error('[UpdateLoop] Critical error in update loop:', error);
     } finally {
+        current = null;
         if (!stopping) {
             nextCycle = setTimeout(() => startUpdateLoop(client), INTERVAL);
         }
@@ -294,4 +298,7 @@ export const stopUpdateLoop = () => {
     }
 };
 
-export default { runCycle, processStatuspage, startUpdateLoop, stopUpdateLoop, INTERVAL };
+/** Resolves when the cycle in flight, if any, is done. */
+export const whenCycleDone = () => (current ? current.then(() => {}, () => {}) : Promise.resolve());
+
+export default { runCycle, processStatuspage, startUpdateLoop, stopUpdateLoop, whenCycleDone, INTERVAL };

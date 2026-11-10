@@ -135,3 +135,49 @@ describe('with nothing to close', () => {
         expect(exit).toHaveBeenCalledWith(0);
     });
 });
+
+describe('work still in flight', () => {
+    test('is waited for before anything is closed', async () => {
+        // A delivery can outlive its cycle now (util/delivery.js), and a message that reaches
+        // Discord after the database closed is posted without the row that remembers it — so
+        // the next process posts it a second time.
+        const events = [];
+        let finish;
+        const pending = new Promise((resolve) => { finish = resolve; });
+
+        const shutdown = createShutdown({
+            stopLoop: () => events.push('stopLoop'),
+            drain: [async () => { await pending; events.push('drained'); }],
+            close: [async () => { events.push('database'); }],
+            exit: () => {},
+            log: () => {},
+        });
+
+        const done = shutdown('SIGTERM');
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(events).toEqual(['stopLoop']);
+
+        finish();
+        await done;
+        expect(events).toEqual(['stopLoop', 'drained', 'database']);
+    });
+
+    test('is not waited for past the point where the connections could still be closed', async () => {
+        const events = [];
+        const exit = jest.fn();
+
+        const shutdown = createShutdown({
+            stopLoop: () => {},
+            drain: [() => new Promise(() => {})],
+            close: [async () => { events.push('database'); }],
+            deadlineMs: 400,
+            exit,
+            log: () => {},
+        });
+
+        await shutdown('SIGTERM');
+
+        expect(events).toEqual(['database']);
+        expect(exit).toHaveBeenCalledWith(0);
+    });
+});
