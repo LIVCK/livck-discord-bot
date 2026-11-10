@@ -62,6 +62,14 @@ status pages just as much.
   that guild clears it.
 - The subscription removal brake let more through than its limit once deliveries ran in
   parallel (measured: 30 removed with a limit of 25). Asking and counting is one step now.
+- **A shutdown closed the database under the cycle still running.** The loop stopped
+  scheduling and the connections were closed in the same breath, so a message sent in that
+  moment had no row and was posted again by the next process. Shutdown now waits for the
+  cycle and for deliveries that outlived it, bounded by `SHUTDOWN_DEADLINE_MS`.
+- A database outage printed some forty lines of stack trace every 15 seconds. It is one line
+  per outage now, and one when the database is back.
+- `DB_PORT` and `DB_DIALECT` were honoured by `migrate.js` but ignored by the bot itself, so
+  a database outside port 3306 was migrated and then never reached.
 - **Automatic pausing never triggered.** Two independent causes: `LIVCK.get()` returned
   `{data: []}` on every error instead of throwing (so an unreachable page looked like an empty
   one), and `server.js` did not load `failureCount`/`lastFailure`, leaving the counter
