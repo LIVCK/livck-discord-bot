@@ -52,10 +52,26 @@ export const mayReap = () => {
 /** Record a deletion that actually happened. */
 export const recordReap = () => { reaped += 1; };
 
+/**
+ * Ask and count in ONE step: true means this caller may delete one subscription, and that
+ * deletion is already counted.
+ *
+ * `mayReap()` followed by an awaited delete and then `recordReap()` is a check-then-act, and
+ * since deliveries run concurrently it lets through more than the limit: ten channels that
+ * fail at the same moment all ask before any of them has counted. Measured with thirty gone
+ * channels and a limit of 25: thirty subscriptions deleted. The brake exists for exactly the
+ * case where everything fails at once.
+ */
+export const claimReap = () => {
+    if (!mayReap()) return false;
+    reaped += 1;
+    return true;
+};
+
 /** How many have been removed in this run. */
 export const reapCount = () => reaped;
 
 /** Reset. For tests, and for nothing else. */
 export const resetReaper = () => { reaped = 0; announced = false; };
 
-export default { mayReap, recordReap, reapCount, resetReaper, REAP_LIMIT };
+export default { mayReap, recordReap, claimReap, reapCount, resetReaper, REAP_LIMIT };

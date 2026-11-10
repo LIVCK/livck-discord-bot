@@ -152,6 +152,6 @@ describe('a cycle with nothing due', () => {
 
         const summary = await loop.runCycle({});
 
-        expect(summary).toEqual({ due: 0, updated: 0, skipped: 0, failed: 0, marked: 0 });
+        expect(summary).toEqual({ due: 0, updated: 0, skipped: 0, failed: 0, marked: 0, busy: 0, overran: 0 });
     });
 });

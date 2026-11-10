@@ -155,7 +155,12 @@ e2e('against a real Discord bot', () => {
         process.env.DISCORD_CLIENT_ID = credentials.DISCORD_CLIENT_ID;
 
         const { Client, GatewayIntentBits } = await import('discord.js');
-        client = new Client({ intents: [GatewayIntentBits.Guilds] });
+        // Configured like production (discord/restPolicy.js): a 429 is final, refused requests are
+        // collected. What Discord accepts is only worth proving for the client the bot really runs.
+        const { createRestPolicy } = await import('../../discord/restPolicy.js');
+        const restPolicy = createRestPolicy();
+        client = new Client({ intents: [GatewayIntentBits.Guilds], rest: restPolicy.options });
+        restPolicy.attach(client.rest);
         await client.login(credentials.DISCORD_BOT_TOKEN);
 
         channel = await client.channels.fetch(credentials.TEST_CHANNEL_ID);

@@ -47,6 +47,21 @@ status pages just as much.
 
 ### Fixed
 
+- **One channel could stop the bot for everyone.** A cycle waited for its slowest page before
+  the next one was scheduled, and inside a page every channel waited for the one before it.
+  discord.js retries a 429 without limit (and without emitting `rateLimited`), so a single
+  rate-limited or silent channel held every status page for as long as Discord kept refusing
+  it — in production twenty to fifty minutes at a time, which is why an incident could take
+  ten minutes to reach a channel while the log showed nothing but INVALID REQUEST warnings.
+  Now every delivery has its own deadline, the channels of a page are delivered concurrently,
+  a page still running is skipped instead of awaited, and a 429 Discord actually sends is
+  final instead of retried for ever.
+- **A channel the bot may not post in was asked again every 15 seconds**, for ever, each
+  refusal counting towards Discord's IP ban. A failing channel now backs off on its own
+  (30s up to 10 minutes) without affecting its page; the first success or any `/livck` in
+  that guild clears it.
+- The subscription removal brake let more through than its limit once deliveries ran in
+  parallel (measured: 30 removed with a limit of 25). Asking and counting is one step now.
 - **Automatic pausing never triggered.** Two independent causes: `LIVCK.get()` returned
   `{data: []}` on every error instead of throwing (so an unreachable page looked like an empty
   one), and `server.js` did not load `failureCount`/`lastFailure`, leaving the counter

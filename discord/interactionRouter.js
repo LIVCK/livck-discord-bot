@@ -20,6 +20,7 @@
 
 import logger from '../util/logger.js';
 import { withLocale } from '../util/Translation.js';
+import { forgetGuild } from '../util/delivery.js';
 
 /** Discord: this interaction's token is no longer valid (15-minute lifetime). */
 const UNKNOWN_INTERACTION = 10062;
@@ -62,6 +63,11 @@ export const routeInteraction = (interaction, client) =>
     withLocale(null, () => dispatch(interaction, client));
 
 const dispatch = async (interaction, client) => {
+    // Whoever is using /livck in a guild may just have fixed the permission that made its
+    // channels refuse the bot. Without this the refresh the command triggers would still be
+    // sitting out the delivery backoff. See util/delivery.js.
+    if (!interaction.isAutocomplete()) forgetGuild(interaction.guildId);
+
     if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
         if (!command || typeof command.autocomplete !== 'function') return;

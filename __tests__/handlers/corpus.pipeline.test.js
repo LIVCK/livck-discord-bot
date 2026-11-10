@@ -81,6 +81,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { toSnapshot } = await import('../../providers/cloud.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -124,6 +126,7 @@ describe.each(files)('%s', (file) => {
     const payload = JSON.parse(fs.readFileSync(path.join(CORPUS, file), 'utf8'));
 
     beforeEach(() => {
+        resetDelivery();
         db.messages = [];
         db.destroyed = [];
         nextRowId = 1;

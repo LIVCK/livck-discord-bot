@@ -9,8 +9,14 @@ import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone, UNKNOWN_MESSAGE } from '../util/messageSync.js'
-import { mayReap, recordReap } from '../util/subscriptionReaper.js'
+import { claimReap } from '../util/subscriptionReaper.js'
 import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
+import {
+    deliver, deliveryState, forEachLimited, DELIVERY_CONCURRENCY, logDeliveryFailure, logDeliverySuccess,
+} from '../util/delivery.js'
+
+/** Discord refused the message itself — malformed or over a limit — not the channel. */
+const isRejectedPayload = (error) => error?.status === 400
 
 /** Alerts older than this are no longer tracked. */
 const ALERT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
@@ -277,6 +283,10 @@ const rememberAttempt = (subscriptionId, alertId) => {
     closeoutAttempts.set(`${subscriptionId}:${alertId}`, Date.now());
 };
 
+const forgetAttempt = (subscriptionId, alertId) => {
+    closeoutAttempts.delete(`${subscriptionId}:${alertId}`);
+};
+
 /** Forget the cooldowns. Exposed for tests. */
 export const clearCloseoutCooldowns = () => closeoutAttempts.clear();
 
@@ -351,87 +361,108 @@ const removeAlertThread = async (subscription, parentRecord, client) => {
     return true
 }
 
-const reconcileClosedAlerts = async (subscriptions, snapshot, statuspageRecord, locale, footer, client) => {
-    const stillLive = new Set(snapshot.alerts.map((alert) => alert.id))
+/**
+ * Close out one subscription's threads whose alert has left the live payload.
+ *
+ * The lookup of the closed alert is a request to the STATUS PAGE and stays outside the
+ * delivery deadline: a slow page must not be blamed on, and back off, the channel. Only what
+ * is sent to Discord runs through `deliver()`.
+ */
+const reconcileClosedAlerts = async (subscription, stillLive, snapshot, statuspageRecord, locale, footer, client) => {
+    if (!subscription.eventTypes.NEWS) return
+
     const cutoff = Date.now() - ALERT_WINDOW_MS
 
-    for (const subscription of subscriptions) {
-        if (!subscription.eventTypes.NEWS) continue
+    // BOUNDED BY THE WINDOW, and not by anything else.
+    //
+    // NEWS and ALERT rows are never deleted — one per alert per subscription, plus one per
+    // update — so this table only grows, for the life of the installation. The query ran
+    // once per subscription per cycle with no bound at all, so a page that has been
+    // watched for two years reads two years of rows every fifteen seconds to find the
+    // handful that are still inside the three-day window. The loop below discards
+    // everything older on the very next line; the database may as well not send it.
+    const posted = await models.Message.findAll({
+        where: {
+            subscriptionId: subscription.id,
+            category: 'NEWS',
+            createdAt: { [Op.gte]: new Date(cutoff) },
+        },
+    })
 
-        // BOUNDED BY THE WINDOW, and not by anything else.
+    for (const record of posted) {
+        if (!record.serviceId || stillLive.has(record.serviceId)) continue
+        // Outside the window the thread stays as it is, permanently. This is the bound
+        // that keeps an unconfirmable alert from being re-checked every cycle forever.
+        if (new Date(record.createdAt).getTime() < cutoff) continue
+
+        // Nothing could be sent anyway: the channel is busy with an earlier delivery or
+        // sitting out its backoff. Checked BEFORE the lookup, which is a request to the status
+        // page — asked first and dropped after, it went out every cycle for as long as the
+        // channel stayed broken.
+        if (deliveryState(subscription, 'alerts') !== 'ready') return
+
+        // Asked about recently enough. Without this the same request went out every 15
+        // seconds for the full three days — see CLOSEOUT_RECHECK_MS.
+        if (recentlyAttempted(subscription.id, record.serviceId)) continue
+        rememberAttempt(subscription.id, record.serviceId)
+
+        // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
+        // returns a notice shaped exactly like an incident and says nothing about which
+        // it is, so without this a closed advisory came back red with an outage severity.
         //
-        // NEWS and ALERT rows are never deleted — one per alert per subscription, plus one per
-        // update — so this table only grows, for the life of the installation. The query ran
-        // once per subscription per cycle with no bound at all, so a page that has been
-        // watched for two years reads two years of rows every fifteen seconds to find the
-        // handful that are still inside the three-day window. The loop below discards
-        // everything older on the very next line; the database may as well not send it.
-        const posted = await models.Message.findAll({
-            where: {
-                subscriptionId: subscription.id,
-                category: 'NEWS',
-                createdAt: { [Op.gte]: new Date(cutoff) },
-            },
-        })
+        // `historyVisible` is what separates "the operator removed it" from "the page
+        // hides resolved alerts", which arrive as the same 404. Only the first may delete
+        // anything; see the verdict in providers/cloud.js.
+        const { alert: closed, removed } = await fetchClosedAlert(
+            statuspageRecord,
+            record.serviceId,
+            record.kind || null,
+            { historyVisible: snapshot.showIncidentHistory },
+        )
+        if (!closed && !removed) continue
 
-        for (const record of posted) {
-            if (!record.serviceId || stillLive.has(record.serviceId)) continue
-            // Outside the window the thread stays as it is, permanently. This is the bound
-            // that keeps an unconfirmable alert from being re-checked every cycle forever.
-            if (new Date(record.createdAt).getTime() < cutoff) continue
+        let outcome
+        try {
+            outcome = await deliver(subscription, 'alerts', () => (removed
+                ? removeAlertThread(subscription, record, client)
+                : withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))))
+        } catch (error) {
+            // From Discord, so it is the channel's: it backs off, and the rest of this
+            // subscription's endings wait for it. Errors from the status page lookup above
+            // travel on to the caller instead.
+            await handleDeliveryError(subscription, error)
+            return
+        }
 
-            // Asked about recently enough. Without this the same request went out every 15
-            // seconds for the full three days — see CLOSEOUT_RECHECK_MS.
-            if (recentlyAttempted(subscription.id, record.serviceId)) continue
-            rememberAttempt(subscription.id, record.serviceId)
-
-            // The kind the bot ORIGINALLY saw is passed in. The Cloud's detail endpoint
-            // returns a notice shaped exactly like an incident and says nothing about which
-            // it is, so without this a closed advisory came back red with an outage severity.
-            //
-            // `historyVisible` is what separates "the operator removed it" from "the page
-            // hides resolved alerts", which arrive as the same 404. Only the first may delete
-            // anything; see the verdict in providers/cloud.js.
-            const { alert: closed, removed } = await fetchClosedAlert(
-                statuspageRecord,
-                record.serviceId,
-                record.kind || null,
-                { historyVisible: snapshot.showIncidentHistory },
-            )
-            if (!closed && !removed) continue
-
-            try {
-                if (removed) {
-                    await removeAlertThread(subscription, record, client)
-                } else {
-                    await withLocale(locale, () => deliverAlert(subscription, closed, snapshot, locale, footer, client))
-                }
-            } catch (error) {
-                // The same guard the live path has, which this loop was missing. Without it
-                // one guild that revoked "Send Messages" aborted the whole reconciliation:
-                // every OTHER guild's thread stayed on "we are investigating" and read as an
-                // ongoing outage, and it never recovered — the same error threw every cycle
-                // until the three-day window closed the thread out of scope for good.
-                if (isChannelGone(error)) {
-                    logger.info(
-                        `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
-                    )
-                    // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
-                    // answer 10003, and this is the line that would delete every subscription.
-                    if (!mayReap()) continue
-                    await models.Subscription.destroy({ where: { id: subscription.id } })
-                    recordReap()
-                    continue
-                }
-
-                logger.once(
-                    `deliver:${subscription.id}`, 'error',
-                    `[handleAlerts] Could not close out in channel ${subscription.channelId} ` +
-                    `(${error.code ?? error.name}): ${error.message}`
-                )
-            }
+        // Nothing was sent after all — the lane became busy between the check above and here.
+        // Forget the attempt, or the cooldown would keep this ending away from the channel for
+        // half an hour after the channel is fine again.
+        if (outcome.status !== 'done') {
+            forgetAttempt(subscription.id, record.serviceId)
+            return
         }
     }
+}
+
+/**
+ * What to do with an error from one subscription's alert delivery. Shared by the live path
+ * and the close-out, which used to differ here — see the history of this file.
+ */
+const handleDeliveryError = async (subscription, error) => {
+    if (isChannelGone(error)) {
+        logger.info(
+            `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
+        )
+        // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
+        // answer 10003, and this is the line that would delete every subscription.
+        if (!claimReap()) return
+        await models.Subscription.destroy({ where: { id: subscription.id } })
+        return
+    }
+
+    // See handleStatusPage: a channel-level failure must not advance the status page's
+    // backoff or pause it for everyone else. The channel backs off on its own.
+    logDeliveryFailure('handleAlerts', 'alerts', subscription, error)
 }
 
 export const handleAlerts = async (statuspageId, client) => {
@@ -470,45 +501,54 @@ export const handleAlerts = async (statuspageId, client) => {
         translation.setLocale(locale)
         const footer = resolveText(snapshot.name, locale, snapshot.defaultLocale) || statuspageRecord.name
 
-        // No early exit on an empty list: an EMPTY alert list is the normal shape of a page
-        // whose incident has just been resolved, and that is precisely when the threads below
-        // still need finishing.
-        for (const alert of recentAlerts) {
-            for (const subscription of subscriptions) {
-                try {
-                    await withLocale(locale, () => deliverAlert(subscription, alert, snapshot, locale, footer, client))
-                    logger.resetOnce(`deliver:${subscription.id}`)
-                } catch (error) {
-                    if (isChannelGone(error)) {
-                        logger.info(
-                            `[handleAlerts] Channel ${subscription.channelId} unavailable (${error.code}), removing subscription ${subscription.id}`
-                        )
-                        // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
-                        // answer 10003, and this is the line that would delete every subscription.
-                        if (!mayReap()) continue
-                        await models.Subscription.destroy({ where: { id: subscription.id } })
-                        recordReap()
-                        continue
-                    }
+        const stillLive = new Set(snapshot.alerts.map((alert) => alert.id))
 
-                    // See handleStatusPage: a channel-level failure must not advance the
-                    // status page's backoff or pause it for everyone else.
-                    logger.once(
-                        `deliver:${subscription.id}`, 'error',
-                        `[handleAlerts] Could not deliver to channel ${subscription.channelId} ` +
-                        `(${error.code ?? error.name}): ${error.message}`
-                    )
+        // Per subscription, concurrently: a channel that stalls holds up itself and nothing
+        // else. Inside one subscription the alerts stay in order, live ones first and then the
+        // endings, all in the same delivery lane so a reply never overtakes its parent.
+        //
+        // No early exit on an empty list: an EMPTY alert list is the normal shape of a page
+        // whose incident has just been resolved, and that is precisely when the threads
+        // still need finishing.
+        await forEachLimited(subscriptions, DELIVERY_CONCURRENCY, async (subscription) => {
+            if (!subscription.eventTypes.NEWS) return
+
+            if (recentAlerts.length > 0) {
+                try {
+                    const outcome = await deliver(subscription, 'alerts', () =>
+                        withLocale(locale, async () => {
+                            for (const alert of recentAlerts) {
+                                try {
+                                    await deliverAlert(subscription, alert, snapshot, locale, footer, client)
+                                } catch (error) {
+                                    // Discord rejected THIS message (400: the payload), not the
+                                    // channel. The other alerts still go out; this one is
+                                    // logged and tried again next cycle.
+                                    if (!isRejectedPayload(error)) throw error
+                                    logger.once(
+                                        `payload:${subscription.id}:${alert.id}`, 'error',
+                                        `[handleAlerts] Discord rejected alert ${alert.id} for channel ` +
+                                        `${subscription.channelId} (${error.code}): ${error.message}`
+                                    )
+                                }
+                            }
+                        }))
+                    if (outcome.status !== 'done') return
+                    logDeliverySuccess('alerts', subscription)
+                } catch (error) {
+                    await handleDeliveryError(subscription, error)
+                    return
                 }
             }
-        }
 
-        try {
-            await reconcileClosedAlerts(subscriptions, snapshot, statuspageRecord, locale, footer, client)
-        } catch (error) {
-            // Closing out is best-effort: a page that cannot be reached for the lookup must not
-            // fail the whole cycle, because the live part already succeeded.
-            logger.failure('[handleAlerts] close-out', statuspageRecord.url, error, `closeout:${statuspageRecord.id}`)
-        }
+            try {
+                await reconcileClosedAlerts(subscription, stillLive, snapshot, statuspageRecord, locale, footer, client)
+            } catch (error) {
+                // Closing out is best-effort: a page that cannot be reached for the lookup must
+                // not fail the whole cycle, because the live part already succeeded.
+                logger.failure('[handleAlerts] close-out', statuspageRecord.url, error, `closeout:${statuspageRecord.id}`)
+            }
+        })
     }
 
     if (fetched === 0 && firstError) {

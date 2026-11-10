@@ -73,6 +73,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { HttpError } = await import('../../util/errors.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -132,6 +134,7 @@ const categoriesResponse = (state = 'AVAILABLE') => ({
 });
 
 beforeEach(() => {
+    resetDelivery();
     api.responses = {
         categories: { 'cat-1': { id: 'cat-1', name: 'Platform' } },
         'category/cat-1/monitors': { data: [{ id: 'm1', name: 'API', state: 'AVAILABLE' }] },

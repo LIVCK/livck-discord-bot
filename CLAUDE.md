@@ -53,6 +53,14 @@ fetch instead of two.
   announcement at all. See `services/statuspagePauseManager.js`.
 - **Embed limits** are enforced in `util/discordLimits.js`; Discord rejects an over-limit
   message whole, so an unguarded layout means the page posts nothing.
+- **One channel never holds up another.** Every delivery runs through `util/delivery.js`: a
+  deadline, one delivery at a time per subscription and lane (so a late answer is never
+  followed by a duplicate post), and a backoff for a channel that refuses. The channels of a
+  page go out concurrently, and the loop skips a page that is still running instead of
+  waiting for it. A 429 Discord actually sends is final (`discord/restPolicy.js`) — discord.js
+  would otherwise retry it for ever, silently, and that is what froze the whole bot in
+  production. `__tests__/services/loopIsolation.test.js` and `loopSoak.test.js` run the real
+  discord.js client against `__tests__/fixtures/fakeDiscord.js` to hold this in place.
 
 ### How an alert ends
 

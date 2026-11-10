@@ -88,7 +88,12 @@ e2e('an incident from first report to resolution', () => {
         ({ handleAlerts, clearCloseoutCooldowns } = await import('../../handlers/handleAlerts.js'));
 
         const { Client, GatewayIntentBits } = await import('discord.js');
-        client = new Client({ intents: [GatewayIntentBits.Guilds] });
+        // Configured like production (discord/restPolicy.js): a 429 is final, refused requests are
+        // collected. What Discord accepts is only worth proving for the client the bot really runs.
+        const { createRestPolicy } = await import('../../discord/restPolicy.js');
+        const restPolicy = createRestPolicy();
+        client = new Client({ intents: [GatewayIntentBits.Guilds], rest: restPolicy.options });
+        restPolicy.attach(client.rest);
         await client.login(credentials.DISCORD_BOT_TOKEN);
         channel = await client.channels.fetch(credentials.TEST_CHANNEL_ID);
 

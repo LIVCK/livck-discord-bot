@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { routeInteraction } from './interactionRouter.js';
 import { requireModalSupport } from '../util/discordPatch.js';
+import { createRestPolicy } from './restPolicy.js';
 
 /**
  * Collect every command definition and register the set with Discord.
@@ -49,15 +50,16 @@ const initializeBot = async (commandsFolder, models) => {
     // status page. See util/discordPatch.js.
     requireModalSupport();
 
+    // A 429 is final rather than retried for ever, and refused requests are logged by route.
+    // See discord/restPolicy.js.
+    const restPolicy = createRestPolicy();
+
     const client = new Client({
         intents: [GatewayIntentBits.Guilds],
-        rest: {
-            // Emit invalidRequestWarning every N invalid responses instead of never (the
-            // default of 0 disables the warning entirely). 250 gives ~40 warnings before the
-            // 10,000 ban threshold, which is early enough to react and rare enough to read.
-            invalidRequestWarningInterval: 250,
-        },
+        rest: restPolicy.options,
     });
+
+    restPolicy.attach(client.rest);
 
     // Load commands into client
     client.commands = new Collection();

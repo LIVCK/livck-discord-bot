@@ -68,6 +68,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleAlerts } = await import('../../handlers/handleAlerts.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { HttpError } = await import('../../util/errors.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -116,6 +118,7 @@ const subscription = (overrides = {}) => ({
 });
 
 beforeEach(() => {
+    resetDelivery();
     api.responses = { alerts: { data: [alert()] } };
     api.calls = [];
 

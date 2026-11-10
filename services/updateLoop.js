@@ -84,6 +84,48 @@ const claim = async (statuspageId) => {
 export const INTERVAL = 15 * 1000;
 
 /**
+ * How long a cycle waits for one page before it moves on without it.
+ *
+ * The cycle used to wait for its slowest page, and the next cycle is scheduled only when this
+ * one is done — so a single page that took forty minutes stopped every other page for forty
+ * minutes. Every request a page makes has its own timeout now (10s to the status page, 10s per
+ * Discord delivery), so a page should never get here; this is the guarantee for the case where
+ * something without a timeout turns up anyway.
+ *
+ * A page that runs past it is not cancelled. It keeps running, is listed in `active`, and the
+ * cycles that start in the meantime leave it alone until it has finished.
+ */
+const PAGE_DEADLINE_MS = Number(process.env.UPDATE_PAGE_DEADLINE_MS || 20_000);
+
+/** Pages this process is working on right now, by id. */
+const active = new Set();
+
+/** Process a page, or report that it overran the deadline and is still going. */
+const processWithDeadline = (page, client) => {
+    active.add(page.id);
+    const work = processStatuspage(page, client).finally(() => active.delete(page.id));
+
+    let timer;
+    const overrun = new Promise((resolve) => {
+        timer = setTimeout(() => resolve({ overran: true }), PAGE_DEADLINE_MS);
+        timer.unref?.();
+    });
+
+    return Promise.race([work, overrun]).then((result) => {
+        clearTimeout(timer);
+        if (result?.overran) {
+            logger.once(
+                `overrun:${page.id}`, 'warn',
+                `[UpdateLoop] ${page.url} still running after ${PAGE_DEADLINE_MS / 1000}s; continuing without it`
+            );
+        } else {
+            logger.resetOnce(`overrun:${page.id}`);
+        }
+        return result;
+    });
+};
+
+/**
  * Columns the loop needs.
  *
  * `failureCount`, `lastFailure`, `backoffLevel` and `nextAttemptAt` are load-bearing: an
@@ -139,7 +181,7 @@ export const processStatuspage = async (statuspage, client) => {
 /**
  * Process every status page that is due.
  *
- * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, marked: number}>}
+ * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, marked: number, busy: number, overran: number, duration: number}>}
  */
 export const runCycle = async (client) => {
     const now = new Date();
@@ -170,16 +212,20 @@ export const runCycle = async (client) => {
         },
     });
 
-    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, marked: 0 };
+    const startedAt = Date.now();
+    const busy = due.filter((page) => active.has(page.id)).length;
+    const ready = due.filter((page) => !active.has(page.id));
+
+    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, marked: 0, busy, overran: 0 };
 
     if (due.length === 0) {
         logger.debug('[UpdateLoop] Nothing due');
         return summary;
     }
 
-    for (let i = 0; i < due.length; i += BATCH_SIZE) {
-        const batch = due.slice(i, i + BATCH_SIZE);
-        const results = await Promise.allSettled(batch.map((page) => processStatuspage(page, client)));
+    for (let i = 0; i < ready.length; i += BATCH_SIZE) {
+        const batch = ready.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(batch.map((page) => processWithDeadline(page, client)));
 
         for (const result of results) {
             if (result.status === 'rejected') {
@@ -192,13 +238,22 @@ export const runCycle = async (client) => {
             if (result.value?.skipped) summary.skipped += 1;
             if (result.value?.failed) summary.failed += 1;
             if (result.value?.marked) summary.marked += 1;
+            if (result.value?.overran) summary.overran += 1;
         }
     }
 
+    summary.duration = Date.now() - startedAt;
+
     // One summary line per cycle instead of several lines per statuspage.
+    const extra = [
+        summary.marked > 0 ? `${summary.marked} marked stale` : null,
+        summary.overran > 0 ? `${summary.overran} overran` : null,
+        summary.busy > 0 ? `${summary.busy} still running` : null,
+    ].filter(Boolean).map((part) => ` · ${part}`).join('');
+
     logger.info(
         `[UpdateLoop] ${summary.due} due · ${summary.updated} updated · ${summary.skipped} cached · ` +
-        `${summary.failed} failed${summary.marked > 0 ? ` · ${summary.marked} marked stale` : ''}`
+        `${summary.failed} failed${extra} · ${(summary.duration / 1000).toFixed(1)}s`
     );
 
     return summary;
