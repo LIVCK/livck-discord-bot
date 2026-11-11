@@ -30,6 +30,15 @@
  * "success" wiped the ladder the alert lane had just climbed, every cycle, and a channel
  * refusing every alert stayed at the first step — asked every thirty seconds, for ever.
  *
+ * A LIMITED NUMBER OF SLOTS, shared by every page. Discord allows the bot 50 requests per
+ * second in total, and discord.js holds whatever goes over that in a queue of its own — where
+ * the deadline above kept running. A burst (the first cycle after a restart, when every
+ * heartbeat is due at once) sent a few hundred deliveries into that queue together, every one
+ * of them overran its deadline, and every channel was logged as not answering. An incident
+ * alert, meanwhile, stood behind all of them. Now at most DISCORD_DELIVERY_SLOTS deliveries
+ * are with discord.js at a time, the deadline starts when a delivery gets its slot, and an
+ * alert waiting for one goes before every status edit.
+ *
  * Held in memory. A restart costs one more attempt per broken channel, which is cheaper than
  * a migration and a write on every failure.
  */
@@ -38,6 +47,13 @@ import logger from './logger.js';
 
 const TIMEOUT_MS = () => Number(process.env.DISCORD_DELIVERY_TIMEOUT_MS || 10_000);
 const BACKOFF_BASE_MS = () => Number(process.env.DELIVERY_BACKOFF_BASE_MS || 30_000);
+
+/**
+ * Deliveries with discord.js at once. Most are one request, a new alert thread a few, and
+ * what the slots hold must clear Discord's 50 per second well inside the deadline: 25 is at
+ * most a second or two of queue, against 10s.
+ */
+const SLOTS = () => Math.max(1, Number(process.env.DISCORD_DELIVERY_SLOTS || 25));
 
 /** Multiples of the base: 30s, 1m, 2m, 5m, 10m, then 10m for as long as it lasts. */
 const LADDER = [1, 2, 4, 10, 20];
@@ -56,6 +72,31 @@ const inFlight = new Map();
 const failures = new Map();
 /** Deleted subscriptions leave their entry behind; this keeps that from adding up. */
 const MAX_FAILURES = 10_000;
+
+let busySlots = 0;
+/** Waiting for a slot, alerts first: an incident should not stand behind a heartbeat. */
+const waiting = { alerts: [], status: [] };
+/** Bumped by resetDelivery, so work from before it does not release a slot of after it. */
+let generation = 0;
+
+/** @returns {Promise<boolean>} false when the wait was cancelled by a shutdown */
+const acquireSlot = (lane) => {
+    if (busySlots < SLOTS()) {
+        busySlots += 1;
+        return Promise.resolve(true);
+    }
+    return new Promise((resolve) => (waiting[lane] ?? waiting.status).push(resolve));
+};
+
+const releaseSlot = () => {
+    const next = waiting.alerts.shift() ?? waiting.status.shift();
+    // The slot passes straight on, so nothing can take it in between.
+    if (next) next(true);
+    else busySlots -= 1;
+};
+
+/** How many deliveries are waiting for a slot right now. */
+export const queuedDeliveries = () => waiting.alerts.length + waiting.status.length;
 
 const backoffFor = (level) => BACKOFF_BASE_MS() * LADDER[Math.min(level, LADDER.length) - 1];
 
@@ -99,7 +140,7 @@ export const deliveryState = (subscription, lane) => {
  * @param {{id: number, guildId?: string}} subscription
  * @param {'status'|'alerts'} lane
  * @param {() => Promise<T>} fn
- * @returns {Promise<{status: 'done', value: T} | {status: 'busy'} | {status: 'backoff', until: number}>}
+ * @returns {Promise<{status: 'done', value: T} | {status: 'busy'} | {status: 'backoff', until: number} | {status: 'cancelled'}>}
  * @throws whatever `fn` throws, or a DeliveryTimeout. `error.retryInMs` says when the
  *   subscription will be tried again.
  */
@@ -111,9 +152,31 @@ export const deliver = async (subscription, lane, fn) => {
     const failure = failures.get(key);
     if (failure && failure.until > Date.now()) return { status: 'backoff', until: failure.until };
 
+    // In flight from the moment it is queued: a cycle that comes round while this one is still
+    // waiting for a slot must find it busy, not queue the same message a second time.
+    let settle;
+    const tracked = new Promise((resolve) => { settle = resolve; });
+    inFlight.set(key, tracked);
+    const finished = () => {
+        settle();
+        if (inFlight.get(key) === tracked) inFlight.delete(key);
+    };
+
+    if (!await acquireSlot(lane)) {
+        finished();
+        return { status: 'cancelled' };
+    }
+
+    const mine = generation;
+    let holding = true;
+    const giveBack = () => {
+        if (!holding) return;
+        holding = false;
+        if (mine === generation) releaseSlot();
+    };
+
     const work = Promise.resolve().then(fn);
 
-    inFlight.set(key, work);
     // Only the SUCCESS is recorded here, because it may come late and must still clear the
     // backoff. A failure is counted once, below, where the caller learns about it — a request
     // that fails after its timeout already counted is the same failure, not a second one.
@@ -121,13 +184,17 @@ export const deliver = async (subscription, lane, fn) => {
         () => recordSuccess(key),
         () => {},
     ).finally(() => {
-        if (inFlight.get(key) === work) inFlight.delete(key);
+        giveBack();
+        finished();
     });
 
     const ms = TIMEOUT_MS();
     let timer;
     const deadline = new Promise((_resolve, reject) => {
         timer = setTimeout(() => {
+            // The request carries on, but it no longer holds a slot: a channel that never
+            // answers must not take the place of one that would.
+            giveBack();
             reject(new DeliveryTimeout(ms));
         }, ms);
         timer.unref?.();
@@ -212,14 +279,26 @@ export const logDeliverySuccess = (lane, subscription) => {
 
 /**
  * Resolves once every delivery still out has settled — including ones that outlived their
- * deadline. For shutdown: see util/shutdown.js.
+ * deadline. For shutdown: see util/shutdown.js. What is still waiting for a slot is not
+ * started any more: it would reach Discord just as the database closes, which is the
+ * post-without-a-row this exists to prevent. The next process sends it.
  */
-export const drainDeliveries = () => Promise.allSettled([...inFlight.values()]);
+export const drainDeliveries = () => {
+    for (const lane of Object.keys(waiting)) {
+        for (const resolve of waiting[lane].splice(0)) resolve(false);
+    }
+    return Promise.allSettled([...inFlight.values()]);
+};
 
 /** For tests. */
 export const resetDelivery = () => {
+    for (const lane of Object.keys(waiting)) {
+        for (const resolve of waiting[lane].splice(0)) resolve(false);
+    }
+    generation += 1;
+    busySlots = 0;
     inFlight.clear();
     failures.clear();
 };
 
-export default { deliver, deliveryState, drainDeliveries, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };
+export default { deliver, deliveryState, drainDeliveries, forgetGuild, forEachLimited, queuedDeliveries, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };

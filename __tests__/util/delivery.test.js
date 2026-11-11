@@ -5,8 +5,11 @@
 
 process.env.DISCORD_DELIVERY_TIMEOUT_MS = '100';
 process.env.DELIVERY_BACKOFF_BASE_MS = '1000';
+process.env.DISCORD_DELIVERY_SLOTS = '3';
 
-const { deliver, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout } = await import('../../util/delivery.js');
+const {
+    deliver, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, drainDeliveries, queuedDeliveries,
+} = await import('../../util/delivery.js');
 
 /**
  * Ids are fresh per test: a delivery an earlier test left running still reports its outcome
@@ -121,6 +124,77 @@ describe('deliver', () => {
 
         await expect(deliver(sub(1, 'g1'), 'status', async () => {})).resolves.toMatchObject({ status: 'done' });
         await expect(deliver(sub(2, 'g2'), 'status', async () => {})).resolves.toMatchObject({ status: 'backoff' });
+    });
+});
+
+describe('the slots shared by every page', () => {
+    // discord.js queues whatever goes over Discord's 50 requests per second itself, and a
+    // request waiting there runs down the same deadline as a channel that does not answer.
+    // In a burst every channel timed out — see __tests__/services/loopBurst.test.js.
+
+    test('no more deliveries run at once than there are slots', async () => {
+        let running = 0;
+        let peak = 0;
+        const work = async () => { running += 1; peak = Math.max(peak, running); await sleep(20); running -= 1; };
+
+        await Promise.all(Array.from({ length: 10 }, (_, i) => deliver(sub(i), 'status', work)));
+
+        expect(peak).toBe(3);
+    });
+
+    test('the deadline starts when a delivery gets its slot, not when it is queued', async () => {
+        // Six of 80ms each through three slots: the last ones wait 80ms before they start and
+        // finish at 160ms, past the 100ms deadline — and none of them was slow.
+        const outcomes = await Promise.all(Array.from({ length: 6 }, (_, i) =>
+            deliver(sub(i), 'status', () => sleep(80)).then((o) => o.status, (e) => e.name)));
+
+        expect(outcomes).toEqual(Array(6).fill('done'));
+    });
+
+    test('alerts go before status edits that were queued first', async () => {
+        const order = [];
+        const hold = Array.from({ length: 3 }, (_, i) => deliver(sub(i), 'status', () => sleep(30)));
+        const status = deliver(sub(10), 'status', async () => { order.push('status'); });
+        const alert = deliver(sub(11), 'alerts', async () => { order.push('alert'); });
+
+        await Promise.all([...hold, status, alert]);
+
+        expect(order).toEqual(['alert', 'status']);
+    });
+
+    test('a channel that never answers gives its slot back at the deadline', async () => {
+        const hung = Array.from({ length: 3 }, (_, i) =>
+            deliver(sub(i), 'status', () => new Promise(() => {})).catch((e) => e.name));
+
+        const after = await deliver(sub(10), 'status', async () => 'through');
+
+        expect(after).toEqual({ status: 'done', value: 'through' });
+        expect(await Promise.all(hung)).toEqual(Array(3).fill('DeliveryTimeout'));
+    });
+
+    test('a queued delivery counts as in flight, so the next cycle does not queue it twice', async () => {
+        const hold = Array.from({ length: 3 }, (_, i) => deliver(sub(i), 'status', () => sleep(30)));
+        const first = deliver(sub(10), 'status', async () => 'once');
+
+        await expect(deliver(sub(10), 'status', async () => 'twice')).resolves.toEqual({ status: 'busy' });
+        expect(queuedDeliveries()).toBe(1);
+
+        await Promise.all([...hold, first]);
+        expect(queuedDeliveries()).toBe(0);
+    });
+
+    test('a shutdown does not start what is still queued', async () => {
+        // drainDeliveries runs right before the database closes. Starting a queued delivery
+        // then is the post-without-a-row this drain exists to prevent.
+        let started = 0;
+        const hold = Array.from({ length: 3 }, (_, i) => deliver(sub(i), 'status', () => sleep(30)));
+        const queued = deliver(sub(10), 'status', async () => { started += 1; });
+
+        await drainDeliveries();
+
+        expect(started).toBe(0);
+        await expect(queued).resolves.toEqual({ status: 'cancelled' });
+        await Promise.all(hold);
     });
 });
 

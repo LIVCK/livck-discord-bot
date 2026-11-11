@@ -70,6 +70,12 @@ status pages just as much.
   per outage now, and one when the database is back.
 - `DB_PORT` and `DB_DIALECT` were honoured by `migrate.js` but ignored by the bot itself, so
   a database outside port 3306 was migrated and then never reached.
+- **In a burst every channel was reported as not answering, and alerts came last.** Discord
+  takes 50 requests per second and discord.js queues the rest, with each delivery's deadline
+  running in that queue. The first cycle after a restart, with every heartbeat due, sent them
+  all in together: each one overran, each channel was logged as silent, and an incident alert
+  stood behind every status edit. At most 25 deliveries (`DISCORD_DELIVERY_SLOTS`) are now with
+  discord.js at a time, the deadline starts when a delivery gets its slot, and alerts go first.
 - **A lost gateway went unnoticed.** Status updates go over REST and kept arriving, while
   slash commands, which only come over the gateway, were silently no longer answered. After a
   close discord.js does not recover from (a reset token, an intent not enabled) or ten minutes

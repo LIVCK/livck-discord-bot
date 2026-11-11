@@ -5,6 +5,7 @@ import { handleAlerts } from '../handlers/handleAlerts.js';
 import cache from '../database/redis.js';
 import StatuspagePauseManager from './statuspagePauseManager.js';
 import logger from '../util/logger.js';
+import { queuedDeliveries } from '../util/delivery.js';
 
 /**
  * The update cycle.
@@ -114,6 +115,13 @@ const processWithDeadline = (page, client) => {
     return Promise.race([work, overrun]).then((result) => {
         clearTimeout(timer);
         if (result?.overran) {
+            // Deliveries waiting for a slot (util/delivery.js) mean the bot has more to send
+            // than Discord takes per second: every page is slow, none of them is stuck, and the
+            // cycle line says how many are waiting. A warning per page would blame each one.
+            if (queuedDeliveries() > 0) {
+                logger.debug(`[UpdateLoop] ${page.url} still waiting for Discord after ${PAGE_DEADLINE_MS / 1000}s`);
+                return result;
+            }
             logger.once(
                 `overrun:${page.id}`, 'warn',
                 `[UpdateLoop] ${page.url} still running after ${PAGE_DEADLINE_MS / 1000}s; continuing without it`
@@ -249,6 +257,7 @@ export const runCycle = async (client) => {
         summary.marked > 0 ? `${summary.marked} marked stale` : null,
         summary.overran > 0 ? `${summary.overran} overran` : null,
         summary.busy > 0 ? `${summary.busy} still running` : null,
+        queuedDeliveries() > 0 ? `${queuedDeliveries()} deliveries waiting for Discord` : null,
     ].filter(Boolean).map((part) => ` · ${part}`).join('');
 
     logger.info(

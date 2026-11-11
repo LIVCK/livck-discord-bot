@@ -57,10 +57,11 @@ fetch instead of two.
   deadline, one delivery at a time per subscription and lane (so a late answer is never
   followed by a duplicate post), and a backoff for a channel that refuses. The channels of a
   page go out concurrently, and the loop skips a page that is still running instead of
-  waiting for it. A 429 Discord actually sends is final (`discord/restPolicy.js`) — discord.js
+  waiting for it. At most `DISCORD_DELIVERY_SLOTS` deliveries are with discord.js at once,
+  alerts first, so a burst queues in front of the deadline rather than inside it. A 429 Discord actually sends is final (`discord/restPolicy.js`) — discord.js
   would otherwise retry it for ever, silently, and that is what froze the whole bot in
-  production. `__tests__/services/loopIsolation.test.js` and `loopSoak.test.js` run the real
-  discord.js client against `__tests__/fixtures/fakeDiscord.js` to hold this in place.
+  production. `__tests__/services/loopIsolation.test.js`, `loopSoak.test.js` and `loopBurst.test.js`
+  run the real discord.js client against `__tests__/fixtures/fakeDiscord.js` to hold this in place.
 
 ### How an alert ends
 
