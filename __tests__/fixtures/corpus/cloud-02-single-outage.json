@@ -173,15 +173,6 @@
       "resolved_at": null,
       "updates": [
         {
-          "id": "ZBH1b5lA9iaCqeWcGpsNI",
-          "status": "investigating",
-          "message": {
-            "de": "Hic facilis veniam facilis dolor. Ex iusto nisi.",
-            "en": "Praesentium ducimus itaque ex fugit dolore ex maiores. Vero harum nobis nam eos vel."
-          },
-          "created_at": "2026-09-12T06:23:14.946Z"
-        },
-        {
           "id": "5ZGKp9cGrxhx9ud6XK4g9",
           "status": "identified",
           "message": {
@@ -189,6 +180,15 @@
             "en": "Dolores sit vel voluptatibus tempore porro. Vero animi beatae temporibus."
           },
           "created_at": "2026-09-12T06:43:14.946Z"
+        },
+        {
+          "id": "ZBH1b5lA9iaCqeWcGpsNI",
+          "status": "investigating",
+          "message": {
+            "de": "Hic facilis veniam facilis dolor. Ex iusto nisi.",
+            "en": "Praesentium ducimus itaque ex fugit dolore ex maiores. Vero harum nobis nam eos vel."
+          },
+          "created_at": "2026-09-12T06:23:14.946Z"
         }
       ],
       "affected_components": [],

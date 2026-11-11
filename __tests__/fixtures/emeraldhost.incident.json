@@ -1,0 +1,53 @@
+{
+  "id": "0coRsn8ll1vrJSo2yAF3T",
+  "title": {
+    "de": "Störung er1.cgn1.as200482.net",
+    "en": "Service outage detected"
+  },
+  "severity": "major",
+  "status": "resolved",
+  "started_at": "2026-08-03T11:47:40+00:00",
+  "resolved_at": "2026-08-03T13:08:57+00:00",
+  "updates": [
+    {
+      "id": "ygpqah8FLuPWRHrUbYDP4",
+      "status": "resolved",
+      "message": {
+        "de": "Das Problem wurde behoben.",
+        "en": "The issue has been solved."
+      },
+      "created_at": "2026-08-03T13:08:57+00:00"
+    },
+    {
+      "id": "CM75UA05b3WcgyS4BiZKy",
+      "status": "monitoring",
+      "message": {
+        "de": "Der Fix wurde deployed. Aktuell ueberwachen wir die Resultate dessen.",
+        "en": "The fix has been deployed and we are monitoring the results."
+      },
+      "created_at": "2026-08-03T12:50:07+00:00"
+    },
+    {
+      "id": "xyNAHONydjeKD0oRGWNOX",
+      "status": "identified",
+      "message": {
+        "de": "Das Problem wurde identifiziert und wir arbeiten aktuell an einem Fix. Der Router wurde vorerst isoliert und ist nicht mehr im Netz aktiv.",
+        "en": "The problem has been identified, and we are working on a fix. The router has already been isolated and is no longer routing any traffic."
+      },
+      "created_at": "2026-08-03T12:05:37+00:00"
+    },
+    {
+      "id": "f5X8FmCtw9Q6vp4VIOVQG",
+      "status": "investigating",
+      "message": {
+        "de": "Wir untersuchen derzeit eine Störung an `er1.cgn1.as200482.net`, die sich auf das Netzwerk in CGN1 ausbreitet. Weitere Informationen folgen in Kürze.",
+        "en": "We are currently investigating an issue on `er1.cgn1.as200482.net` that affects the whole CGN network. Further updates will follow shortly."
+      },
+      "created_at": "2026-08-03T11:47:40+00:00"
+    }
+  ],
+  "affected_components": [],
+  "affected_services": [],
+  "attachments": [],
+  "postmortem": null
+}

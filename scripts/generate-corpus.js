@@ -102,7 +102,8 @@ const incident = ({ status = 'investigating', severity = 'major', updates = 1 } 
             status: states[Math.min(i, states.length - 1)],
             message: bilingual(faker.lorem.sentences(2), faker.lorem.sentences(2)),
             created_at: new Date(start.getTime() + (i + 1) * 12e5).toISOString(),
-        })),
+        // Newest first, as the API sends them (see splitUpdates in providers/cloud.js).
+        })).reverse(),
         affected_components: [], affected_services: [], attachments: [], postmortem: null,
     };
 };
@@ -123,7 +124,7 @@ const maintenance = ({ status = 'scheduled', updates = 0 } = {}) => {
             status: ['in_progress', 'completed'][Math.min(i, 1)],
             message: bilingual(faker.lorem.sentence(), faker.lorem.sentence()),
             created_at: new Date(start.getTime() + i * 36e5).toISOString(),
-        })),
+        })).reverse(),
         affected_components: [], affected_services: [],
     };
 };
