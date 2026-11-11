@@ -9,7 +9,9 @@ process.env.DISCORD_DELIVERY_SLOTS = '3';
 
 const {
     deliver, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, drainDeliveries, queuedDeliveries,
+    busyDeliverySlots, logDeliveryFailure,
 } = await import('../../util/delivery.js');
+const { default: logger } = await import('../../util/logger.js');
 
 /**
  * Ids are fresh per test: a delivery an earlier test left running still reports its outcome
@@ -83,7 +85,7 @@ describe('deliver', () => {
             for (let i = 0; i < 6; i += 1) {
                 const error = await deliver(sub(), 'status', async () => { throw refused(); }).catch((e) => e);
                 waits.push(error.retryInMs);
-                await sleep(error.retryInMs + 5);
+                await sleep(error.retryInMs + 30);
             }
             // 1, 2, 4, 10, 20 times the base, then it stays at the top.
             expect(waits).toEqual([10, 20, 40, 100, 200, 200]);
@@ -143,12 +145,18 @@ describe('the slots shared by every page', () => {
     });
 
     test('the deadline starts when a delivery gets its slot, not when it is queued', async () => {
-        // Six of 80ms each through three slots: the last ones wait 80ms before they start and
-        // finish at 160ms, past the 100ms deadline — and none of them was slow.
-        const outcomes = await Promise.all(Array.from({ length: 6 }, (_, i) =>
-            deliver(sub(i), 'status', () => sleep(80)).then((o) => o.status, (e) => e.name)));
+        // Six of 250ms each through three slots: the last ones wait 250ms before they start and
+        // finish at 500ms, past the 400ms deadline — and none of them was slow. Wide margins on
+        // purpose: each one has 150ms to spare, so a slow machine does not fail it.
+        process.env.DISCORD_DELIVERY_TIMEOUT_MS = '400';
+        try {
+            const outcomes = await Promise.all(Array.from({ length: 6 }, (_, i) =>
+                deliver(sub(i), 'status', () => sleep(250)).then((o) => o.status, (e) => e.name)));
 
-        expect(outcomes).toEqual(Array(6).fill('done'));
+            expect(outcomes).toEqual(Array(6).fill('done'));
+        } finally {
+            process.env.DISCORD_DELIVERY_TIMEOUT_MS = '100';
+        }
     });
 
     test('alerts go before status edits that were queued first', async () => {
@@ -195,6 +203,66 @@ describe('the slots shared by every page', () => {
         expect(started).toBe(0);
         await expect(queued).resolves.toEqual({ status: 'cancelled' });
         await Promise.all(hold);
+    });
+
+    test('a delivery that timed out gives its slot back once, not again when it finishes', async () => {
+        // Released at the deadline, so a channel that never answers does not keep a slot —
+        // and NOT a second time when the request does come back. Twice, and the count drifts
+        // below what is really out, and the limit quietly stops limiting.
+        const late = await deliver(sub(1), 'status', () => sleep(250)).catch((e) => e);
+        expect(late).toBeInstanceOf(DeliveryTimeout);
+        expect(busyDeliverySlots()).toBe(0);
+
+        await sleep(300);
+        expect(busyDeliverySlots()).toBe(0);
+
+        // And the limit still holds afterwards.
+        let running = 0;
+        let peak = 0;
+        const work = async () => { running += 1; peak = Math.max(peak, running); await sleep(20); running -= 1; };
+        await Promise.all(Array.from({ length: 8 }, (_, i) => deliver(sub(10 + i), 'status', work)));
+        expect(peak).toBe(3);
+    });
+});
+
+describe('shutting down', () => {
+    test('waits for a delivery that outlived its deadline', async () => {
+        // The handler stopped waiting for it; the request did not stop. Closing the database
+        // under it would post a message whose row is never written.
+        let finished = false;
+        await deliver(sub(), 'status', async () => { await sleep(250); finished = true; }).catch(() => {});
+        expect(finished).toBe(false);
+
+        await drainDeliveries();
+
+        expect(finished).toBe(true);
+    });
+
+    test('starts nothing that asks after the drain began', async () => {
+        // A page that overran its deadline is still running when the shutdown drains, and can
+        // reach deliver() afterwards. That delivery would land after the drain's snapshot.
+        const drained = drainDeliveries();
+        let called = false;
+
+        await expect(deliver(sub(), 'alerts', async () => { called = true; })).resolves.toEqual({ status: 'cancelled' });
+        await drained;
+        expect(called).toBe(false);
+    });
+});
+
+describe('the line a failed delivery writes', () => {
+    test('says what a rate limit is, when the error carries no message of its own', () => {
+        // RateLimitError from @discordjs/rest has an empty message; the line read "(…): , next".
+        const lines = [];
+        const original = logger.once;
+        logger.once = (_key, _level, line) => { lines.push(line); };
+        try {
+            const error = Object.assign(new Error(''), { name: 'RateLimitError[/channels/:id/messages]', timeToReset: 3000, global: false, scope: 'user', retryInMs: 60_000 });
+            logDeliveryFailure('handleAlerts', 'alerts', sub(), error);
+        } finally {
+            logger.once = original;
+        }
+        expect(lines[0]).toMatch(/: rate limited by Discord \(user, 3s\), next attempt in 60s$/);
     });
 });
 

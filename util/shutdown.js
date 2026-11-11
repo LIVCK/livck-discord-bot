@@ -75,4 +75,37 @@ export const createShutdown = ({
     };
 };
 
-export default { createShutdown };
+/**
+ * The bot's own shutdown: what server.js registers on SIGTERM.
+ *
+ * Assembled here rather than in server.js so the ORDER can be tested — server.js opens a
+ * database connection on import, and nothing there was covered. An empty `drain` would close the
+ * database under deliveries still out, and every suite stayed green with it.
+ *
+ * @param {object} parts
+ * @param {{destroy: () => Promise<void>, gatewayWatch?: {stop: () => void}}} parts.client
+ * @param {() => void} parts.stopUpdateLoop
+ * @param {() => Promise<void>} parts.whenCycleDone
+ * @param {() => Promise<unknown>} parts.drainDeliveries
+ * @param {() => Promise<unknown>} parts.closeDatabase
+ * @param {{isOpen: boolean, quit: () => Promise<unknown>}} parts.cache
+ */
+export const createBotShutdown = ({ client, stopUpdateLoop, whenCycleDone, drainDeliveries, closeDatabase, cache, ...rest }) =>
+    createShutdown({
+        stopLoop: () => {
+            stopUpdateLoop();
+            // Before client.destroy(), which closes the gateway and would read as a lost connection.
+            client.gatewayWatch?.stop();
+        },
+        // The cycle first, then whatever it left running: a page that overran its deadline is
+        // still delivering, and the database has to outlive it.
+        drain: [async () => { await whenCycleDone(); await drainDeliveries(); }],
+        close: [
+            () => client.destroy(),
+            () => closeDatabase(),
+            () => (cache.isOpen ? cache.quit() : Promise.resolve()),
+        ],
+        ...rest,
+    });
+
+export default { createShutdown, createBotShutdown };

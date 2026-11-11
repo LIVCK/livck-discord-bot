@@ -91,6 +91,10 @@ status pages just as much.
   returns the message it already made instead of making another.
 - A message Discord accepted while its row could not be written (database gone at the wrong
   moment) is taken back, instead of being posted a second time on the next cycle.
+- A shutdown could let a page that overran its deadline start a delivery after the drain had
+  begun, which is the post-without-a-row the drain exists to prevent. Deliveries asked for once
+  the drain has started are not started.
+- A failed delivery after a 429 logged an empty reason (`(RateLimitError[…]): , next attempt`).
 - Waits discord.js sits out by itself were logged one line each, so a heartbeat across a
   few hundred channels wrote a few hundred lines. They are counted per route now and appear
   in the once-a-minute Discord summary, next to the refused requests.

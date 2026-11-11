@@ -36,22 +36,16 @@ const client = await bot(models, {
 startUpdateLoop(client);
 
 // Stopping on request rather than being killed — see util/shutdown.js.
-const { createShutdown } = await import('./util/shutdown.js');
+const { createBotShutdown } = await import('./util/shutdown.js');
 const cache = (await import('./database/redis.js')).default;
 
-shutdown = createShutdown({
-    stopLoop: () => {
-        stopUpdateLoop();
-        // Before client.destroy(), which closes the gateway and would read as a lost connection.
-        client.gatewayWatch?.stop();
-    },
-    // The cycle first, then whatever it left running: see util/shutdown.js.
-    drain: [async () => { await whenCycleDone(); await drainDeliveries(); }],
-    close: [
-        () => client.destroy(),
-        () => models.database.close(),
-        () => (cache.isOpen ? cache.quit() : Promise.resolve()),
-    ],
+shutdown = createBotShutdown({
+    client,
+    stopUpdateLoop,
+    whenCycleDone,
+    drainDeliveries,
+    closeDatabase: () => models.database.close(),
+    cache,
 });
 
 for (const signal of ['SIGTERM', 'SIGINT']) {

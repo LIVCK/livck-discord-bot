@@ -78,6 +78,12 @@ let busySlots = 0;
 const waiting = { alerts: [], status: [] };
 /** Bumped by resetDelivery, so work from before it does not release a slot of after it. */
 let generation = 0;
+/**
+ * Set once the process starts shutting down. A page that overran its deadline is still running
+ * when the shutdown drains what is in flight, and it can reach `deliver()` after that snapshot
+ * was taken — a message posted as the database closes, without the row that remembers it.
+ */
+let closing = false;
 
 /** @returns {Promise<boolean>} false when the wait was cancelled by a shutdown */
 const acquireSlot = (lane) => {
@@ -97,6 +103,9 @@ const releaseSlot = () => {
 
 /** How many deliveries are waiting for a slot right now. */
 export const queuedDeliveries = () => waiting.alerts.length + waiting.status.length;
+
+/** How many slots are taken right now. For tests: the count must come back to zero. */
+export const busyDeliverySlots = () => busySlots;
 
 const backoffFor = (level) => BACKOFF_BASE_MS() * LADDER[Math.min(level, LADDER.length) - 1];
 
@@ -147,6 +156,7 @@ export const deliveryState = (subscription, lane) => {
 export const deliver = async (subscription, lane, fn) => {
     const key = `${subscription.id}:${lane}`;
 
+    if (closing) return { status: 'cancelled' };
     if (inFlight.has(key)) return { status: 'busy' };
 
     const failure = failures.get(key);
@@ -245,6 +255,20 @@ export const forEachLimited = async (items, limit, fn) => {
 export const DELIVERY_CONCURRENCY = Number(process.env.DELIVERY_CONCURRENCY || 10);
 
 /**
+ * What went wrong, in words. A RateLimitError from @discordjs/rest has no message at all, so
+ * the line used to end in "): , next attempt in 60s".
+ */
+const describe = (error) => {
+    if (error.message) return error.message;
+    if (error.timeToReset !== undefined || error.retryAfter !== undefined) {
+        const wait = Math.round(Number(error.retryAfter ?? error.timeToReset) / 100) / 10;
+        const scope = error.global ? 'global' : (error.scope ?? 'route');
+        return `rate limited by Discord (${scope}, ${wait}s)`;
+    }
+    return 'no reason given';
+};
+
+/**
  * One line for a failed delivery, repeated only when the message changes.
  *
  * Per lane: status and alerts used to share the key, so a success in one cleared the other's
@@ -269,7 +293,7 @@ export const logDeliveryFailure = (scope, lane, subscription, error) => {
     logger.once(
         key, 'error',
         `[${scope}] Could not deliver to channel ${subscription.channelId} ` +
-        `(${error.code ?? error.name}): ${error.message}${retry}`
+        `(${error.code ?? error.name}): ${describe(error)}${retry}`
     );
 };
 
@@ -281,9 +305,11 @@ export const logDeliverySuccess = (lane, subscription) => {
  * Resolves once every delivery still out has settled — including ones that outlived their
  * deadline. For shutdown: see util/shutdown.js. What is still waiting for a slot is not
  * started any more: it would reach Discord just as the database closes, which is the
- * post-without-a-row this exists to prevent. The next process sends it.
+ * post-without-a-row this exists to prevent. The next process sends it. Nor does anything
+ * that asks for a delivery after this was called.
  */
 export const drainDeliveries = () => {
+    closing = true;
     for (const lane of Object.keys(waiting)) {
         for (const resolve of waiting[lane].splice(0)) resolve(false);
     }
@@ -297,8 +323,9 @@ export const resetDelivery = () => {
     }
     generation += 1;
     busySlots = 0;
+    closing = false;
     inFlight.clear();
     failures.clear();
 };
 
-export default { deliver, deliveryState, drainDeliveries, forgetGuild, forEachLimited, queuedDeliveries, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };
+export default { deliver, deliveryState, drainDeliveries, busyDeliverySlots, forgetGuild, forEachLimited, queuedDeliveries, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };
