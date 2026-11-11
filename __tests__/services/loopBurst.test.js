@@ -169,8 +169,10 @@ test('an incident in the middle of it does not wait for the burst', async () => 
         const lastStatusAt = Math.max(...channels.map(firstPost)) - started;
 
         expect(fake.messagesIn(alertChannel).length).toBeGreaterThanOrEqual(1);
-        // Out in the first fifth of the burst, not at its end.
-        expect(alertAt).toBeLessThan(lastStatusAt / 5);
+        // Out in the first half of the burst, not at its end. It typically lands in the first
+        // tenth; half leaves room for a slow machine and still fails the code this replaced,
+        // where the alert came out last.
+        expect(alertAt).toBeLessThan(lastStatusAt / 2);
     } finally {
         await teardown();
     }

@@ -40,17 +40,15 @@ export const registerCommands = async (commandsFolder, models) => {
     return commands;
 };
 
-const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => {
-    if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CLIENT_ID) {
-        console.error('Missing environment variables: DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID.');
-        process.exit(1);
-    }
-
-    // Asked of the library, not of its source: node_modules restored from a build cache never
-    // runs postinstall, and the bot would come up healthy and missing the only way to add a
-    // status page. See util/modalSupport.js.
-    requireModalSupport();
-
+/**
+ * The client, with everything that decides how it treats Discord: the REST policy and the one
+ * advance warning before a Cloudflare ban. No connection is opened.
+ *
+ * Separate from initializeBot so a test can hold it in place. The loop tests build their own
+ * client, which proved what the policy does and not that the bot uses it — dropping the
+ * `rest:` line here would have brought back the 429 retried for ever with every suite green.
+ */
+export const createClient = () => {
     // A 429 is final rather than retried for ever, and refused requests are logged by route.
     // See discord/restPolicy.js.
     const restPolicy = createRestPolicy();
@@ -61,19 +59,7 @@ const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => 
     });
 
     restPolicy.attach(client.rest);
-
-    // Load commands into client
-    client.commands = new Collection();
-    const commandFiles = fs.readdirSync(commandsFolder).filter(file => file.endsWith('.js'));
-
-    for (const file of commandFiles) {
-        const command = (await import(path.join(commandsFolder, file))).default(models);
-        client.commands.set(command.data.name, command);
-    }
-
-    client.once(Events.ClientReady, () => {
-        console.log(`Logged in as ${client.user.tag}!`);
-    });
+    client.restPolicy = restPolicy;
 
     /**
      * The one that actually gets a bot banned.
@@ -93,6 +79,35 @@ const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => 
             `[Discord] INVALID REQUEST WARNING: ${info.count} invalid requests, ` +
             `${info.remainingTime}ms left in the window. Approaching the Cloudflare ban threshold.`
         );
+    });
+
+    return client;
+};
+
+const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => {
+    if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CLIENT_ID) {
+        console.error('Missing environment variables: DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID.');
+        process.exit(1);
+    }
+
+    // Asked of the library, not of its source: node_modules restored from a build cache never
+    // runs postinstall, and the bot would come up healthy and missing the only way to add a
+    // status page. See util/modalSupport.js.
+    requireModalSupport();
+
+    const client = createClient();
+
+    // Load commands into client
+    client.commands = new Collection();
+    const commandFiles = fs.readdirSync(commandsFolder).filter(file => file.endsWith('.js'));
+
+    for (const file of commandFiles) {
+        const command = (await import(path.join(commandsFolder, file))).default(models);
+        client.commands.set(command.data.name, command);
+    }
+
+    client.once(Events.ClientReady, () => {
+        console.log(`Logged in as ${client.user.tag}!`);
     });
 
     // routeInteraction resolves even when a handler fails. The catch is for a bug in the router
