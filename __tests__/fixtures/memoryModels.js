@@ -11,6 +11,22 @@
 
 import { Op } from 'sequelize';
 
+/**
+ * `instance.update(values)` the way Sequelize does it: when no value actually changes there is
+ * no UPDATE, and `updatedAt` stays where it was. A double that bumped it anyway hid the
+ * heartbeat bug in util/messageSync.js (see `touch` there) from every test that used it.
+ */
+export const updateLikeSequelize = (row, values) => {
+    const changed = Object.entries(values).some(([key, value]) => {
+        const before = row[key];
+        if (before instanceof Date && value instanceof Date) return before.getTime() !== value.getTime();
+        return JSON.stringify(before) !== JSON.stringify(value);
+    });
+    if (!changed) return row;
+    Object.assign(row, values, { updatedAt: new Date() });
+    return row;
+};
+
 const matches = (row, where = {}) => Object.entries(where).every(([key, expected]) => {
     if (expected && typeof expected === 'object' && !(expected instanceof Date)) {
         if (Op.in in expected) return expected[Op.in].includes(row[key]);
@@ -37,7 +53,7 @@ export const createMemoryModels = () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             ...fields,
-            async update(values) { Object.assign(this, values, { updatedAt: new Date() }); return this; },
+            async update(values) { return updateLikeSequelize(this, values); },
             async destroy() { db.messages = db.messages.filter((m) => m !== this); },
             async reload() { return this; },
         };

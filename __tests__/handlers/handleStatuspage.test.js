@@ -7,6 +7,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { updateLikeSequelize } from '../fixtures/memoryModels.js';
 
 /** Controls what the stubbed LIVCK client returns, per test. */
 const api = {
@@ -56,13 +57,13 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                 return [row ? 1 : 0];
             },
             create: async (row) => {
-                // Behaves like a Sequelize instance: update() persists and bumps updatedAt,
-                // which is what the dirty check and the heartbeat both read back.
+                // Behaves like a Sequelize instance: update() persists, and bumps updatedAt only
+                // when something changed, which is what the heartbeat reads back.
                 const record = {
                     id: db.messages.length + 1,
                     ...row,
                     updatedAt: new Date(),
-                    update: async (fields) => { Object.assign(record, fields); record.updatedAt = new Date(); },
+                    update: async (fields) => updateLikeSequelize(record, fields),
                     destroy: async () => { db.messages = db.messages.filter((m) => m !== record); },
                 };
                 db.messages.push(record);

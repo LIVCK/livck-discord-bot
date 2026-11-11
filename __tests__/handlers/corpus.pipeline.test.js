@@ -20,6 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { jest } from '@jest/globals';
+import { updateLikeSequelize } from '../fixtures/memoryModels.js';
 
 const CORPUS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/corpus');
 const files = fs.readdirSync(CORPUS).filter((f) => f.endsWith('.json') && f.startsWith('cloud-')).sort();
@@ -70,7 +71,7 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                     // and would have failed in CI from then on, at no particular time.
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    update: async function (fields) { Object.assign(this, fields); this.updatedAt = new Date(); },
+                    update: async function (fields) { return updateLikeSequelize(this, fields); },
                     destroy: async function () { db.messages = db.messages.filter((m) => m !== this); },
                 };
                 db.messages.push(record);
