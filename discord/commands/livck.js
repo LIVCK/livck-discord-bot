@@ -1,4 +1,4 @@
-import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder as ChannelSelect, RoleSelectMenuBuilder } from "discord.js";
+import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder as ChannelSelect, RoleSelectMenuBuilder, MessageFlags } from "discord.js";
 import { Op } from "sequelize";
 import cache from "../../database/redis.js";
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
@@ -93,7 +93,7 @@ const denyWithoutPermission = async (interaction) => {
 
     await interaction.reply({
         content: translation.trans('errors.missing_permissions'),
-        flags: 64 // EPHEMERAL
+        flags: MessageFlags.Ephemeral
     });
     return true;
 };
@@ -195,7 +195,7 @@ export default (models) => ({
 
                 await interaction.reply({
                     content: translation.trans('errors.missing_permissions'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -329,7 +329,7 @@ export default (models) => ({
                     if (!interaction.replied) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.subscribe.error'),
-                            flags: 64 // EPHEMERAL flag
+                            flags: MessageFlags.Ephemeral
                         });
                     }
                 }
@@ -349,7 +349,7 @@ export default (models) => ({
                     if (!url && !channel) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.unsubscribe.missing_params'),
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                         return;
                     }
@@ -359,7 +359,7 @@ export default (models) => ({
                         if (!statuspage) {
                             await interaction.reply({
                                 content: translation.trans('commands.livck.subscribe.statuspage_not_found', { url }),
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                             return;
                         }
@@ -375,12 +375,12 @@ export default (models) => ({
                         if (deletedCount === 0) {
                             await interaction.reply({
                                 content: translation.trans('commands.livck.unsubscribe.no_subscriptions', { url }, 0),
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                         } else {
                             await interaction.reply({
                                 content: translation.trans('commands.livck.unsubscribe.success', { url }),
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                         }
                     } else if (channel) {
@@ -394,12 +394,12 @@ export default (models) => ({
                         if (deletedCount === 0) {
                             await interaction.reply({
                                 content: translation.trans('commands.livck.unsubscribe.no_subscriptions', { channelId: channel.id }, 1),
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                         } else {
                             await interaction.reply({
                                 content: translation.trans('commands.livck.unsubscribe.success_channel', { channelId: channel.id }),
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                         }
                     }
@@ -407,7 +407,7 @@ export default (models) => ({
                     console.error('Error removing subscription:', error);
                     await interaction.reply({
                         content: translation.trans('commands.livck.unsubscribe.error'),
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
                 break;
@@ -426,7 +426,7 @@ export default (models) => ({
                     if (subscriptions.length === 0) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.list.no_subscriptions'),
-                            ephemeral: true,
+                            flags: MessageFlags.Ephemeral,
                         });
                         return;
                     }
@@ -491,13 +491,13 @@ export default (models) => ({
 
                     await interaction.reply({
                         embeds,
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 } catch (error) {
                     console.error('Error fetching subscriptions:', error);
                     await interaction.reply({
                         content: translation.trans('commands.livck.list.error'),
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
                 break;
@@ -521,7 +521,7 @@ export default (models) => ({
                     if (!subscription) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.list.subscription_not_found'),
-                            ephemeral: true
+                            flags: MessageFlags.Ephemeral
                         });
                         return;
                     }
@@ -603,13 +603,13 @@ export default (models) => ({
                             channelId: subscription.channelId
                         }),
                         components: [localeRow, layoutRow, buttonRow],
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 } catch (error) {
                     console.error('Error showing edit menu:', error);
                     await interaction.reply({
                         content: translation.trans('commands.livck.edit.error'),
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                 }
                 break;
@@ -635,7 +635,7 @@ export default (models) => ({
                     if (!statuspage) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.not_found', { url }),
-                            flags: 64
+                            flags: MessageFlags.Ephemeral
                         });
                         return;
                     }
@@ -645,7 +645,7 @@ export default (models) => ({
                     if (!statuspage.paused && !statuspage.nextAttemptAt) {
                         await interaction.reply({
                             content: translation.trans('commands.livck.resume.not_paused', { url }),
-                            flags: 64
+                            flags: MessageFlags.Ephemeral
                         });
                         return;
                     }
@@ -665,7 +665,7 @@ export default (models) => ({
                                 url,
                                 reason: translation.trans(`commands.livck.resume.reasons.${pauseReason}`)
                             }),
-                            flags: 64
+                            flags: MessageFlags.Ephemeral
                         });
                     } else {
                         await interaction.reply({
@@ -673,14 +673,14 @@ export default (models) => ({
                                 url,
                                 message: result.message
                             }),
-                            flags: 64
+                            flags: MessageFlags.Ephemeral
                         });
                     }
                 } catch (error) {
                     console.error('Error resuming statuspage:', error);
                     await interaction.reply({
                         content: translation.trans('commands.livck.resume.error'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 break;
@@ -689,7 +689,7 @@ export default (models) => ({
             default:
                 await interaction.reply({
                     content: 'Unknown subcommand. Use `/livck` to see available subcommands.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
         }
     },
@@ -759,7 +759,7 @@ export default (models) => ({
             if (!subscription || !subscription.Statuspage) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    flags: 64 // EPHEMERAL
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -878,7 +878,7 @@ export default (models) => ({
             if (!subscription || !subscription.Statuspage) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    flags: 64 // EPHEMERAL
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -993,7 +993,7 @@ export default (models) => ({
             if (!subscription) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1080,7 +1080,7 @@ export default (models) => ({
             if (!subscription) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1191,7 +1191,7 @@ export default (models) => ({
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1208,7 +1208,7 @@ export default (models) => ({
             if (!subscription || !subscription.Statuspage) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    flags: 64 // EPHEMERAL
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1329,7 +1329,7 @@ export default (models) => ({
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1394,7 +1394,7 @@ export default (models) => ({
             if (!link) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.error'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1433,7 +1433,7 @@ export default (models) => ({
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1531,7 +1531,7 @@ export default (models) => ({
             if (!link) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.custom_links.error'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1635,7 +1635,7 @@ export default (models) => ({
             if (!subscription) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1767,7 +1767,7 @@ export default (models) => ({
             if (currentCount + selectedRoleIds.length > 25) {
                 await interaction.followUp({
                     content: translation.trans('commands.livck.role_mentions.max_roles'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1839,7 +1839,7 @@ export default (models) => ({
             if (!subscription) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -1897,7 +1897,7 @@ export default (models) => ({
             if (!subscription) {
                 await interaction.reply({
                     content: translation.trans('commands.livck.list.subscription_not_found'),
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -2004,7 +2004,7 @@ export default (models) => ({
                             channelId: channelId,
                             locale: locale.toUpperCase()
                         }),
-                        flags: 64 // EPHEMERAL flag
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2012,7 +2012,7 @@ export default (models) => ({
 
             // Defer the reply to give us more time for validation
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.deferReply({ flags: 64 }); // EPHEMERAL
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             }
 
             // IMPORTANT: Validate URL BEFORE creating anything.
@@ -2033,7 +2033,7 @@ export default (models) => ({
                         url,
                         reason: translation.trans(`messages.pause.reason.${classifyError(error).kind}`),
                     }),
-                    flags: 64 // EPHEMERAL flag
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -2042,7 +2042,7 @@ export default (models) => ({
                 logger.info(`[Subscribe] ${url} is not a LIVCK statuspage`);
                 await interaction[replyMethod]({
                     content: translation.trans('commands.livck.subscribe.invalid_livck_url', { url }),
-                    flags: 64 // EPHEMERAL flag
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -2057,7 +2057,7 @@ export default (models) => ({
                     logger.info(`[Subscribe] ${url} is a protected Cloud page: ${error.message}`);
                     await interaction[replyMethod]({
                         content: translation.trans('commands.livck.subscribe.protected_page', { url }),
-                        flags: 64 // EPHEMERAL flag
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2110,7 +2110,7 @@ export default (models) => ({
             const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
             await interaction[replyMethod]({
                 content: translation.trans('commands.livck.subscribe.error'),
-                flags: 64 // EPHEMERAL flag
+                flags: MessageFlags.Ephemeral
             });
         }
     },
@@ -2158,7 +2158,7 @@ export default (models) => ({
                 if (!url || !channelId) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.subscribe.error'),
-                        flags: 64 // EPHEMERAL flag
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2177,7 +2177,7 @@ export default (models) => ({
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.subscribe.error'),
-                        flags: 64 // EPHEMERAL flag
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             }
@@ -2196,7 +2196,7 @@ export default (models) => ({
                 if (!linkTarget) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.list.subscription_not_found'),
-                        flags: 64 // EPHEMERAL
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2210,7 +2210,7 @@ export default (models) => ({
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.invalid_url'),
-                        flags: 64 // EPHEMERAL
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2223,7 +2223,7 @@ export default (models) => ({
                 if (existingCount >= 25) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.max_links'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2240,7 +2240,7 @@ export default (models) => ({
                 // IMPORTANT: Reply first before doing expensive operations
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.added'),
-                    flags: 64
+                    flags: MessageFlags.Ephemeral
                 });
 
                 // Trigger status page refresh asynchronously (don't await)
@@ -2262,7 +2262,7 @@ export default (models) => ({
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             }
@@ -2277,7 +2277,7 @@ export default (models) => ({
                 if (!link) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2291,7 +2291,7 @@ export default (models) => ({
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.invalid_url'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2306,7 +2306,7 @@ export default (models) => ({
                 // IMPORTANT: Reply first
                 await interaction.reply({
                     content: translation.trans('commands.livck.custom_links.updated'),
-                    flags: 64
+                    flags: MessageFlags.Ephemeral
                 });
 
                 // Trigger status page refresh asynchronously
@@ -2326,7 +2326,7 @@ export default (models) => ({
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.error'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             }
@@ -2345,7 +2345,7 @@ export default (models) => ({
                 if (!subscription) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.list.subscription_not_found'),
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                     return;
                 }
@@ -2367,7 +2367,7 @@ export default (models) => ({
                 const statusText = newToken ? 'API Token updated.' : 'API Token removed.';
                 await interaction.reply({
                     content: `✅ ${statusText}`,
-                    flags: 64
+                    flags: MessageFlags.Ephemeral
                 });
 
                 // Fire-and-forget: re-fetch statuspage with new token
@@ -2382,7 +2382,7 @@ export default (models) => ({
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: 'Error updating API token.',
-                        flags: 64
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             }

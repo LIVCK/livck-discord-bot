@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import translation from "../../util/Translation.js";
 
 export default (models) => ({
@@ -14,7 +15,7 @@ export default (models) => ({
 
         await interaction.reply({
             content: translation.trans('commands.ping.response'),
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     },
 });

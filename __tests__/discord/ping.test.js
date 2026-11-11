@@ -6,6 +6,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { MessageFlags } from 'discord.js';
 
 jest.unstable_mockModule('../../database/redis.js', () => ({
     default: { get: async () => null, set: async () => {}, del: async () => {} },
@@ -70,7 +71,9 @@ describe('the reply', () => {
 
         await command.execute(interaction, {});
 
-        expect(interaction.replies[0].ephemeral ?? interaction.replies[0].flags).toBeTruthy();
+        // As a flag. The `ephemeral` option is deprecated in discord.js 14 and gone in 15.
+        expect(interaction.replies[0].flags & MessageFlags.Ephemeral).toBe(MessageFlags.Ephemeral);
+        expect(interaction.replies[0]).not.toHaveProperty('ephemeral');
     });
 
     test('an interaction with no locale at all does not throw', async () => {

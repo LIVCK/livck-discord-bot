@@ -7,7 +7,6 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "postinstall": "node scripts/patch-discordjs.js",
     "i18n:upload": "crowdin upload sources",
     "i18n:upload-all": "crowdin upload sources && crowdin upload translations",
     "i18n:download": "crowdin download",
@@ -17,7 +16,7 @@
   "author": "Rene Roscher",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "14.22.1",
+    "discord.js": "14.28.1",
     "dotenv": "^16.4.7",
     "html-to-text": "^9.0.5",
     "mariadb": "^3.4.0",

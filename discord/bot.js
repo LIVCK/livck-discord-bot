@@ -1,9 +1,9 @@
 import { REST, Routes } from 'discord.js';
-import { Client, GatewayIntentBits, Collection } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Collection } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 import { routeInteraction } from './interactionRouter.js';
-import { requireModalSupport } from '../util/discordPatch.js';
+import { requireModalSupport } from '../util/modalSupport.js';
 import { createRestPolicy } from './restPolicy.js';
 
 /**
@@ -47,7 +47,7 @@ const initializeBot = async (commandsFolder, models) => {
 
     // Asked of the library, not of its source: node_modules restored from a build cache never
     // runs postinstall, and the bot would come up healthy and missing the only way to add a
-    // status page. See util/discordPatch.js.
+    // status page. See util/modalSupport.js.
     requireModalSupport();
 
     // A 429 is final rather than retried for ever, and refused requests are logged by route.
@@ -70,7 +70,7 @@ const initializeBot = async (commandsFolder, models) => {
         client.commands.set(command.data.name, command);
     }
 
-    client.once('ready', () => {
+    client.once(Events.ClientReady, () => {
         console.log(`Logged in as ${client.user.tag}!`);
     });
 

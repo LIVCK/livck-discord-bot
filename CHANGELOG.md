@@ -117,6 +117,12 @@ status pages just as much.
   `debug`, leaving one summary line per cycle. Expected network failures log a single line with
   no stack trace, and repeats for the same page are suppressed until the message changes — a
   dead domain went from ~5760 log entries a day to roughly ten.
+- **discord.js 14.28.1** (from 14.22.1). It reads the Type 18 Label components of the subscribe
+  modal itself, so `scripts/patch-discordjs.js` and the `postinstall` step that rewrote two of
+  its files are gone, and with them the pin to one exact version of its source. The startup
+  check in `util/modalSupport.js` stays and refuses a discord.js that cannot read the modal.
+  Replies use `flags: MessageFlags.Ephemeral` and the login line listens for `clientReady`:
+  `ephemeral` and `ready` print deprecation warnings in 14 and do nothing in 15.
 - Discord rate limiting is now reported: waits per route, and refused requests per route and
   Discord error code, in one line per minute. Previously discord.js queued silently and the
   only symptom was updates arriving later and later.
@@ -129,6 +135,9 @@ status pages just as much.
   destroyed a subscription and `edit_api_token_` read and wrote a status page API token that
   way. Every id-driven path is now scoped to `interaction.guildId`, matching what the
   slash-command paths already did.
+- undici is 6.29 through discord.js 14.28, which closes the two advisories against the version
+  14.22 shipped (unbounded decompression of a response, and a WebSocket frame length that
+  crashes the parser).
 - Discord's `invalidRequestWarning` is now armed (`invalidRequestWarningInterval: 250`). It was
   disabled by default, and it is the only advance warning before Discord blocks a bot's IP at
   the Cloudflare layer for accumulating 401/403/429 responses — which the bot produces whenever

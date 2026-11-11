@@ -37,7 +37,7 @@ jest.unstable_mockModule('../../database/redis.js', () => ({
     default: { get: async () => null, set: async () => {}, del: async () => {} },
 }));
 
-jest.unstable_mockModule('../../util/discordPatch.js', () => ({
+jest.unstable_mockModule('../../util/modalSupport.js', () => ({
     requireModalSupport: () => {}, checkModalSupport: () => [], default: {},
 }));
 
