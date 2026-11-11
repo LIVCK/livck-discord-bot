@@ -74,6 +74,42 @@ export const hashPayload = ({ embeds = [], components = [], content = '' } = {})
     return crypto.createHash('sha256').update(JSON.stringify(shape)).digest('hex');
 };
 
+/**
+ * A message that reached Discord although the answer did not.
+ *
+ * A POST can arrive and its answer get lost: a network blip on the way back, or Discord itself
+ * answering slower than the client's 15 seconds. @discordjs/rest then sends the same POST again,
+ * up to three times, and after that the delivery's backoff tries once more on a later cycle.
+ * Every one of them was a new message. Measured against the real API with the answers dropped
+ * on the way back: one incident, six copies in the channel, one of them recorded.
+ *
+ * Discord's answer is a nonce with `enforce_nonce`: the same nonce from the same bot within a
+ * few minutes returns the message it already made instead of making another. So each message
+ * keeps ONE nonce from its first attempt until its row is written — across the library's
+ * retries and the backoff's — and only then is it forgotten, so a message an admin deleted is
+ * posted again with a fresh one.
+ *
+ * Held in memory: a restart in the middle of it costs at worst the duplicate it would always
+ * have cost.
+ */
+const pendingNonces = new Map();
+const MAX_PENDING_NONCES = 10_000;
+
+const nonceFor = (create) => {
+    const key = `${create.subscriptionId}:${create.category}:${create.serviceId ?? ''}`;
+    let nonce = pendingNonces.get(key);
+    if (!nonce) {
+        if (pendingNonces.size >= MAX_PENDING_NONCES) pendingNonces.delete(pendingNonces.keys().next().value);
+        // At most 25 characters, which Discord allows for a nonce.
+        nonce = crypto.randomBytes(15).toString('base64url');
+        pendingNonces.set(key, nonce);
+    }
+    return { key, nonce };
+};
+
+/** For tests. */
+export const clearPendingNonces = () => pendingNonces.clear();
+
 /** True when the stored message is older than the heartbeat interval. */
 const needsHeartbeat = (record, now) => {
     const last = record.updatedAt ? new Date(record.updatedAt).getTime() : 0;
@@ -154,8 +190,25 @@ export const syncMessage = async ({
     }
 
     if (!record) {
-        const sent = await (send ? send(payload, resolved) : resolved.send(payload));
-        await models.Message.create({ ...create, messageId: sent.id, contentHash: hash });
+        const { key, nonce } = nonceFor(create);
+        const once = { ...payload, nonce, enforceNonce: true };
+        const sent = await (send ? send(once, resolved) : resolved.send(once));
+        try {
+            await models.Message.create({ ...create, messageId: sent.id, contentHash: hash });
+            pendingNonces.delete(key);
+        } catch (error) {
+            pendingNonces.delete(key);
+            // Discord has the message and the database does not, so nothing would ever edit
+            // it, and the next cycle — finding no row — would post it a second time. Take it
+            // back while the id is still known. If Discord refuses that too, the duplicate is
+            // unavoidable, and the line says which message it is.
+            try {
+                await resolved.messages.delete(sent.id);
+            } catch (deleteError) {
+                logger.warn(`[MessageSync] Message ${sent.id} was posted but not recorded, and could not be taken back: ${deleteError.message}`);
+            }
+            throw error;
+        }
         return 'created';
     }
 

@@ -45,13 +45,14 @@ describe('hashPayload', () => {
 
 /** Minimal stand-ins — the point is which Discord calls happen, not what they return. */
 const makeChannel = () => {
-    const calls = { send: 0, edit: 0, fetch: 0 };
+    const calls = { send: 0, edit: 0, fetch: 0, deleted: [] };
     return {
         calls,
         send: async () => { calls.send += 1; return { id: 'new-message-id' }; },
         messages: {
             edit: async () => { calls.edit += 1; return { id: 'existing' }; },
             fetch: async () => { calls.fetch += 1; return { id: 'existing' }; },
+            delete: async (id) => { calls.deleted.push(id); },
         },
     };
 };
@@ -149,6 +150,46 @@ describe('syncMessage', () => {
         });
 
         expect(result).toBe('updated');
+    });
+
+    test('takes a new message back when its row cannot be written', async () => {
+        // Posted, then the database refused the row: nothing would ever edit that message, and
+        // the next cycle, finding no row, would post it again. Two messages for one status.
+        const channel = makeChannel();
+        const models = makeModels();
+        models.Message.create = async () => { throw new Error('database went away'); };
+
+        await expect(syncMessage({ channel, record: null, payload, models, create: {} }))
+            .rejects.toThrow('database went away');
+
+        expect(channel.calls.send).toBe(1);
+        expect(channel.calls.deleted).toEqual(['new-message-id']);
+    });
+
+    test('still reports the database error when the take-back fails too', async () => {
+        const channel = makeChannel();
+        channel.messages.delete = async () => { throw new Error('discord unreachable'); };
+        const models = makeModels();
+        models.Message.create = async () => { throw new Error('database went away'); };
+
+        await expect(syncMessage({ channel, record: null, payload, models, create: {} }))
+            .rejects.toThrow('database went away');
+    });
+
+    test('a heartbeat refresh is written down, so the next cycle stays quiet', async () => {
+        // The bug this guards came back once already: `record.update({contentHash})` with the
+        // hash it already has is a no-op in Sequelize, updatedAt never moves, and every status
+        // message is edited every fifteen seconds from then on. The record double here behaves
+        // like Sequelize does — an instance update moves nothing that did not change.
+        const channel = makeChannel();
+        const models = makeModels();
+        const record = makeRecord(hashPayload(payload), new Date(Date.now() - 60 * 60 * 1000));
+
+        expect(await syncMessage({ channel, record, payload, models, create: {}, heartbeat: true })).toBe('updated');
+        expect(await syncMessage({ channel, record, payload, models, create: {}, heartbeat: true })).toBe('skipped');
+
+        expect(channel.calls.edit).toBe(1);
+        expect(models.updated).toHaveLength(1);
     });
 
     test('a fresh unchanged message is left alone even with heartbeat on', async () => {

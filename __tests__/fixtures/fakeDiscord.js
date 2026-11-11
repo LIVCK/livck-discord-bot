@@ -15,7 +15,16 @@
  *   unknown      - 404, code 10003 (the channel is gone)
  *   rateLimited  - 429 on every request, for as long as it stays scripted
  *   hang         - accepts the request and never answers
+ *   loseAnswer   - does what was asked — the message is posted or edited — and never answers,
+ *                  the way a response lost on the way back looks to the client
+ *   badGateway   - does what was asked, then answers 502: Cloudflare giving up on Discord
+ *                  after Discord had already done it. @discordjs/rest retries a 5xx.
+ *   serverError  - 500
+ *   reset        - drops the connection without a word
  *   { delayMs }  - answers normally, late
+ *
+ * A POST carrying `enforce_nonce` with a nonce this server has seen in the last five minutes
+ * returns the message that nonce made, as Discord does, instead of making another.
  *
  * The bodies follow the shapes in Discord's API reference. They are not recordings; anything
  * the bot depends on that only real Discord can confirm stays in __tests__/e2e/discord.live.test.js.
@@ -92,6 +101,9 @@ export const startFakeDiscord = async ({
     const log = [];
     /** Requests left open by `hang`, so they can be let go at the end. */
     const hanging = new Set();
+    /** `${channelId}:${nonce}` → { id, at } for enforce_nonce */
+    const nonces = new Map();
+    const NONCE_WINDOW_MS = 5 * 60 * 1000;
 
     const channelBody = (id) => ({
         id,
@@ -129,6 +141,61 @@ export const startFakeDiscord = async ({
         flags: 0,
     });
 
+    /** What every channel does when nothing is scripted for it. */
+    const answerNormally = async (req, res, entry, channelId, messagesPart, messageId, route) => {
+        const taken = take(`${req.method} ${route}`, channelId);
+        if (taken.exhausted) {
+            return json(res, 429, {
+                message: 'You are being rate limited.',
+                retry_after: taken.resetAfter,
+                global: false,
+            }, {
+                ...bucketHeaders(route, { limit: bucket.limit, remaining: 0, resetAfter: taken.resetAfter }),
+                'retry-after': String(Math.ceil(taken.resetAfter)),
+                'x-ratelimit-scope': 'user',
+            });
+        }
+        const headers = taken.headers;
+
+        if (!messagesPart) {
+            if (req.method !== 'GET') return json(res, 405, { message: '405: Method Not Allowed', code: 0 });
+            return json(res, 200, channelBody(channelId), headers);
+        }
+
+        if (req.method === 'POST' && !messageId) {
+            const body = await readBody(req);
+            const seen = body.enforce_nonce && body.nonce ? nonces.get(`${channelId}:${body.nonce}`) : null;
+            if (seen && Date.now() - seen.at < NONCE_WINDOW_MS && messages.has(seen.id)) {
+                entry.messageId = seen.id;
+                entry.deduplicated = true;
+                return json(res, 200, messages.get(seen.id), headers);
+            }
+            const message = messageBody(channelId, body);
+            messages.set(message.id, message);
+            if (body.enforce_nonce && body.nonce) nonces.set(`${channelId}:${body.nonce}`, { id: message.id, at: Date.now() });
+            entry.messageId = message.id;
+            return json(res, 200, message, headers);
+        }
+
+        const existing = messageId ? messages.get(messageId) : null;
+        if (!existing || existing.channel_id !== channelId) {
+            return json(res, 404, { message: 'Unknown Message', code: 10008 }, headers);
+        }
+
+        if (req.method === 'PATCH') {
+            const updated = messageBody(channelId, await readBody(req), existing);
+            messages.set(messageId, updated);
+            return json(res, 200, updated, headers);
+        }
+        if (req.method === 'DELETE') {
+            messages.delete(messageId);
+            res.writeHead(204, headers);
+            return res.end();
+        }
+
+        return json(res, 405, { message: '405: Method Not Allowed', code: 0 });
+    };
+
     const answer = async (req, res, entry) => {
         const match = req.url.match(/^\/api\/v\d+\/channels\/(\d+)(\/messages(?:\/(\d+))?)?\/?(\?.*)?$/);
         if (!match) return json(res, 404, { message: '404: Not Found', code: 0 });
@@ -149,6 +216,29 @@ export const startFakeDiscord = async ({
             entry.status = 'hang';
             hanging.add(res);
             res.on('close', () => hanging.delete(res));
+            return undefined;
+        }
+        if (behaviour === 'reset') {
+            entry.status = 'reset';
+            req.socket.destroy();
+            return undefined;
+        }
+        if (behaviour === 'serverError') {
+            return json(res, 500, { message: 'Internal Server Error', code: 0 });
+        }
+        if (behaviour === 'badGateway') {
+            const discarded = { ...res, writeHead: () => discarded, end: () => discarded };
+            await answerNormally(req, discarded, entry, channelId, messagesPart, messageId, route);
+            return json(res, 502, { message: 'Bad Gateway', code: 0 });
+        }
+        if (behaviour === 'loseAnswer') {
+            // Answer into nothing: the work is done, the client never hears of it.
+            const swallowed = { ...res, writeHead: () => swallowed, end: () => swallowed };
+            hanging.add(res);
+            res.on('close', () => hanging.delete(res));
+            entry.lost = true;
+            await answerNormally(req, swallowed, entry, channelId, messagesPart, messageId, route);
+            entry.status = 'lost';
             return undefined;
         }
         if (behaviour === 'rateLimited') {
@@ -173,50 +263,7 @@ export const startFakeDiscord = async ({
             await new Promise((resolve) => setTimeout(resolve, behaviour.delayMs));
         }
 
-        const taken = take(`${req.method} ${route}`, channelId);
-        if (taken.exhausted) {
-            return json(res, 429, {
-                message: 'You are being rate limited.',
-                retry_after: taken.resetAfter,
-                global: false,
-            }, {
-                ...bucketHeaders(route, { limit: bucket.limit, remaining: 0, resetAfter: taken.resetAfter }),
-                'retry-after': String(Math.ceil(taken.resetAfter)),
-                'x-ratelimit-scope': 'user',
-            });
-        }
-        const headers = taken.headers;
-
-        if (!messagesPart) {
-            if (req.method !== 'GET') return json(res, 405, { message: '405: Method Not Allowed', code: 0 });
-            return json(res, 200, channelBody(channelId), headers);
-        }
-
-        if (req.method === 'POST' && !messageId) {
-            const body = await readBody(req);
-            const message = messageBody(channelId, body);
-            messages.set(message.id, message);
-            entry.messageId = message.id;
-            return json(res, 200, message, headers);
-        }
-
-        const existing = messageId ? messages.get(messageId) : null;
-        if (!existing || existing.channel_id !== channelId) {
-            return json(res, 404, { message: 'Unknown Message', code: 10008 }, headers);
-        }
-
-        if (req.method === 'PATCH') {
-            const updated = messageBody(channelId, await readBody(req), existing);
-            messages.set(messageId, updated);
-            return json(res, 200, updated, headers);
-        }
-        if (req.method === 'DELETE') {
-            messages.delete(messageId);
-            res.writeHead(204, headers);
-            return res.end();
-        }
-
-        return json(res, 405, { message: '405: Method Not Allowed', code: 0 });
+        return answerNormally(req, res, entry, channelId, messagesPart, messageId, route);
     };
 
     const server = http.createServer((req, res) => {

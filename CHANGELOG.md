@@ -82,6 +82,15 @@ status pages just as much.
   without a connection (`GATEWAY_STALL_MINUTES`), the bot now shuts down cleanly with exit code
   1 for its supervisor to restart. A drop lasting more than 30 seconds is logged once, and so is
   its end; the routine reconnects Discord asks for say nothing.
+- **A message could be posted several times when Discord's answer got lost.** A POST that
+  reaches Discord but whose answer does not — a network blip on the way back, or Discord
+  answering slower than the client's 15 seconds — was sent again by discord.js, up to three
+  times, and once more by the delivery's backoff later. Against the real API with the answers
+  dropped: six copies of one incident, one of them recorded. Every new message now carries a
+  nonce with `enforce_nonce`, kept from its first attempt until its row is written, so Discord
+  returns the message it already made instead of making another.
+- A message Discord accepted while its row could not be written (database gone at the wrong
+  moment) is taken back, instead of being posted a second time on the next cycle.
 - Waits discord.js sits out by itself were logged one line each, so a heartbeat across a
   few hundred channels wrote a few hundred lines. They are counted per route now and appear
   in the once-a-minute Discord summary, next to the refused requests.
