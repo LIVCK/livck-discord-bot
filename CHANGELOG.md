@@ -70,6 +70,12 @@ status pages just as much.
   per outage now, and one when the database is back.
 - `DB_PORT` and `DB_DIALECT` were honoured by `migrate.js` but ignored by the bot itself, so
   a database outside port 3306 was migrated and then never reached.
+- **A lost gateway went unnoticed.** Status updates go over REST and kept arriving, while
+  slash commands, which only come over the gateway, were silently no longer answered. After a
+  close discord.js does not recover from (a reset token, an intent not enabled) or ten minutes
+  without a connection (`GATEWAY_STALL_MINUTES`), the bot now shuts down cleanly with exit code
+  1 for its supervisor to restart. A drop lasting more than 30 seconds is logged once, and so is
+  its end; the routine reconnects Discord asks for say nothing.
 - Waits discord.js sits out by itself were logged one line each, so a heartbeat across a
   few hundred channels wrote a few hundred lines. They are counted per route now and appear
   in the once-a-minute Discord summary, next to the refused requests.

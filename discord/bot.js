@@ -5,6 +5,7 @@ import path from 'path';
 import { routeInteraction } from './interactionRouter.js';
 import { requireModalSupport } from '../util/modalSupport.js';
 import { createRestPolicy } from './restPolicy.js';
+import { watchGateway } from './gatewayWatch.js';
 
 /**
  * Collect every command definition and register the set with Discord.
@@ -39,7 +40,7 @@ export const registerCommands = async (commandsFolder, models) => {
     return commands;
 };
 
-const initializeBot = async (commandsFolder, models) => {
+const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => {
     if (!process.env.DISCORD_BOT_TOKEN || !process.env.DISCORD_CLIENT_ID) {
         console.error('Missing environment variables: DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID.');
         process.exit(1);
@@ -94,7 +95,18 @@ const initializeBot = async (commandsFolder, models) => {
         );
     });
 
-    client.on('interactionCreate', (interaction) => routeInteraction(interaction, client));
+    // routeInteraction resolves even when a handler fails. The catch is for a bug in the router
+    // itself: it would otherwise be an unhandled rejection, which ends the process.
+    client.on(Events.InteractionCreate, (interaction) => {
+        routeInteraction(interaction, client).catch((error) => {
+            console.error('[Discord] Interaction routing failed:', error);
+        });
+    });
+
+    // Before login, so a first ready that never arrives counts too. See discord/gatewayWatch.js.
+    client.gatewayWatch = watchGateway(client, {
+        onFatal: (reason) => (onGatewayLost ? onGatewayLost(reason) : process.exit(1)),
+    });
 
     try {
         await client.login(process.env.DISCORD_BOT_TOKEN);
@@ -111,10 +123,15 @@ const initializeBot = async (commandsFolder, models) => {
     return client;
 };
 
-const bot = async (database) => {
+/**
+ * @param {object} database - the models
+ * @param {{onGatewayLost?: (reason: string) => void}} [options] - called once when the gateway
+ *   is not coming back; the process should leave with a failure code. See discord/gatewayWatch.js.
+ */
+const bot = async (database, options = {}) => {
     const commandsFolder = path.resolve('./discord/commands');
     await registerCommands(commandsFolder, database);
-    return await initializeBot(commandsFolder, database);
+    return await initializeBot(commandsFolder, database, options);
 };
 
 export default bot;

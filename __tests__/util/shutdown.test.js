@@ -49,6 +49,33 @@ describe('on a signal', () => {
     });
 });
 
+describe('leaving because something is broken', () => {
+    test('tears down the same way, and exits non-zero so the supervisor sees a failure', async () => {
+        // A gateway Discord will not let back in (util/gatewayWatch.js). Leaving with 0 would
+        // read as a requested stop, and a restart policy of on-failure would leave it stopped.
+        const { shutdown, events, exit } = harness();
+
+        await shutdown('gateway', 1);
+
+        expect(new Set(events)).toEqual(new Set(['stopLoop', 'discord', 'database', 'redis']));
+        expect(exit).toHaveBeenCalledWith(1);
+    });
+
+    test('keeps the code when the deadline cuts it short', async () => {
+        jest.useFakeTimers();
+        try {
+            const { shutdown, exit } = harness({ close: [() => new Promise(() => {})], deadlineMs: 100 });
+
+            shutdown('gateway', 1);
+            await jest.advanceTimersByTimeAsync(150);
+
+            expect(exit).toHaveBeenCalledWith(1);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+});
+
 describe('a second signal', () => {
     test('does not start a second teardown', async () => {
         // Closing a pool twice throws, and the throw would land in a signal handler where

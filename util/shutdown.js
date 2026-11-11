@@ -33,18 +33,18 @@ export const createShutdown = ({
 } = {}) => {
     let started = false;
 
-    return async (signal) => {
+    return async (signal, code = 0) => {
         // A second signal must not start a second teardown: closing a pool twice throws, and
         // the throw would land in a signal handler where nothing catches it.
         if (started) return;
         started = true;
 
-        log(`[Shutdown] ${signal} received, stopping.`);
+        log(`[Shutdown] ${signal}${code === 0 ? ' received' : ''}, stopping.`);
 
         // Unref'd, so waiting for the deadline does not itself keep the process alive.
         const deadline = setTimeout(() => {
             log('[Shutdown] Deadline reached, exiting anyway.');
-            exit(0);
+            exit(code);
         }, deadlineMs);
         deadline.unref?.();
 
@@ -71,7 +71,7 @@ export const createShutdown = ({
 
         clearTimeout(deadline);
         log('[Shutdown] Done.');
-        exit(0);
+        exit(code);
     };
 };
 
