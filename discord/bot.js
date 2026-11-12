@@ -7,6 +7,7 @@ import { requireModalSupport } from '../util/modalSupport.js';
 import { createRestPolicy } from './restPolicy.js';
 import { watchGateway } from './gatewayWatch.js';
 import { forgetGuild } from '../util/delivery.js';
+import { watchGuildMembership } from './guildMembership.js';
 
 /**
  * Collect every command definition and register the set with Discord.
@@ -110,6 +111,9 @@ const initializeBot = async (commandsFolder, models, { onGatewayLost } = {}) => 
     requireModalSupport();
 
     const client = createClient();
+
+    // Before login, so a GUILD_DELETE in the first seconds is not missed. See the file.
+    watchGuildMembership(client, models);
 
     // Load commands into client
     client.commands = new Collection();

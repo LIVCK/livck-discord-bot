@@ -62,6 +62,9 @@ fetch instead of two.
   would otherwise retry it for ever, silently, and that is what froze the whole bot in
   production. `__tests__/services/loopIsolation.test.js`, `loopSoak.test.js` and `loopBurst.test.js`
   run the real discord.js client against `__tests__/fixtures/fakeDiscord.js` to hold this in place.
+- **Guilds the bot is not in** get no request at all (`discord/guildMembership.js`). A kick
+  reported live deletes that guild's subscriptions; a guild merely missing from the list at
+  login is skipped but never deleted — that is also what a bot with the wrong token sees.
 
 ### How an alert ends
 

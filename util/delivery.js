@@ -42,6 +42,10 @@
  * are with discord.js at a time, the deadline starts when a delivery gets its slot, and an
  * alert waiting for one goes before every status edit.
  *
+ * NOT AT ALL TO A GUILD THE BOT IS NOT IN. Kicked while it was offline, the bot finds out from
+ * the guild list Discord sends at login (discord/guildMembership.js); such a subscription gets
+ * no request, not even one every six hours, until the bot is invited back.
+ *
  * Held in memory. A restart costs one more attempt per broken channel, which is cheaper than
  * a migration and a write on every failure.
  */
@@ -96,6 +100,17 @@ let generation = 0;
  */
 let closing = false;
 
+/**
+ * Is the bot in this guild? Set by discord/guildMembership.js once the gateway has said which
+ * guilds it is in; until then, and in tests that set nothing, every guild counts as joined.
+ */
+let isMember = () => true;
+
+/** @param {((guildId: string) => boolean) | null} check */
+export const setMembershipCheck = (check) => { isMember = check ?? (() => true); };
+
+const absent = (subscription) => Boolean(subscription.guildId) && !isMember(subscription.guildId);
+
 /** @returns {Promise<boolean>} false when the wait was cancelled by a shutdown */
 const acquireSlot = (lane) => {
     if (busySlots < SLOTS()) {
@@ -144,10 +159,11 @@ const recordSuccess = (key) => {
  * channel that is sitting out its backoff is a request to the customer's page every cycle,
  * for nothing.
  *
- * @returns {'ready'|'busy'|'backoff'}
+ * @returns {'ready'|'busy'|'backoff'|'absent'}
  */
 export const deliveryState = (subscription, lane) => {
     const key = `${subscription.id}:${lane}`;
+    if (absent(subscription)) return 'absent';
     if (inFlight.has(key)) return 'busy';
     const failure = failures.get(key);
     return failure && failure.until > Date.now() ? 'backoff' : 'ready';
@@ -160,7 +176,7 @@ export const deliveryState = (subscription, lane) => {
  * @param {{id: number, guildId?: string}} subscription
  * @param {'status'|'alerts'} lane
  * @param {() => Promise<T>} fn
- * @returns {Promise<{status: 'done', value: T} | {status: 'busy'} | {status: 'backoff', until: number} | {status: 'cancelled'}>}
+ * @returns {Promise<{status: 'done', value: T} | {status: 'busy'} | {status: 'backoff', until: number} | {status: 'absent'} | {status: 'cancelled'}>}
  * @throws whatever `fn` throws, or a DeliveryTimeout. `error.retryInMs` says when the
  *   subscription will be tried again.
  */
@@ -168,6 +184,7 @@ export const deliver = async (subscription, lane, fn) => {
     const key = `${subscription.id}:${lane}`;
 
     if (closing) return { status: 'cancelled' };
+    if (absent(subscription)) return { status: 'absent' };
     if (inFlight.has(key)) return { status: 'busy' };
 
     const failure = failures.get(key);
@@ -336,8 +353,9 @@ export const resetDelivery = () => {
     generation += 1;
     busySlots = 0;
     closing = false;
+    isMember = () => true;
     inFlight.clear();
     failures.clear();
 };
 
-export default { deliver, deliveryState, drainDeliveries, busyDeliverySlots, forgetGuild, forEachLimited, queuedDeliveries, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };
+export default { deliver, deliveryState, setMembershipCheck, drainDeliveries, busyDeliverySlots, forgetGuild, forEachLimited, queuedDeliveries, resetDelivery, DeliveryTimeout, DELIVERY_CONCURRENCY };

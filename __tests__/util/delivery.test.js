@@ -9,7 +9,7 @@ process.env.DISCORD_DELIVERY_SLOTS = '3';
 
 const {
     deliver, forgetGuild, forEachLimited, resetDelivery, DeliveryTimeout, drainDeliveries, queuedDeliveries,
-    busyDeliverySlots, logDeliveryFailure,
+    busyDeliverySlots, logDeliveryFailure, deliveryState, setMembershipCheck,
 } = await import('../../util/delivery.js');
 const { default: logger } = await import('../../util/logger.js');
 
@@ -146,6 +146,26 @@ describe('deliver', () => {
 
         await expect(deliver(sub(1, 'g1'), 'status', async () => {})).resolves.toMatchObject({ status: 'done' });
         await expect(deliver(sub(2, 'g2'), 'status', async () => {})).resolves.toMatchObject({ status: 'backoff' });
+    });
+});
+
+describe('a guild the bot is not in', () => {
+    test('is not asked, and the check is all it takes', async () => {
+        setMembershipCheck((guildId) => guildId !== 'gone');
+        let called = false;
+
+        await expect(deliver(sub(1, 'gone'), 'status', async () => { called = true; })).resolves.toEqual({ status: 'absent' });
+        expect(deliveryState(sub(1, 'gone'), 'alerts')).toBe('absent');
+        expect(called).toBe(false);
+
+        // Nothing is counted against it: invited back, it is delivered on the next cycle.
+        setMembershipCheck((guildId) => guildId === 'gone');
+        await expect(deliver(sub(1, 'gone'), 'status', async () => 'ok')).resolves.toEqual({ status: 'done', value: 'ok' });
+    });
+
+    test('other guilds are not affected', async () => {
+        setMembershipCheck((guildId) => guildId !== 'gone');
+        await expect(deliver(sub(2, 'g1'), 'status', async () => 'ok')).resolves.toMatchObject({ status: 'done' });
     });
 });
 

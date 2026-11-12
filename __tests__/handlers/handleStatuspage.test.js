@@ -75,7 +75,7 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
 // A failed delivery backs the channel off for the life of the process; each test starts clean.
-const { resetDelivery } = await import('../../util/delivery.js');
+const { resetDelivery, setMembershipCheck } = await import('../../util/delivery.js');
 const { HttpError } = await import('../../util/errors.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -467,6 +467,22 @@ describe('channel problems', () => {
         await handleStatusPage(7, makeClient());
 
         expect(db.destroyed).toEqual([1]);
+    });
+
+    test('a guild the bot is no longer in gets no request at all, and keeps its subscription', async () => {
+        // Kicked while the bot was offline: the guild list at login says so. Asking the
+        // channel anyway is one invalid request per cycle, and deleting on this basis is what
+        // a bot with the wrong token would do to every subscription — see guildMembership.js.
+        db.statuspage.Subscriptions = [
+            subscription({ id: 1, guildId: 'left', channelId: 'chan-left' }),
+            subscription({ id: 2, guildId: 'still-in', channelId: 'chan-in' }),
+        ];
+        setMembershipCheck((guildId) => guildId === 'still-in');
+
+        await handleStatusPage(7, makeClient());
+
+        expect(discord.sentTo).toEqual(['chan-in']);
+        expect(db.destroyed).toEqual([]);
     });
 
     test('losing access keeps the subscription', async () => {
