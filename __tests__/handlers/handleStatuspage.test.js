@@ -469,14 +469,16 @@ describe('channel problems', () => {
         expect(db.destroyed).toEqual([1]);
     });
 
-    test('losing access removes the subscription', async () => {
+    test('losing access keeps the subscription', async () => {
+        // A channel the bot can no longer see is usually a permission, not a deleted channel.
+        // It backs off (util/delivery.js) and comes back once the permission does.
         const error = new Error('Missing Access');
         error.code = 50001;
         discord.channelError = error;
 
-        await handleStatusPage(7, makeClient());
+        await expect(handleStatusPage(7, makeClient())).resolves.toBeUndefined();
 
-        expect(db.destroyed).toEqual([1]);
+        expect(db.destroyed).toEqual([]);
     });
 
     test('any other Discord error leaves the subscription alone', async () => {

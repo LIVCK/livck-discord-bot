@@ -19,11 +19,14 @@
  * messages and run concurrently by design.
  *
  * A BACKOFF PER SUBSCRIPTION AND LANE. A channel that refused the bot (50013), rate limited it
- * or did not answer is not asked again on the next cycle but after a growing pause. Each refused
+ * or did not answer is not asked again on the next cycle but after a growing pause. A channel
+ * the bot can no longer see at all (50001) climbs a longer ladder, up to six hours: that is
+ * rarely fixed within minutes and sometimes never, and asking every ten minutes for weeks is
+ * thousands of invalid requests per channel for nothing. Each refused
  * request counts towards the 10,000 per 10 minutes at which Discord bans the bot's IP, and a
  * channel that refused at 12:00:00 will refuse at 12:00:15 too. The first success clears it,
- * and so does any /livck interaction in that guild (see `forgetGuild`), so an admin who fixes
- * a permission does not wait out the ladder.
+ * and so does any /livck interaction in that guild or any change to a channel or a role there
+ * (see `forgetGuild`), so an admin who fixes a permission does not wait out the ladder.
  *
  * Per lane, because a lane can succeed without sending anything: an unchanged status embed
  * is a few database reads and no request at all. With one backoff per subscription that
@@ -57,6 +60,14 @@ const SLOTS = () => Math.max(1, Number(process.env.DISCORD_DELIVERY_SLOTS || 25)
 
 /** Multiples of the base: 30s, 1m, 2m, 5m, 10m, then 10m for as long as it lasts. */
 const LADDER = [1, 2, 4, 10, 20];
+
+/**
+ * For 50001, the bot not seeing the channel any more: 1m, 5m, 15m, 1h, 3h, then 6h. The first
+ * steps are short because the usual cause is an admin rearranging permissions right now; the
+ * last is long because a channel that stays hidden for a day is likely to stay hidden.
+ */
+const NO_ACCESS_LADDER = [2, 10, 30, 120, 360, 720];
+const MISSING_ACCESS = 50001;
 
 export class DeliveryTimeout extends Error {
     constructor(ms) {
@@ -107,11 +118,11 @@ export const queuedDeliveries = () => waiting.alerts.length + waiting.status.len
 /** How many slots are taken right now. For tests: the count must come back to zero. */
 export const busyDeliverySlots = () => busySlots;
 
-const backoffFor = (level) => BACKOFF_BASE_MS() * LADDER[Math.min(level, LADDER.length) - 1];
+const backoffFor = (level, ladder = LADDER) => BACKOFF_BASE_MS() * ladder[Math.min(level, ladder.length) - 1];
 
-const recordFailure = (key, subscription) => {
+const recordFailure = (key, subscription, error) => {
     const level = (failures.get(key)?.level ?? 0) + 1;
-    const wait = backoffFor(level);
+    const wait = backoffFor(level, error?.code === MISSING_ACCESS ? NO_ACCESS_LADDER : LADDER);
     failures.delete(key);
     if (failures.size >= MAX_FAILURES) failures.delete(failures.keys().next().value);
     failures.set(key, { level, until: Date.now() + wait, guildId: subscription.guildId });
@@ -214,7 +225,7 @@ export const deliver = async (subscription, lane, fn) => {
         const value = await Promise.race([work, deadline]);
         return { status: 'done', value };
     } catch (error) {
-        error.retryInMs = recordFailure(key, subscription);
+        error.retryInMs = recordFailure(key, subscription, error);
         throw error;
     } finally {
         clearTimeout(timer);
@@ -226,7 +237,8 @@ export const deliver = async (subscription, lane, fn) => {
  *
  * Called on any /livck interaction there: whoever is using the command is in a position to
  * have just fixed the channel, and the immediate refresh that follows should be allowed to
- * prove it.
+ * prove it. And on any change to a channel or a role in the guild (discord/bot.js), which is
+ * what fixing a permission is — the next cycle tries again instead of hours later.
  */
 export const forgetGuild = (guildId) => {
     if (!guildId) return;

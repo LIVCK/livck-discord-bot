@@ -6,6 +6,7 @@ import { routeInteraction } from './interactionRouter.js';
 import { requireModalSupport } from '../util/modalSupport.js';
 import { createRestPolicy } from './restPolicy.js';
 import { watchGateway } from './gatewayWatch.js';
+import { forgetGuild } from '../util/delivery.js';
 
 /**
  * Collect every command definition and register the set with Discord.
@@ -67,8 +68,8 @@ export const createClient = () => {
      * Discord counts 401, 403 and 429 responses as INVALID REQUESTS and blocks the bot's IP at
      * the Cloudflare layer once ~10,000 of them accumulate inside 10 minutes — a ban that
      * outlives a restart. The bot produces exactly those codes in normal operation whenever a
-     * channel was deleted or its permissions were withdrawn (10003 / 50001), and it removes the
-     * subscription when that happens, so it self-heals. But a mass event — a large guild wiping
+     * channel was deleted (10003, the subscription is removed) or the bot lost access to it
+     * (50001 and 50013, the channel backs off for up to six hours — util/delivery.js). But a mass event — a large guild wiping
      * a category, a permission change across many servers — can spike the count.
      *
      * discord.js emits this once per `invalidRequestWarningInterval` requests. It is the only
@@ -80,6 +81,19 @@ export const createClient = () => {
             `${info.remainingTime}ms left in the window. Approaching the Cloudflare ban threshold.`
         );
     });
+
+    /**
+     * A permission was fixed, perhaps. A channel that refused the bot sits out a backoff of up
+     * to six hours (util/delivery.js), and the admin who just gave the bot its access back
+     * should not have to wait for it, nor know to run /livck. Every one of these is a change
+     * to what the bot may see or do in that guild; the next cycle tries its channels again.
+     * All four arrive with the Guilds intent the bot already has.
+     */
+    const retryGuild = (thing) => forgetGuild(thing?.guild?.id);
+    client.on(Events.ChannelCreate, retryGuild);
+    client.on(Events.ChannelUpdate, (_before, after) => retryGuild(after));
+    client.on(Events.GuildRoleUpdate, (_before, after) => retryGuild(after));
+    client.on(Events.GuildRoleCreate, retryGuild);
 
     return client;
 };

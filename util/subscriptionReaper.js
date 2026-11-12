@@ -1,8 +1,9 @@
 /**
  * A brake on removing subscriptions.
  *
- * A channel that answers 10003 (Unknown Channel) or 50001 (Missing Access) is treated as gone
- * for good, and the subscription is deleted. That is right for the case it was written for —
+ * A channel that answers 10003 (Unknown Channel) is treated as gone for good, and the
+ * subscription is deleted. (50001, Missing Access, used to be too; it backs off now, because
+ * the channel is usually still there — see util/messageSync.js.) That is right for the case it was written for —
  * somebody deleted the channel — and it is a customer's configuration, gone for good, with no
  * undo and no record of what it was.
  *

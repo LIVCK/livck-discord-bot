@@ -47,6 +47,11 @@ status pages just as much.
 
 ### Fixed
 
+- **A channel the bot can no longer see keeps its subscription.** Missing Access (50001) deleted
+  the subscription as if the channel were gone, so making a category private for a moment, or
+  editing the bot's role, cost a guild its whole setup. The channel now backs off — 1 minute
+  up to 6 hours — and any channel or role change in that guild, or any `/livck` there, lets it
+  try again at once. Only a deleted channel (10003) still removes a subscription.
 - **One channel could stop the bot for everyone.** A cycle waited for its slowest page before
   the next one was scheduled, and inside a page every channel waited for the one before it.
   discord.js retries a 429 without limit (and without emitting `rateLimited`), so a single

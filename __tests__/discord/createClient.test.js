@@ -18,6 +18,7 @@ jest.unstable_mockModule('../../database/redis.js', () => ({
 }));
 
 const { createClient } = await import('../../discord/bot.js');
+const { deliver, resetDelivery } = await import('../../util/delivery.js');
 
 let client;
 afterEach(async () => {
@@ -50,4 +51,30 @@ test('refused requests and rate limit waits reach the minute summary', () => {
 
     expect(client.rest.listenerCount('response')).toBe(1);
     expect(client.rest.listenerCount('rateLimited')).toBe(1);
+});
+
+test('a changed channel or role in a guild lets its channels try again at once', async () => {
+    // A channel the bot cannot see sits out up to six hours. The admin who fixes the
+    // permission should not wait for that, nor need to know to run /livck afterwards.
+    client = createClient();
+    resetDelivery();
+    const hidden = () => Object.assign(new Error('Missing Access'), { code: 50001 });
+    const mine = { id: 1, guildId: 'g1', channelId: 'c1' };
+    const other = { id: 2, guildId: 'g2', channelId: 'c2' };
+
+    for (const [event, args] of [
+        ['channelUpdate', [{}, { guild: { id: 'g1' } }]],
+        ['channelCreate', [{ guild: { id: 'g1' } }]],
+        ['roleUpdate', [{}, { guild: { id: 'g1' } }]],
+        ['roleCreate', [{ guild: { id: 'g1' } }]],
+    ]) {
+        await deliver(mine, 'status', async () => { throw hidden(); }).catch(() => {});
+        await deliver(other, 'status', async () => { throw hidden(); }).catch(() => {});
+
+        client.emit(event, ...args);
+
+        await expect(deliver(mine, 'status', async () => {})).resolves.toMatchObject({ status: 'done' });
+        await expect(deliver(other, 'status', async () => {})).resolves.toMatchObject({ status: 'backoff' });
+    }
+    resetDelivery();
 });

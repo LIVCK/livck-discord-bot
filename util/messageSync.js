@@ -37,15 +37,19 @@ export const UNKNOWN_CHANNEL = 10003;
 export const MISSING_ACCESS = 50001;
 
 /**
- * The channel is gone for good as far as this bot is concerned — deleted, or no longer
- * visible to it. The subscription can never be delivered again, so the handlers drop it.
+ * The channel is gone for good — deleted. The subscription can never be delivered again, so
+ * the handlers drop it.
  *
- * Deliberately NOT in here: 50013 (Missing Permissions), which is what a channel where the
- * bot may look but not post returns. That is a server setting an admin can fix in seconds,
- * and deleting the subscription over it would be unrecoverable.
+ * Deliberately NOT in here:
+ * - 50013 (Missing Permissions): the bot may look but not post. A server setting an admin can
+ *   fix in seconds, and deleting the subscription over it would be unrecoverable.
+ * - 50001 (Missing Access): the bot can no longer see the channel. Just as often a setting —
+ *   a category made private, a role edited, the bot's role removed for an afternoon — and the
+ *   channel is still there. It used to delete the subscription, so one careless permission
+ *   change cost a guild its whole setup. It backs off instead, on a ladder of its own (see
+ *   util/delivery.js).
  */
-export const isChannelGone = (error) =>
-    error?.code === UNKNOWN_CHANNEL || error?.code === MISSING_ACCESS;
+export const isChannelGone = (error) => error?.code === UNKNOWN_CHANNEL;
 
 /**
  * Stable fingerprint of what would be sent to Discord.

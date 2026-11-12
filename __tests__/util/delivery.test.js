@@ -94,6 +94,26 @@ describe('deliver', () => {
         }
     });
 
+    test('a channel the bot cannot see climbs a longer ladder, up to six hours', async () => {
+        // 50001 is no longer a deletion (util/messageSync.js), so it must not cost a request
+        // every ten minutes for as long as the channel stays hidden — that is thousands of
+        // invalid requests a month per channel, and Discord bans for invalid requests.
+        process.env.DELIVERY_BACKOFF_BASE_MS = '1';
+        const hidden = () => Object.assign(new Error('Missing Access'), { code: 50001, status: 403 });
+        try {
+            const waits = [];
+            for (let i = 0; i < 7; i += 1) {
+                const error = await deliver(sub(), 'status', async () => { throw hidden(); }).catch((e) => e);
+                waits.push(error.retryInMs);
+                await sleep(error.retryInMs + 10);
+            }
+            // With the real base of 30s: 1m, 5m, 15m, 1h, 3h, 6h, 6h.
+            expect(waits).toEqual([2, 10, 30, 120, 360, 720, 720]);
+        } finally {
+            process.env.DELIVERY_BACKOFF_BASE_MS = '1000';
+        }
+    });
+
     test('a late success clears the backoff the timeout started', async () => {
         await deliver(sub(), 'status', () => sleep(200)).catch(() => {});
         await sleep(250);
