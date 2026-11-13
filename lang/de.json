@@ -135,7 +135,7 @@
         "modal_title_edit": "Custom Link bearbeiten",
         "modal_label_label": "Button Text (max 80 Zeichen)",
         "modal_label_url": "URL (muss mit https:// beginnen)",
-        "modal_label_emoji": "Emoji (optional, z.B. 🔗)",
+        "modal_label_emoji": "Emoji (optional, ein einzelnes, z.B. 🔗)",
         "no_links": "Keine Custom Links vorhanden.",
         "more_links": "… und :count weitere",
         "list_item": "**:label**",
@@ -151,6 +151,7 @@
         "deleted": "Link erfolgreich gelöscht!",
         "error": "Ein Fehler ist aufgetreten.",
         "invalid_url": "Ungültige URL.",
+        "invalid_emoji": "Das ist kein Emoji, das Discord auf einem Button akzeptiert. Verwende ein einzelnes Emoji wie 🔗 oder ein Server-Emoji wie <:name:id>.",
         "max_links": "Maximum von 25 Links erreicht."
       },
       "list": {

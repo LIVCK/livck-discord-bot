@@ -2,6 +2,7 @@ import { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilde
 import { Op } from "sequelize";
 import cache from "../../database/redis.js";
 import { domainFromUrl, normalizeUrl } from "../../util/String.js";
+import { normalizeButtonEmoji } from "../../util/emoji.js";
 import { handleStatusPage } from "../../handlers/handleStatuspage.js";
 import LIVCKCloud from "../../api/livckCloud.js";
 import { detectSource } from "../../api/detect.js";
@@ -2204,7 +2205,10 @@ export default (models) => ({
                 // Extract form values
                 const label = interaction.fields.getTextInputValue('label');
                 const url = interaction.fields.getTextInputValue('url');
-                const emoji = interaction.fields.getTextInputValue('emoji') || null;
+                // Only what Discord takes as a button emoji; anything else would get the status message
+                // rejected whole (util/emoji.js).
+                const emojiInput = interaction.fields.getTextInputValue('emoji')?.trim() || null;
+                const emoji = normalizeButtonEmoji(emojiInput);
 
                 // Validate URL
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -2216,6 +2220,14 @@ export default (models) => ({
                 }
 
                 // Check max links
+                if (emojiInput && !emoji) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.invalid_emoji'),
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return;
+                }
+
                 const existingCount = await models.CustomLink.count({
                     where: { subscriptionId }
                 });
@@ -2285,12 +2297,23 @@ export default (models) => ({
                 // Extract form values
                 const label = interaction.fields.getTextInputValue('label');
                 const url = interaction.fields.getTextInputValue('url');
-                const emoji = interaction.fields.getTextInputValue('emoji') || null;
+                // Only what Discord takes as a button emoji; anything else would get the status message
+                // rejected whole (util/emoji.js).
+                const emojiInput = interaction.fields.getTextInputValue('emoji')?.trim() || null;
+                const emoji = normalizeButtonEmoji(emojiInput);
 
                 // Validate URL
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     await interaction.reply({
                         content: translation.trans('commands.livck.custom_links.invalid_url'),
+                        flags: MessageFlags.Ephemeral
+                    });
+                    return;
+                }
+
+                if (emojiInput && !emoji) {
+                    await interaction.reply({
+                        content: translation.trans('commands.livck.custom_links.invalid_emoji'),
                         flags: MessageFlags.Ephemeral
                     });
                     return;

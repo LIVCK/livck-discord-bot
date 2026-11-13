@@ -53,6 +53,12 @@ status pages just as much.
 
 ### Fixed
 
+- **One bad link emoji no longer stops a channel's status message.** Discord rejects a whole
+  message over one button emoji it does not accept, and the custom link modal took any text, so
+  a word or an emoji with text after it froze that channel's status for as long as the link
+  existed. The modal now accepts one emoji or a server emoji (`<:name:id>`) and says so
+  otherwise; an emoji already saved that does not qualify is left off the button; and should
+  Discord refuse one anyway, the status goes out without link emojis instead of not at all.
 - **An alert taken off the page takes even a message the bot never got the id of.** Posted with
   the answer lost, then taken down before a retry learned the id, the announcement used to stay.
   The bot now finds its own messages among the channel's recent ones by the alert's link.

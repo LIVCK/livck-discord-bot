@@ -5,6 +5,7 @@ import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
+import { parseButtonEmoji } from '../util/emoji.js'
 import { claimReap } from '../util/subscriptionReaper.js'
 import { withLocale } from '../util/Translation.js'
 import { withPageLock } from '../util/pageLock.js'
@@ -21,7 +22,7 @@ const BUTTONS_PER_ROW = 5
  * a custom `<:name:id>` reference is — so shortcodes are dropped rather than rejected by the
  * API along with the whole message.
  */
-const buildLinkButtons = (customLinks) => {
+const buildLinkButtons = (customLinks, { withEmojis = true } = {}) => {
     if (customLinks.length === 0) return []
 
     const rows = []
@@ -33,9 +34,9 @@ const buildLinkButtons = (customLinks) => {
             .setURL(link.url)
             .setStyle(ButtonStyle.Link)
 
-        if (link.emoji && (link.emoji.startsWith('<') || !link.emoji.startsWith(':'))) {
-            button.setEmoji(link.emoji)
-        }
+        // Only what Discord accepts: one bad emoji gets the whole message rejected. See util/emoji.js.
+        const emoji = withEmojis ? parseButtonEmoji(link.emoji) : null
+        if (emoji) button.setEmoji(emoji)
 
         current.push(button)
 
@@ -103,18 +104,35 @@ const deliverStatus = async (subscription, snapshot, client) => {
         await extra.destroy()
     }
 
-    return syncMessage({
+    const sync = (body) => syncMessage({
         // Resolved only if something is actually going to be sent — see util/messageSync.js.
         channel: () => client.channels.fetch(subscription.channelId),
         record,
-        payload,
+        payload: body,
         models,
         create: { subscriptionId: subscription.id, category: 'STATUS' },
         // The embed timestamp is excluded from the hash, so refresh periodically to keep it
         // from looking stale on a page that has not changed in days.
         heartbeat: true,
     })
+
+    try {
+        return await sync(payload)
+    } catch (error) {
+        // Discord still refused an emoji the check let through (one it does not know, say).
+        // The status is what matters: send it with plain buttons rather than not at all.
+        if (!isRejectedEmoji(error)) throw error
+        logger.once(
+            `emoji:${subscription.id}`, 'warn',
+            `[handleStatusPage] Discord refused a link emoji for subscription ${subscription.id}; ` +
+            'sending the status without link emojis'
+        )
+        return sync({ embeds, components: buildLinkButtons(customLinks, { withEmojis: false }) })
+    }
 }
+
+/** 50035 naming a component's emoji: the payload, not the channel, is what Discord refused. */
+const isRejectedEmoji = (error) => error?.code === 50035 && /emoji/i.test(String(error?.message ?? ''))
 
 /**
  * Serialized per page — see util/pageLock.js. `/livck` triggers an immediate refresh from

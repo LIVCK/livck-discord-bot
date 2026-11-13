@@ -236,6 +236,27 @@ describe('every modal handler', () => {
         await expect(command.handleModalSubmit(interaction, {})).resolves.toBeUndefined();
     });
 
+    test.each(['add_link_submit_1', 'edit_link_submit_7'])('%s turns down an emoji Discord would refuse, and saves nothing', async (customId) => {
+        // Saved, it got every status message of the subscription rejected by Discord.
+        const interaction = makeInteraction({ customId });
+        interaction.fields.getTextInputValue = (id) => ({ label: 'Doku', url: 'https://docs.example.com', emoji: ':zap: Doku' }[id] ?? '');
+        const before = JSON.stringify(db.links.map(({ label, url, emoji }) => ({ label, url, emoji })));
+
+        await command.handleModalSubmit(interaction, {});
+
+        expect(shown(interaction)).toMatch(/Emoji/);
+        expect(JSON.stringify(db.links.map(({ label, url, emoji }) => ({ label, url, emoji })))).toBe(before);
+    });
+
+    test.each(['add_link_submit_1', 'edit_link_submit_7'])('%s keeps a valid emoji, trimmed', async (customId) => {
+        const interaction = makeInteraction({ customId });
+        interaction.fields.getTextInputValue = (id) => ({ label: 'Doku', url: 'https://docs.example.com', emoji: '  🔗 ' }[id] ?? '');
+
+        await command.handleModalSubmit(interaction, {});
+
+        expect(db.links.some((l) => l.emoji === '🔗')).toBe(true);
+    });
+
     test('the subscribe modal refuses an incomplete submission rather than creating half a row', async () => {
         const interaction = makeInteraction({
             customId: 'subscribe_complete_modal',

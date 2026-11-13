@@ -375,13 +375,50 @@ describe('custom link buttons', () => {
     });
 
     test('unicode and custom emojis are kept', async () => {
-        db.customLinks = [link({ id: 1, emoji: '🔥' }), link({ id: 2, emoji: '<:live:123>' })];
+        db.customLinks = [link({ id: 1, emoji: '🔥' }), link({ id: 2, emoji: '<:live:1300000000000000123>' })];
 
         await handleStatusPage(7, makeClient());
 
         const buttons = discord.lastPayload.components[0].toJSON().components;
-        expect(buttons[0].emoji).toBeDefined();
-        expect(buttons[1].emoji).toBeDefined();
+        expect(buttons[0].emoji).toEqual({ name: '🔥' });
+        expect(buttons[1].emoji).toEqual({ id: '1300000000000000123', name: 'live', animated: false });
+    });
+
+    test('anything else is dropped rather than sent: a word, two emojis, an emoji with text', async () => {
+        // Each of these got the whole status message rejected (50035 COMPONENT_INVALID_EMOJI),
+        // so the channel's status stopped updating for as long as the link existed.
+        db.customLinks = ['Status', '🔗🔗', '🔗 Doku', '<:broken>', '<:live:123>'].map((emoji, id) => link({ id, emoji }));
+
+        await handleStatusPage(7, makeClient());
+
+        const buttons = discord.lastPayload.components[0].toJSON().components;
+        expect(buttons.map((b) => b.emoji)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+    });
+
+    test('an emoji Discord refuses anyway does not stop the status: it goes out without them', async () => {
+        db.customLinks = [link({ id: 1, emoji: '©' })];
+        let attempts = 0;
+        const client = makeClient();
+        const fetch = client.channels.fetch;
+        client.channels.fetch = async (id) => {
+            const channel = await fetch(id);
+            const send = channel.send;
+            channel.send = async (payload) => {
+                attempts += 1;
+                const emoji = payload.components?.[0]?.toJSON?.().components?.[0]?.emoji;
+                if (emoji) {
+                    throw Object.assign(new Error('Invalid Form Body\ncomponents[0].components[0].emoji.name[COMPONENT_INVALID_EMOJI]: Invalid emoji'), { code: 50035, status: 400 });
+                }
+                return send(payload);
+            };
+            return channel;
+        };
+
+        await handleStatusPage(7, client);
+
+        expect(attempts).toBe(2);
+        expect(discord.sends).toBe(1);
+        expect(discord.lastPayload.components[0].toJSON().components[0].emoji).toBeUndefined();
     });
 
     test('no links means no component rows', async () => {
