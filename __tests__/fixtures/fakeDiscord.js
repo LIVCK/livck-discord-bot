@@ -24,7 +24,8 @@
  *   { delayMs }  - answers normally, late
  *
  * A POST carrying `enforce_nonce` with a nonce this server has seen in the last five minutes
- * returns the message that nonce made, as Discord does, instead of making another.
+ * returns the message that nonce made — unchanged, whatever the new body says — instead of making
+ * another, or 404 / 10008 when that message has been deleted. Both as the real API answers.
  *
  * The bodies follow the shapes in Discord's API reference. They are not recordings; anything
  * the bot depends on that only real Discord can confirm stays in __tests__/e2e/discord.live.test.js.
@@ -165,7 +166,10 @@ export const startFakeDiscord = async ({
         if (req.method === 'POST' && !messageId) {
             const body = await readBody(req);
             const seen = body.enforce_nonce && body.nonce ? nonces.get(`${channelId}:${body.nonce}`) : null;
-            if (seen && Date.now() - seen.at < NONCE_WINDOW_MS && messages.has(seen.id)) {
+            if (seen && Date.now() - seen.at < NONCE_WINDOW_MS) {
+                // As Discord does (checked against the real API): the nonce names the message it
+                // already made — returned as it is, old content and all, or 10008 if it is gone.
+                if (!messages.has(seen.id)) return json(res, 404, { message: 'Unknown Message', code: 10008 }, headers);
                 entry.messageId = seen.id;
                 entry.deduplicated = true;
                 return json(res, 200, messages.get(seen.id), headers);

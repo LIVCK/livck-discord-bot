@@ -259,10 +259,26 @@ export const syncMessage = async ({
         const { key, nonce: fresh } = nonceFor(create);
         const nonce = record ? record.messageId.slice(PENDING.length) : fresh;
         const row = record ?? await models.Message.create({ ...create, messageId: `${PENDING}${nonce}`, contentHash: null });
-        const once = { ...payload, nonce, enforceNonce: true };
+        const post = (n) => {
+            const once = { ...payload, nonce: n, enforceNonce: true };
+            return send ? send(once, resolved) : resolved.send(once);
+        };
         // A failure here leaves the row pending: maybe posted, maybe not. The next attempt finds
         // out, with the same nonce.
-        const sent = await (send ? send(once, resolved) : resolved.send(once));
+        let sent;
+        try {
+            sent = await post(nonce);
+        } catch (error) {
+            if (error?.code !== UNKNOWN_MESSAGE) throw error;
+            // The nonce names a message that has been deleted since — taken back after a failed
+            // write, or by an admin — and Discord refuses it with 10008 for a few minutes rather
+            // than posting anew (checked against the real API). A nonce of its own, then.
+            const again = crypto.randomBytes(15).toString('base64url');
+            await models.Message.update({ messageId: `${PENDING}${again}` }, { where: { id: row.id } });
+            row.messageId = `${PENDING}${again}`;
+            remember(pendingNonces, key, again);
+            sent = await post(again);
+        }
         // A pending row means an earlier attempt may have made the message, and the nonce then
         // hands back THAT message — with the content it had then, not this payload's. Recording
         // this payload's hash for it made a stale message look current (the simulation's chaos

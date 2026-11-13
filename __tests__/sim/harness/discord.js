@@ -239,7 +239,10 @@ export const startSimDiscord = async ({ memberGraceMs = 3000, heartbeatMs = 5000
                 return json(res, 400, { message: 'Invalid Form Body', code: 50035 }, taken.headers);
             }
             const seen = body.enforce_nonce && body.nonce ? nonces.get(`${channel.id}:${body.nonce}`) : null;
-            if (seen && Date.now() - seen.at < 5 * 60 * 1000 && messages.has(seen.id)) {
+            if (seen && Date.now() - seen.at < 5 * 60 * 1000) {
+                // As Discord does (checked against the real API): the message that nonce made,
+                // as it is — old content and all — or 10008 if it has been deleted since.
+                if (!messages.has(seen.id)) return json(res, 404, { message: 'Unknown Message', code: 10008 }, taken.headers);
                 entry.messageId = seen.id;
                 entry.deduplicated = true;
                 return json(res, 200, messages.get(seen.id), taken.headers);

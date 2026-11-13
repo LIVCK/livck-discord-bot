@@ -136,6 +136,26 @@ test('a message an admin deleted is posted again with a nonce of its own', async
     expect(fake.messagesIn(CHANNEL)[0].id).not.toBe(first);
 });
 
+test('a pending row whose message was deleted meanwhile is posted under a fresh nonce', async () => {
+    // Discord answers a nonce whose message is gone with 10008 instead of posting (checked
+    // against the real API), for as long as it remembers the nonce. The row's own nonce would
+    // fail every cycle for minutes.
+    const resolved = await client.channels.fetch(CHANNEL);
+    const models = rows();
+    const create = { subscriptionId: 1, category: 'NEWS', serviceId: 'inc-9' };
+
+    fake.script(CHANNEL, 'loseAnswer');
+    await syncMessage({ channel: resolved, record: null, payload, models, create }).catch(() => {});
+    fake.script(CHANNEL, 'ok');
+    const [orphan] = fake.messagesIn(CHANNEL);
+    fake.messages.delete(orphan.id); // an admin removes it before the bot ever learned its id
+
+    await expect(syncMessage({ channel: resolved, record: models.created[0], payload, models, create })).resolves.toBe('created');
+
+    expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
+    expect(models.created[0].messageId).toBe(fake.messagesIn(CHANNEL)[0].id);
+});
+
 test('two different messages for the same channel are not mistaken for one', async () => {
     const resolved = await client.channels.fetch(CHANNEL);
     const models = rows();
