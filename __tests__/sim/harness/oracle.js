@@ -133,7 +133,7 @@ export const differences = async ({ discord, pages, subscriptions }) => {
                 }
                 const [parent] = parents;
                 remaining.delete(parent.id);
-                if (!(parent.embeds?.[0]?.description ?? '').includes(text(updates[0].message, sub.locale))) {
+                if (!unknowable && !(parent.embeds?.[0]?.description ?? '').includes(text(updates[0].message, sub.locale))) {
                     problems.push(`${where}: announcement of "${title}" does not carry its first update`);
                 }
 
@@ -144,6 +144,8 @@ export const differences = async ({ discord, pages, subscriptions }) => {
                 }
                 expectedReplies.forEach((update, i) => {
                     const reply = replies[i];
+                    // Out of sight, a correction made after the bot last saw it cannot arrive.
+                    if (unknowable) return;
                     const want = text(update.message, sub.locale);
                     if (reply && !(reply.embeds?.[0]?.description ?? '').includes(want)) {
                         problems.push(`${where}: reply ${i + 1} of "${title}" should say "${want}", says "${(reply.embeds?.[0]?.description ?? '').slice(0, 80)}"`);

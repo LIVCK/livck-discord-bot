@@ -17,7 +17,9 @@
  *   noop-edit        an edit that changes nothing a reader can see — unless the bot never
  *                    learned that its previous write arrived (a lost answer, a 502): then
  *                    sending it again is the only thing it can do
- *   not-a-member     a request to a guild the bot is not in, past the grace period
+ *   not-a-member     a request to a guild the bot is not in: any at all once it learned so at
+ *                    login; after a live kick, more than a few stragglers discord.js already had
+ *                    queued, or any after half a minute
  *   limits           a message Discord would reject for its size (it is rejected here too)
  *   unknown-route    anything the bot was never meant to call
  *   burst            the bot running into Discord's global limit (50 a second) again and
@@ -211,9 +213,15 @@ export const startSimDiscord = async ({ memberGraceMs = 3000, heartbeatMs = 5000
         if (!channel || !readyAt) return;
         const guild = guilds.get(channel.guildId);
         if (!guild || guild.member) return;
+        // Told live (GUILD_DELETE while connected): what discord.js already had queued or was
+        // retrying still goes out — a straggler or two inside half a minute is not the bot asking
+        // again. Learned at login: nothing was queued, so nothing at all.
+        const live = guild.leftAt && guild.leftAt > readyAt;
         const since = Math.max(guild.leftAt ?? 0, readyAt);
-        if (entry.at - since > memberGraceMs) {
-            violate('not-a-member', `${entry.method} ${entry.url} to guild ${guild.id}, ${entry.at - since}ms after the bot left it`);
+        const after = entry.at - since;
+        guild.stragglers = (guild.stragglers ?? 0) + (after > memberGraceMs ? 1 : 0);
+        if (after > memberGraceMs && (!live || after > 30_000 || guild.stragglers > 5)) {
+            violate('not-a-member', `${entry.method} ${entry.url} to guild ${guild.id}, ${after}ms after the bot left it`);
         }
     };
 

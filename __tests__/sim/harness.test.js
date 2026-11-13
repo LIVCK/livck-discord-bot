@@ -69,14 +69,31 @@ describe('the referee', () => {
         expect(rules()).toEqual([]);
     });
 
-    test('sees a request to a guild the bot was removed from', async () => {
-        discord.resetReady();
-        // READY has to have happened for membership to count; a kick before it is the offline case.
+    const identify = async () => {
         const ws = new WebSocket(discord.gatewayUrl);
         await new Promise((resolve) => ws.addEventListener('open', resolve));
         ws.send(JSON.stringify({ op: 2, d: {} }));
         await new Promise((resolve) => setTimeout(resolve, 100));
+        return ws;
+    };
+
+    test('sees a bot that keeps asking a guild it was kicked from', async () => {
+        discord.resetReady();
+        const ws = await identify();
         discord.kick(guild);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        // One or two that discord.js already had queued are stragglers, not the bot asking again.
+        await post({ content: '1' }).catch(() => {});
+        expect(rules()).toEqual([]);
+        for (let i = 0; i < 6; i += 1) await post({ content: String(i) }).catch(() => {});
+        ws.close();
+        expect(rules()).toContain('not-a-member');
+    });
+
+    test('sees even one request to a guild the bot knew at login it was not in', async () => {
+        discord.resetReady();
+        discord.removeQuietly(guild);
+        const ws = await identify();
         await new Promise((resolve) => setTimeout(resolve, 20));
         await post({ content: 'hallo' }).catch(() => {});
         ws.close();
