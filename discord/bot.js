@@ -86,15 +86,18 @@ export const createClient = () => {
     /**
      * A permission was fixed, perhaps. A channel that refused the bot sits out a backoff of up
      * to six hours (util/delivery.js), and the admin who just gave the bot its access back
-     * should not have to wait for it, nor know to run /livck. Every one of these is a change
-     * to what the bot may see or do in that guild; the next cycle tries its channels again.
-     * All four arrive with the Guilds intent the bot already has.
+     * should not have to wait for it, nor know to run /livck. Every one of these packets is a
+     * change to what the bot may see or do in that guild; the next cycle tries its channels
+     * again. All arrive with the Guilds intent the bot already has.
+     *
+     * From the RAW packets: discord.js emits channelUpdate only for a channel it has cached, and
+     * a channel the bot could not see is exactly the one it has not — so the event that matters
+     * most never fired. The simulation in __tests__/sim found that.
      */
-    const retryGuild = (thing) => forgetGuild(thing?.guild?.id);
-    client.on(Events.ChannelCreate, retryGuild);
-    client.on(Events.ChannelUpdate, (_before, after) => retryGuild(after));
-    client.on(Events.GuildRoleUpdate, (_before, after) => retryGuild(after));
-    client.on(Events.GuildRoleCreate, retryGuild);
+    const RETRY_ON = new Set(['CHANNEL_CREATE', 'CHANNEL_UPDATE', 'GUILD_ROLE_CREATE', 'GUILD_ROLE_UPDATE', 'GUILD_MEMBER_UPDATE']);
+    client.on(Events.Raw, (packet) => {
+        if (RETRY_ON.has(packet?.t)) forgetGuild(packet.d?.guild_id);
+    });
 
     return client;
 };

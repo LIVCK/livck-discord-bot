@@ -63,12 +63,11 @@ test('a changed channel or role in a guild lets its channels try again at once',
     const mine = { id: 1, guildId: 'g1', channelId: 'c1' };
     const other = { id: 2, guildId: 'g2', channelId: 'c2' };
 
-    for (const [event, args] of [
-        ['channelUpdate', [{}, { guild: { id: 'g1' } }]],
-        ['channelCreate', [{ guild: { id: 'g1' } }]],
-        ['roleUpdate', [{}, { guild: { id: 'g1' } }]],
-        ['roleCreate', [{ guild: { id: 'g1' } }]],
-    ]) {
+    // Raw packets: discord.js emits channelUpdate only for a channel it has cached, and a channel
+    // the bot could not see is the one it has not.
+    for (const t of ['CHANNEL_UPDATE', 'CHANNEL_CREATE', 'GUILD_ROLE_UPDATE', 'GUILD_ROLE_CREATE', 'GUILD_MEMBER_UPDATE']) {
+        const event = 'raw';
+        const args = [{ op: 0, t, d: { id: 'x', guild_id: 'g1' } }, 0];
         await deliver(mine, 'status', async () => { throw hidden(); }).catch(() => {});
         await deliver(other, 'status', async () => { throw hidden(); }).catch(() => {});
 

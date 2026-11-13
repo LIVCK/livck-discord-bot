@@ -79,11 +79,13 @@ status pages just as much.
   the subscription as if the channel were gone, so making a category private for a moment, or
   editing the bot's role, cost a guild its whole setup. The channel now backs off — 1 minute
   up to 6 hours — and any channel or role change in that guild, or any `/livck` there, lets it
-  try again at once. Only a deleted channel (10003) still removes a subscription.
+  try again at once (read from the gateway itself: discord.js reports no change for a channel it
+  could not see, which is the one that matters). Only a deleted channel (10003) still removes a subscription.
 - **A bot removed from a server stops asking it.** Kicked while running, the server's
   subscriptions are deleted the moment Discord reports it; an outage, which Discord reports
   differently, deletes nothing. Kicked while offline, the server is missing from the list
-  Discord sends at login, and its subscriptions are skipped — no request at all — but kept,
+  Discord sends at login (or on reconnecting, where discord.js itself would have kept believing
+  in it), and its subscriptions are skipped — no request at all — but kept,
   because a bot holding the wrong token sees the same and must not delete on it. Invited back,
   they resume by themselves.
 - **One channel could stop the bot for everyone.** A cycle waited for its slowest page before
