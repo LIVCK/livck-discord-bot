@@ -70,19 +70,47 @@ test('nor does the next attempt, once the channel answers again', async () => {
     expect(models.created.map((row) => row.messageId)).toEqual(fake.messagesIn(CHANNEL).map((m) => m.id));
 });
 
-test('a message posted again after it was deleted is a new message', async () => {
-    // The nonce is forgotten once the row is written, or a message an admin deleted would come
-    // back as the deleted one and never reappear.
+test('a process killed between the post and the row: the next one posts nothing new', async () => {
+    // SIGKILL after Discord made the message and before the row existed. Found by the simulation
+    // in __tests__/sim mid-burst: the next process, with a fresh nonce, posted it again.
     const resolved = await client.channels.fetch(CHANNEL);
-    const models = rows();
-    const create = { subscriptionId: 1, category: 'NEWS', serviceId: 'inc-1' };
+    const create = { subscriptionId: 1, category: 'ALERT', serviceId: 'upd-3' };
+    const dying = { Message: { create: () => new Promise(() => {}) } };
 
-    await syncMessage({ channel: resolved, record: null, payload, models, create });
+    syncMessage({ channel: resolved, record: null, payload, models: dying, create });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
+
+    clearPendingNonces(); // the process is gone, and with it everything it remembered
+    const models = rows();
+    await expect(syncMessage({ channel: resolved, record: null, payload, models, create })).resolves.toBe('created');
+
+    expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
+    expect(models.created.map((row) => row.messageId)).toEqual(fake.messagesIn(CHANNEL).map((m) => m.id));
+});
+
+test('a message an admin deleted is posted again with a nonce of its own', async () => {
+    // The derived nonce would ask Discord for the message it already made — the deleted one.
+    const resolved = await client.channels.fetch(CHANNEL);
+    const create = { subscriptionId: 1, category: 'NEWS', serviceId: 'inc-1' };
+    const nonces = [];
+    const send = (body, channel) => { nonces.push(body.nonce); return channel.send(body); };
+    const created = [];
+    const models = { Message: { create: async (row) => { const r = { ...row, destroy: async () => {} }; created.push(r); return r; } } };
+
+    await syncMessage({ channel: resolved, record: null, payload, models, create, send });
     const first = fake.messagesIn(CHANNEL)[0].id;
     fake.messages.delete(first);
 
-    await syncMessage({ channel: resolved, record: null, payload, models, create });
+    // The next change finds it gone…
+    const changed = { ...payload, embeds: [{ title: 'Störung: API', description: 'Behoben' }] };
+    await expect(syncMessage({ channel: resolved, record: { ...created[0], contentHash: 'old' }, payload: changed, models, create, send }))
+        .resolves.toBe('recreate');
+    // …and the cycle after posts it anew.
+    await syncMessage({ channel: resolved, record: null, payload: changed, models, create, send });
 
+    expect(nonces).toHaveLength(2);
+    expect(nonces[1]).not.toBe(nonces[0]);
     expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
     expect(fake.messagesIn(CHANNEL)[0].id).not.toBe(first);
 });

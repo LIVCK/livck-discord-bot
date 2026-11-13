@@ -93,26 +93,52 @@ export const hashPayload = ({ embeds = [], components = [], content = '' } = {})
  * retries and the backoff's — and only then is it forgotten, so a message an admin deleted is
  * posted again with a fresh one.
  *
- * Held in memory: a restart in the middle of it costs at worst the duplicate it would always
- * have cost.
+ * THE SAME NONCE IN THE NEXT PROCESS, TOO. A process killed between the POST and the row —
+ * SIGKILL, an OOM, the host going away — left the message in the channel and nothing in the
+ * database, and the next process posted it again with a fresh nonce. The simulation in
+ * __tests__/sim does exactly that mid-burst and found the duplicate replies. So the first
+ * nonce for a message is derived from what the message IS (subscription, category, alert or
+ * update id): every process that tries to post it uses the same one.
+ *
+ * Except when the message is being posted AGAIN on purpose — an admin deleted it, or the bot
+ * took it back because its row could not be written. Then the old nonce would hand back the
+ * old, deleted message, so those get a random one. That is remembered in memory only; after a
+ * restart the derived nonce comes back, the edit after it finds the message gone (10008), and
+ * the repost that follows gets its random nonce. One cycle late, never a duplicate.
  */
 const pendingNonces = new Map();
+const reposting = new Set();
 const MAX_PENDING_NONCES = 10_000;
 
+const keyOf = (create) => `${create.subscriptionId}:${create.category}:${create.serviceId ?? ''}`;
+
+const remember = (collection, key, value) => {
+    if (collection.size >= MAX_PENDING_NONCES) {
+        const oldest = collection.keys().next().value;
+        collection.delete(oldest);
+    }
+    if (collection instanceof Map) collection.set(key, value);
+    else collection.add(key);
+};
+
+/** At most 25 characters, which Discord allows for a nonce. */
+const derivedNonce = (key) => crypto.createHash('sha256').update(`livck-message:${key}`).digest('base64url').slice(0, 25);
+
 const nonceFor = (create) => {
-    const key = `${create.subscriptionId}:${create.category}:${create.serviceId ?? ''}`;
+    const key = keyOf(create);
     let nonce = pendingNonces.get(key);
     if (!nonce) {
-        if (pendingNonces.size >= MAX_PENDING_NONCES) pendingNonces.delete(pendingNonces.keys().next().value);
-        // At most 25 characters, which Discord allows for a nonce.
-        nonce = crypto.randomBytes(15).toString('base64url');
-        pendingNonces.set(key, nonce);
+        nonce = reposting.has(key) ? crypto.randomBytes(15).toString('base64url') : derivedNonce(key);
+        remember(pendingNonces, key, nonce);
     }
     return { key, nonce };
 };
 
-/** For tests. */
-export const clearPendingNonces = () => pendingNonces.clear();
+/** For tests: forget everything a process remembers, as a restart does. */
+export const clearPendingNonces = () => {
+    pendingNonces.clear();
+    reposting.clear();
+};
 
 /** True when the stored message is older than the heartbeat interval. */
 const needsHeartbeat = (record, now) => {
@@ -202,6 +228,7 @@ export const syncMessage = async ({
             pendingNonces.delete(key);
         } catch (error) {
             pendingNonces.delete(key);
+            remember(reposting, key);
             // Discord has the message and the database does not, so nothing would ever edit
             // it, and the next cycle — finding no row — would post it a second time. Take it
             // back while the id is still known. If Discord refuses that too, the duplicate is
@@ -223,8 +250,10 @@ export const syncMessage = async ({
         return 'updated';
     } catch (error) {
         if (error.code === UNKNOWN_MESSAGE) {
-            // Someone deleted it in Discord; drop the row so the next cycle posts a new one.
+            // Someone deleted it in Discord; drop the row so the next cycle posts a new one —
+            // with a nonce of its own, or Discord would hand back the deleted one.
             await record.destroy();
+            if (create) remember(reposting, keyOf(create));
             logger.debug(`[MessageSync] Message ${record.messageId} is gone, will repost`);
             return 'recreate';
         }

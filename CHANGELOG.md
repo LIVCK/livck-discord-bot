@@ -47,6 +47,11 @@ status pages just as much.
 
 ### Fixed
 
+- **A message is not posted twice when the bot dies right after posting it.** Killed between
+  Discord making a message and the bot recording it, the next process posted it again. The
+  first nonce of every message is now derived from what the message is, so any process that
+  tries to post it asks Discord for the same one; a message being reposted on purpose (an
+  admin deleted it) still gets a fresh nonce.
 - **A refused request reached the bot without Discord's error code.** The refused-request
   summary read the response body to name the code, but discord.js hands its listeners the body
   it is about to read itself; every 401/403/429 then failed with an internal assertion instead
