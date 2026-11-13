@@ -53,6 +53,9 @@ status pages just as much.
 
 ### Fixed
 
+- **An alert taken off the page takes even a message the bot never got the id of.** Posted with
+  the answer lost, then taken down before a retry learned the id, the announcement used to stay.
+  The bot now finds its own messages among the channel's recent ones by the alert's link.
 - **An announcement is never left without its ending after a crash.** The row that remembers a
   message is written before the message is sent, marked pending, and confirmed after. A bot
   killed in between used to leave an announcement no later process knew about; when its incident

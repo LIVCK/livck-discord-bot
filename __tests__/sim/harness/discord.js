@@ -230,6 +230,14 @@ export const startSimDiscord = async ({ memberGraceMs = 3000, heartbeatMs = 5000
         const taken = take(`${req.method}-${route} ${channel.id}`);
         if (taken.exhausted) return tooMany(res, taken.resetAfter, taken.headers);
 
+        if (req.method === 'GET' && !messageId) {
+            // Newest first, as Discord lists them.
+            const limit = Math.min(100, Number(new URL(req.url, 'http://x').searchParams.get('limit') || 50));
+            const list = [...messages.values()].filter((m) => m.channel_id === channel.id)
+                .sort((a, b) => (BigInt(b.id) > BigInt(a.id) ? 1 : -1)).slice(0, limit);
+            return json(res, 200, list, taken.headers);
+        }
+
         if (req.method === 'POST' && !messageId) {
             const body = await readBody(req);
             entry.body = body;

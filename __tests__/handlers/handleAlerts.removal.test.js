@@ -69,12 +69,15 @@ const { SOURCE, STATUS, makeSnapshot } = await import('../../dto/statuspage.js')
 const discord = { deleted: [], sent: [], edits: 0, failDelete: null };
 
 const makeClient = () => ({
+    user: { id: 'bot' },
     channels: {
         fetch: async (id) => ({
             id,
             send: async (payload) => { discord.sent.push(payload); return { id: 'new-msg' }; },
             messages: {
                 edit: async () => { discord.edits += 1; return {}; },
+                // The channel's recent messages, as discord.js returns them: a Collection.
+                fetch: async () => new Map((discord.recent ?? []).map((m) => [m.id, m])),
                 delete: async (messageId) => {
                     if (discord.failDelete) {
                         const error = new Error(discord.failDelete.message);
@@ -140,6 +143,7 @@ beforeEach(() => {
     discord.sent = [];
     discord.edits = 0;
     discord.failDelete = null;
+    discord.recent = [];
 });
 
 describe('an alert the operator took off the page', () => {
@@ -170,6 +174,28 @@ describe('an alert the operator took off the page', () => {
 
         expect(discord.sent).toEqual([]);
         expect(discord.edits).toBe(0);
+    });
+
+    test('finds a message it posted but never learned the id of, by the alert\'s link', async () => {
+        // Posted, the answer lost, so the row stayed pending; then the alert was taken down
+        // before a retry learned the id. The nonce cannot find it without posting it again.
+        // Found by the simulation (__tests__/sim): an announcement left behind.
+        db.messages = [
+            { id: 1, subscriptionId: 1, category: 'NEWS', serviceId: 'inc-1', alertId: 'inc-1', messageId: 'pending:abc', kind: 'incident', createdAt: hoursAgo(1) },
+        ];
+        const link = (id) => [{ url: `https://status.example.com/incidents/${id}` }];
+        discord.recent = [
+            { id: 'orphan', author: { id: 'bot' }, embeds: link('inc-1') },
+            { id: 'other-alert', author: { id: 'bot' }, embeds: link('inc-2') },
+            { id: 'someone-else', author: { id: 'human' }, embeds: link('inc-1') },
+            { id: 'status', author: { id: 'bot' }, embeds: [{ url: 'https://status.example.com' }] },
+        ];
+        provider.closed['inc-1'] = { alert: null, removed: true };
+
+        await handleAlerts(7, makeClient());
+
+        expect(discord.deleted).toEqual(['orphan']);
+        expect(db.messages).toHaveLength(0);
     });
 
     test('leaves another subscription\'s thread for that subscription to handle', async () => {

@@ -323,6 +323,16 @@ export const clearCloseoutCooldowns = () => closeoutAttempts.clear();
  *
  * @returns {Promise<boolean>} whether the whole thread is gone
  */
+/** Does an alert message's link point at this alert (`…/incidents/<id>`, `…/maintenances/<id>`)? */
+const pointsAt = (url, alertId) => {
+    if (!url || !alertId) return false
+    try {
+        return new URL(url).pathname.split('/').filter(Boolean).at(-1) === String(alertId)
+    } catch {
+        return false
+    }
+}
+
 const removeAlertThread = async (subscription, parentRecord, client) => {
     if (!parentRecord.alertId) return false
 
@@ -343,17 +353,40 @@ const removeAlertThread = async (subscription, parentRecord, client) => {
     const channel = await client.channels.fetch(subscription.channelId)
     let removed = 0
 
+    // A PENDING row's message may exist with no id on record: posted, answer lost, and the
+    // alert taken down before a retry learned the id. Its nonce cannot find it — asking Discord
+    // with it would post the very message being retracted. Every alert message carries the
+    // alert's own link, though, so the bot's own messages among the recent ones that point at
+    // this alert are it. (Read Message History is one of the four permissions the bot asks for.)
+    // Found by the simulation in __tests__/sim: an announcement left standing after its
+    // incident was taken off the page.
+    if (ordered.some(isPending)) {
+        const known = new Set(ordered.filter((row) => !isPending(row)).map((row) => row.messageId))
+        const recent = await channel.messages.fetch({ limit: 100 })
+        const strays = [...recent.values()].filter((message) => message.author?.id === client.user?.id
+            && !known.has(message.id)
+            && message.embeds?.some((embed) => pointsAt(embed.url, parentRecord.alertId)))
+        // Replies before their parent, as below.
+        strays.sort((a, b) => (a.reference ? 0 : 1) - (b.reference ? 0 : 1))
+        for (const message of strays) {
+            try {
+                await channel.messages.delete(message.id)
+                removed += 1
+            } catch (error) {
+                if (error?.code !== UNKNOWN_MESSAGE) throw error
+            }
+        }
+    }
+
     for (const row of ordered) {
         try {
-            // A pending row's message may exist, but its id is not known, and asking Discord
-            // for it would mean posting it. Only the row goes.
             if (!isPending(row)) await channel.messages.delete(row.messageId)
         } catch (error) {
             // Already gone is success: the row is stale and should go with the rest.
             if (error?.code !== UNKNOWN_MESSAGE) throw error
         }
         await models.Message.destroy({ where: { id: row.id } })
-        removed += 1
+        if (!isPending(row)) removed += 1
     }
 
     logger.info(
