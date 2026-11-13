@@ -14,7 +14,8 @@
  *           announcement and carrying that update's text. An incident taken off the page has
  *           nothing left in the channel. A resolved incident on a page that hides its history
  *           keeps its last update before the resolution — the bot cannot see the ending, and
- *           must not invent one.
+ *           must not invent one. A resolved incident a channel never got at all (it was
+ *           unreachable the whole time) may stay absent; one it did get must be finished.
  *   NOTHING ELSE — any other message in the channel is a difference too.
  *
  * Deliberately not a copy of the bot's logic: the announcement/reply structure is written down
@@ -97,7 +98,11 @@ export const differences = async ({ discord, pages, subscriptions }) => {
                 const mine = [...remaining.values()].filter((m) => (m.embeds?.[0]?.title ?? '').includes(title));
                 const tooOld = new Date(incident.startedAt) < new Date(sub.createdAt);
 
-                if (incident.removed || tooOld || !incident.seenLive) {
+                // Taken down on a page that hides its history: to the bot that 404 is exactly what
+                // a resolution looks like there, and it must not delete on a guess (CLAUDE.md, "How
+                // an alert ends"). The thread stays as it was — judged like an unknowable ending.
+                const removalUnknowable = incident.removed && !page.showHistory && incident.seenLive && !tooOld;
+                if ((incident.removed && !removalUnknowable) || tooOld || !incident.seenLive) {
                     for (const m of mine) {
                         problems.push(`${where}: ${m.id} is about "${title}", which ${incident.removed ? 'was taken off the page' : tooOld ? 'predates the subscription' : 'was never live'}`);
                         remaining.delete(m.id);
@@ -111,8 +116,12 @@ export const differences = async ({ discord, pages, subscriptions }) => {
                 // all. Whatever reached the channel while it was live stays — possibly nothing, if
                 // the channel was unreachable the whole time. So: an unbroken beginning of the
                 // live timeline, in order, nothing twice, nothing beyond it. Never an ending.
-                const unknowable = incident.status === 'resolved' && !page.showHistory;
-                if (unknowable && parents.length === 0) {
+                const unknowable = (incident.status === 'resolved' || incident.removed) && !page.showHistory;
+                // Resolved where the history is public: a channel that never got the incident
+                // while it was live is not handed a finished one afterwards — but one that did
+                // must see it to the end. Nothing, or the whole thread; never one left hanging.
+                const missedEntirely = incident.status === 'resolved' && !incident.removed && parents.length === 0;
+                if ((unknowable || missedEntirely) && parents.length === 0) {
                     const strays = mine.filter((m) => m.message_reference);
                     strays.forEach((m) => { problems.push(`${where}: reply ${m.id} to "${title}" without its announcement`); remaining.delete(m.id); });
                     continue;

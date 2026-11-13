@@ -85,7 +85,25 @@ const runOnce = async (seed) => {
         world.clean();
         await bot.stop();
     } catch (error) {
-        error.message = `SIM_SEED=${seed}\nsteps: ${steps.join(' → ')}\n${error.message}`;
+        const named = new Set((error.message.match(/inc[0-9a-z]{6}/g) ?? []));
+        const history = [...named].map((id) => {
+            const slug = pages.pages().find((sl) => pages.page(sl).incidents.has(id));
+            const inc = slug && pages.page(slug).incidents.get(id);
+            return inc ? `  ${id} on ${pages.page(slug).name.de} (history ${pages.page(slug).showHistory ? 'shown' : 'hidden'}): ${inc.status}${inc.removed ? ', removed' : ''}, ${inc.updates.length} updates, seen live: ${Boolean(inc.seenLive)}` : `  ${id}: ?`;
+        });
+        let detail = '';
+        if (process.env.SIM_DEBUG) {
+            const channelIds = [...new Set(error.message.match(/channel (\d{19})/g)?.map((c) => c.slice(8)) ?? [])];
+            for (const id of channelIds) {
+                const reqs = discord.log.filter((e) => e.channelId === id).slice(-25)
+                    .map((e) => `    ${new Date(e.at).toISOString().slice(11, 23)} ${e.method} ${e.url.replace(/.*channels\/\d+/, '')} → ${e.status}${e.deduplicated ? ' (dedup)' : ''}${e.body?.message_reference ? ` reply→${e.body.message_reference.message_id}` : ''} ${(e.body?.embeds?.[0]?.title ?? '').slice(0, 40)}`);
+                const sub = (await world.subscriptions()).find((x) => x.channelId === id);
+                const rows = sub ? await world.database.query('SELECT id, category, serviceId, messageId, contentHash, updatedAt FROM Messages WHERE subscriptionId = ?', [sub.id]) : [];
+                const msgs = discord.messagesIn(id).map((m) => `    ${m.id} ${m.message_reference ? `↳${m.message_reference.message_id} ` : ''}${(m.embeds?.[0]?.title ?? '').slice(0, 50)}`);
+                detail += `\n--- ${id}: requests\n${reqs.join('\n')}\n--- rows\n${rows.map((r) => `    ${r.id} ${r.category} ${r.serviceId} ${r.messageId} ${String(r.contentHash).slice(0, 10)} ${new Date(r.updatedAt).toISOString().slice(11, 23)}`).join('\n')}\n--- messages\n${msgs.join('\n')}`;
+            }
+        }
+        error.message = `SIM_SEED=${seed}\nsteps: ${steps.join(' → ')}\n${error.message}\n--- incidents named above:\n${history.join('\n')}${detail}`;
         throw error;
     } finally {
         await world.close();
