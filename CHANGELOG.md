@@ -12,6 +12,12 @@ status pages just as much.
 
 ### Added
 
+- **A simulation of production in CI.** The real bot process runs against a simulated Discord
+  (REST and gateway) and simulated status pages, with a real database and Redis. A referee
+  checks every request the bot makes, and the expected contents of every channel are worked
+  out from the simulated world and compared — through incidents, kicks, permission changes,
+  network faults, crashes, load, a rollout from the deployed version and seeded chaos. See
+  `__tests__/sim/README.md`. `REDIS_DB` selects a Redis database other than 0.
 - **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
   first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
 - **Threads are finished when their alert ends.** The Cloud drops an incident from

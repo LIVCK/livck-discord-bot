@@ -82,7 +82,11 @@ const claim = async (statuspageId) => {
     }
 };
 
-export const INTERVAL = 15 * 1000;
+/**
+ * Time between cycles. 15s in production; the simulation in __tests__/sim runs the real process
+ * with a shorter one so a scenario of many cycles finishes in seconds rather than minutes.
+ */
+export const INTERVAL = Math.max(250, Number(process.env.UPDATE_INTERVAL_MS || 15 * 1000));
 
 /**
  * How long a cycle waits for one page before it moves on without it.

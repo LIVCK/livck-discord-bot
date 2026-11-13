@@ -187,6 +187,20 @@ window and there is no other way to watch an old incident happen again. Everythi
 alerts is checked at one instant; this is the only thing that checks the PROGRESSION, where
 every step depends on state written by the cycle before.
 
+**The simulation** (needs a MariaDB and a Redis it may use; see `__tests__/sim/README.md`): the
+real bot process against a simulated Discord — REST and gateway — and simulated status pages.
+A referee checks every request the bot makes (duplicates, orphaned replies, edits that change
+nothing, requests to guilds it left, size limits, the global rate limit); an oracle works out
+from the simulated world what every channel must contain and compares. Scenarios cover the
+incident lifecycle, kicks and permissions, every network fault, SIGTERM and SIGKILL mid-burst,
+`/livck subscribe` through real interactions, load, a rollout from the deployed version, and
+seeded chaos. CI runs it on every pull request (`.github/workflows/simulation.yml`).
+
+```bash
+npm run test:sim
+SIM_SEED=123456 npm run test:sim -- __tests__/sim/chaos.sim.test.js   # replay a chaos run
+```
+
 **Contract checks against the live APIs** (network only, no database):
 
 ```bash

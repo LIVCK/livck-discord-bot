@@ -1,0 +1,102 @@
+name: Simulation
+
+# The real bot process against a simulated Discord and simulated status pages, with a real
+# MariaDB and Redis. See __tests__/sim/README.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Nightly: more chaos seeds and a bigger load than a pull request waits for.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: 'Version the rollout starts from (a git ref). Empty: the PR base, or the commit before the push.'
+        required: false
+      seed:
+        description: 'Chaos seed to replay (SIM_SEED). Empty: a new one.'
+        required: false
+      chaos_runs:
+        description: 'Chaos runs'
+        required: false
+        default: '3'
+      scale:
+        description: 'Load scale (SIM_SCALE)'
+        required: false
+        default: '1'
+
+concurrency:
+  group: simulation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulate:
+    name: Simulate production
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=5s --health-retries=20
+
+    env:
+      LIVCK_SIM: '1'
+      SIM_DB_HOST: 127.0.0.1
+      SIM_DB_USER: root
+      SIM_DB_PASSWORD: ''
+      SIM_REDIS_HOST: 127.0.0.1
+      SIM_REDIS_PORT: '6379'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The version the rollout scenario starts from: what is deployed before this change lands.
+      # For a pull request that is its base branch, for a push the commit before it. Set the
+      # repository variable SIM_BASELINE_REF to pin it to what production actually runs.
+      - name: Build the baseline
+        env:
+          INPUT_BASELINE: ${{ inputs.baseline }}
+          VAR_BASELINE: ${{ vars.SIM_BASELINE_REF }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          ref="${INPUT_BASELINE:-$VAR_BASELINE}"
+          if [ -z "$ref" ] && [ -n "$BASE_REF" ]; then ref="origin/$BASE_REF"; fi
+          if [ -z "$ref" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then ref="$BEFORE"; fi
+          if [ -z "$ref" ]; then ref="origin/main"; fi
+          echo "Baseline: $ref ($(git rev-parse --short "$ref"))"
+          git worktree add "$RUNNER_TEMP/baseline" "$ref"
+          (cd "$RUNNER_TEMP/baseline" && npm ci --omit=dev)
+          echo "SIM_BASELINE_DIR=$RUNNER_TEMP/baseline" >> "$GITHUB_ENV"
+
+      - name: Simulate
+        env:
+          SIM_SEED: ${{ inputs.seed }}
+          SIM_CHAOS_RUNS: ${{ github.event_name == 'schedule' && '10' || inputs.chaos_runs || '3' }}
+          SIM_SCALE: ${{ github.event_name == 'schedule' && '4' || inputs.scale || '1' }}
+        run: npm run test:sim
