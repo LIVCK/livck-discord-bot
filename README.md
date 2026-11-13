@@ -6,10 +6,11 @@
 
 Seamlessly integrate your [LIVCK](https://livck.com) statuspage into your Discord server. Display the complete status of all your services in a Discord channel and keep your community instantly informed about incidents, maintenance, and updates - without ever leaving Discord.
 
-**Works exclusively with LIVCK statuspages** - the self-hosted statuspage and communication platform.
+**Works exclusively with LIVCK statuspages** - the statuspage and communication platform.
 
 [![Add to Discord](https://img.shields.io/badge/Add%20to-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1315761064520188005)
-[![LIVCK Website](https://img.shields.io/badge/LIVCK-Website-blue?style=for-the-badge)](https://livck.com)
+[![LIVCK Self-Hosted](https://img.shields.io/badge/LIVCK-SelfHosted-blue?style=for-the-badge)](https://livck.com)
+[![LIVCK Cloud](https://img.shields.io/badge/LIVCK-Cloud-blue?style=for-the-badge)](https://livck.cloud)
 [![Licence](https://img.shields.io/github/license/Ileriayo/markdown-badges?style=for-the-badge)](./LICENSE)
 [![Crowdin](https://img.shields.io/badge/Crowdin-2E3340.svg?style=for-the-badge&logo=Crowdin&logoColor=white)](https://crowdin.com/project/livck-discord-bot)
 
