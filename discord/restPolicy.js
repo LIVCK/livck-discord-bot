@@ -17,8 +17,9 @@
  *
  * 2. Nothing says which requests are refused. discord.js warns every 250 invalid requests
  *    with a count and nothing else. The `response` listener below collects 401/403/429 by
- *    route and Discord error code and writes one line per minute while there are any, so the
- *    channel behind a warning can be found from the log. Waits the client predicted itself
+ *    status and route and writes one line per minute while there are any, so the channel
+ *    behind a warning can be found from the log. The Discord error code is in the delivery's
+ *    own log line (util/delivery.js), not here: see onResponse for why the body is off limits. Waits the client predicted itself
  *    (`rateLimited`) go into the same summary: discord.js emits one per bucket that has to
  *    wait, and a heartbeat across a few hundred channels used to write a line for each.
  */
@@ -86,14 +87,14 @@ export const createRestPolicy = ({ log = (line) => console.warn(line) } = {}) =>
             tooMany.set(keyOf(request.method, request.path), Date.now());
         }
 
-        // The body names the reason (50013, 50001, …); reading it is asynchronous and the
-        // response handed to listeners is a clone, so it costs the request nothing.
-        const count = (code) => {
-            const key = `${status} ${keyOf(request.method, request.path)}${code ? ` (${code})` : ''}`;
-            refused.set(key, (refused.get(key) ?? 0) + 1);
-        };
-        Promise.resolve(typeof response.json === 'function' ? response.json() : null)
-            .then((body) => count(body?.code), () => count(null));
+        // NEVER THE BODY. @discordjs/rest hands listeners `{ ...res }` — a shallow copy whose
+        // body is the very stream it is about to read itself. Reading it here (as this once did,
+        // for the error code) consumed it first, and the bot's own request then failed with an
+        // undici AssertionError instead of the DiscordAPIError it should have seen: no code, so
+        // a hidden channel (50001) was not recognised as one. Found by the simulation in
+        // __tests__/sim, held in place by __tests__/discord/createClient.test.js.
+        const key = `${status} ${keyOf(request.method, request.path)}`;
+        refused.set(key, (refused.get(key) ?? 0) + 1);
     };
 
     const onRateLimited = (info) => {

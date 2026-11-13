@@ -47,6 +47,11 @@ status pages just as much.
 
 ### Fixed
 
+- **A refused request reached the bot without Discord's error code.** The refused-request
+  summary read the response body to name the code, but discord.js hands its listeners the body
+  it is about to read itself; every 401/403/429 then failed with an internal assertion instead
+  of `Missing Access` or `Missing Permissions`, so a channel the bot could not see was never
+  recognised as one. The summary names status and route only now.
 - **A channel the bot can no longer see keeps its subscription.** Missing Access (50001) deleted
   the subscription as if the channel were gone, so making a category private for a moment, or
   editing the bot's role, cost a guild its whole setup. The channel now backs off — 1 minute

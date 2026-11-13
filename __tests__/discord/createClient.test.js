@@ -19,6 +19,7 @@ jest.unstable_mockModule('../../database/redis.js', () => ({
 
 const { createClient } = await import('../../discord/bot.js');
 const { deliver, resetDelivery } = await import('../../util/delivery.js');
+const { startFakeDiscord } = await import('../fixtures/fakeDiscord.js');
 
 let client;
 afterEach(async () => {
@@ -77,4 +78,27 @@ test('a changed channel or role in a guild lets its channels try again at once',
         await expect(deliver(other, 'status', async () => {})).resolves.toMatchObject({ status: 'backoff' });
     }
     resetDelivery();
+});
+
+test('a refused request reaches the bot as Discord\'s error, with its code', async () => {
+    // The listeners this client carries must not touch the response body: @discordjs/rest shares
+    // it with the request in progress, and a listener that read it turned every 403 into an
+    // undici AssertionError with no code. A hidden channel (50001) then went unrecognised.
+    // Found by the simulation; this is the real client against a real HTTP answer.
+    const fake = await startFakeDiscord();
+    try {
+        client = createClient();
+        client.rest.options.api = fake.api;
+        client.rest.setToken('fake-token');
+        fake.script('1500000000000000001', 'forbidden');
+
+        const error = await client.rest.post('/channels/1500000000000000001/messages', { body: { content: 'x' } })
+            .catch((e) => e);
+
+        expect(error.name).toMatch(/DiscordAPIError/);
+        expect(error.code).toBe(50013);
+        expect(error.status).toBe(403);
+    } finally {
+        await fake.close();
+    }
 });

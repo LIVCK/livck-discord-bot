@@ -6,10 +6,18 @@ import { createRestPolicy } from '../../discord/restPolicy.js';
 
 const URL = 'https://discord.com/api/v10/channels/123/messages';
 
-/** What @discordjs/rest hands its `response` listeners. */
-const respond = (policy, rest, status, body = {}) => rest.emit(
+/**
+ * What @discordjs/rest hands its `response` listeners: a shallow copy sharing the body stream
+ * with the request still in progress. Touching the body breaks that request, so here it throws.
+ */
+const respond = (policy, rest, status) => rest.emit(
     { method: 'POST', path: '/channels/123/messages' },
-    { status, json: async () => body },
+    {
+        status,
+        json: () => { throw new Error('the listener read the body'); },
+        text: () => { throw new Error('the listener read the body'); },
+        get body() { throw new Error('the listener touched the body'); },
+    },
 );
 
 const fakeRest = () => {
@@ -70,16 +78,16 @@ describe('rejectOnRateLimit', () => {
 });
 
 describe('the refused-request summary', () => {
-    test('names status, route and Discord code, most frequent first', async () => {
+    test('names status and route, most frequent first, without reading the body', async () => {
         const lines = [];
         const policy = createRestPolicy({ log: (line) => lines.push(line) });
         const rest = fakeRest();
         policy.attach(rest);
 
-        respond(policy, rest, 403, { code: 50013 });
-        respond(policy, rest, 403, { code: 50013 });
-        respond(policy, rest, 429, {});
-        respond(policy, rest, 200, {});
+        respond(policy, rest, 403);
+        respond(policy, rest, 403);
+        respond(policy, rest, 429);
+        respond(policy, rest, 200);
         await new Promise((resolve) => setImmediate(resolve));
 
         policy.summarize();
@@ -87,7 +95,7 @@ describe('the refused-request summary', () => {
 
         expect(lines).toEqual([
             '[Discord] 3 refused request(s) in the last minute: ' +
-            '403 POST /channels/123/messages (50013) ×2, 429 POST /channels/123/messages ×1',
+            '403 POST /channels/123/messages ×2, 429 POST /channels/123/messages ×1',
         ]);
     });
 
