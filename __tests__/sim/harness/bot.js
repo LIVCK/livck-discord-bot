@@ -8,6 +8,7 @@
  * real credentials into a simulation.
  */
 
+import fs from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
@@ -125,12 +126,18 @@ export const migrate = async ({ cwd = process.cwd(), env }) => {
 export const startBot = ({ cwd = process.cwd(), env, label = 'bot' }) => {
     const child = spawn(process.execPath, ['--require', PRELOAD, 'server.js'], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     const lines = [];
+    // SIM_LOG_DIR keeps every bot's whole log, one file per database and process — what CI
+    // uploads when a scenario fails.
+    const logFile = process.env.SIM_LOG_DIR
+        ? path.join(process.env.SIM_LOG_DIR, `${env.DB_DATABASE}-${label}.log`) : null;
+    if (logFile) fs.mkdirSync(process.env.SIM_LOG_DIR, { recursive: true });
     const waiters = new Set();
     let exit = null;
 
     const onLine = (line) => {
         const entry = { at: Date.now(), line };
         lines.push(entry);
+        if (logFile) fs.appendFileSync(logFile, `${new Date(entry.at).toISOString()} ${line}\n`);
         if (process.env.SIM_VERBOSE) process.stdout.write(`[${label}] ${line}\n`);
         for (const waiter of waiters) waiter(entry);
     };

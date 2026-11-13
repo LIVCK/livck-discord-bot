@@ -2,30 +2,37 @@ name: Simulation
 
 # The real bot process against a simulated Discord and simulated status pages, with a real
 # MariaDB and Redis. See __tests__/sim/README.md.
+#
+# Pull requests and pushes run every scenario and the chaos REGRESSION seeds — runs that once
+# found a real fault — so a change is judged on what it does, not on a new random seed finding
+# something unrelated. The nightly run hunts with new seeds on top; a seed it turns red belongs
+# in REGRESSION_SEEDS (__tests__/sim/chaos.sim.test.js) once its fault is fixed.
 
 on:
   pull_request:
   push:
     branches: [main]
   schedule:
-    # Nightly: more chaos seeds and a bigger load than a pull request waits for.
     - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       baseline:
-        description: 'Version the rollout starts from (a git ref). Empty: the PR base, or the commit before the push.'
+        description: 'Version the rollout starts from (a git ref). Empty: the PR base, the commit before the push, or SIM_BASELINE_REF.'
         required: false
       seed:
-        description: 'Chaos seed to replay (SIM_SEED). Empty: a new one.'
+        description: 'Chaos seeds to replay, comma separated. Empty: the regression seeds.'
         required: false
-      chaos_runs:
-        description: 'Chaos runs'
+      hunt_runs:
+        description: 'New chaos seeds to hunt with on top (0 for none)'
         required: false
-        default: '3'
+        default: '0'
       scale:
         description: 'Load scale (SIM_SCALE)'
         required: false
         default: '1'
+
+permissions:
+  contents: read
 
 concurrency:
   group: simulation-${{ github.ref }}
@@ -35,7 +42,7 @@ jobs:
   simulate:
     name: Simulate production
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     services:
       mariadb:
@@ -54,11 +61,13 @@ jobs:
 
     env:
       LIVCK_SIM: '1'
+      SIM_DEBUG: '1'
       SIM_DB_HOST: 127.0.0.1
       SIM_DB_USER: root
       SIM_DB_PASSWORD: ''
       SIM_REDIS_HOST: 127.0.0.1
       SIM_REDIS_PORT: '6379'
+      SIM_LOG_DIR: ${{ github.workspace }}/sim-logs
 
     steps:
       - name: Checkout
@@ -76,8 +85,8 @@ jobs:
         run: npm ci
 
       # The version the rollout scenario starts from: what is deployed before this change lands.
-      # For a pull request that is its base branch, for a push the commit before it. Set the
-      # repository variable SIM_BASELINE_REF to pin it to what production actually runs.
+      # For a pull request that is its base branch, for a push the commit before it. The
+      # repository variable SIM_BASELINE_REF pins it to what production actually runs.
       - name: Build the baseline
         env:
           INPUT_BASELINE: ${{ inputs.baseline }}
@@ -96,7 +105,21 @@ jobs:
 
       - name: Simulate
         env:
-          SIM_SEED: ${{ inputs.seed }}
-          SIM_CHAOS_RUNS: ${{ github.event_name == 'schedule' && '10' || inputs.chaos_runs || '3' }}
+          SIM_SEEDS: ${{ inputs.seed || 'regression' }}
           SIM_SCALE: ${{ github.event_name == 'schedule' && '4' || inputs.scale || '1' }}
         run: npm run test:sim
+
+      - name: Hunt with new chaos seeds
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.hunt_runs != '0')
+        env:
+          SIM_CHAOS_RUNS: ${{ github.event_name == 'schedule' && '10' || inputs.hunt_runs }}
+          SIM_CHAOS_STEPS: '60'
+        run: npm run test:sim -- __tests__/sim/chaos.sim.test.js
+
+      - name: Keep the bot logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-logs
+          path: sim-logs/
+          retention-days: 14

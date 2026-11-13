@@ -3,8 +3,12 @@ name: Tests
 on:
   push:
     branches: [main, develop]
+  # Every pull request, whatever it targets: work lands on feature branches first, and a pull
+  # request into one of those ran no tests at all.
   pull_request:
-    branches: [main, develop]
+
+permissions:
+  contents: read
 
 jobs:
   test:

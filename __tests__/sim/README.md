@@ -63,7 +63,18 @@ needs no database and runs in the ordinary `npm test`.
 | `subscribe.sim.test.js` | `/livck subscribe` through the gateway: command, modal, submit — discord.js's own parsing of what Discord sends |
 | `load.sim.test.js` | 150 subscriptions (`SIM_SCALE` multiplies): a restart with every status due, then an outage on every page; incidents must arrive before status edits |
 | `rollout.sim.test.js` | The deployed version builds a state; the new one must touch **nothing** on its first cycles, then carry on in threads it did not open. Needs `SIM_BASELINE_DIR` (a checkout with dependencies installed) |
-| `chaos.sim.test.js` | A seeded random walk through all of the above. `SIM_SEED` replays a run exactly; `SIM_CHAOS_RUNS`, `SIM_CHAOS_STEPS` turn it up |
+| `chaos.sim.test.js` | A seeded random walk through all of the above. `SIM_SEED` replays a run exactly; `SIM_CHAOS_RUNS`, `SIM_CHAOS_STEPS` turn it up; `SIM_SEEDS=regression` runs the seeds that once found a real fault |
+
+## In CI
+
+`.github/workflows/simulation.yml` runs every scenario on each pull request, with the chaos
+**regression seeds** rather than new ones — a pull request is judged on what it changes, not on a
+new seed finding something unrelated. The nightly run hunts with ten new seeds and four times
+the load on top. A seed it turns red goes into `REGRESSION_SEEDS` once its fault is fixed.
+
+The rollout starts from the pull request's base branch, or from the repository variable
+`SIM_BASELINE_REF` when that is set — set it to whatever production actually runs. When a
+scenario fails, every bot's full log is uploaded as the `sim-logs` artifact (`SIM_LOG_DIR`).
 
 ## What it does not prove
 

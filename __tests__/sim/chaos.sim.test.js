@@ -5,6 +5,11 @@
  *
  * The seed is printed. `SIM_SEED=<seed>` replays a run step for step; `SIM_CHAOS_RUNS` and
  * `SIM_CHAOS_STEPS` turn it up when hunting.
+ *
+ * REGRESSION_SEEDS are runs that once found a real fault, at 60 steps each. They always run —
+ * a pull request should not turn red over a new seed that finds something unrelated to it, and
+ * should not let one of these come back. A seed the nightly hunt turns red belongs in this list
+ * once its fault is fixed.
  */
 
 import { jest } from '@jest/globals';
@@ -13,7 +18,8 @@ import { createWorld, enabled } from './harness/world.js';
 const maybe = enabled ? describe : describe.skip;
 const RUNS = Number(process.env.SIM_CHAOS_RUNS || 2);
 const STEPS = Number(process.env.SIM_CHAOS_STEPS || 40);
-jest.setTimeout(RUNS * (STEPS * 6_000 + 240_000));
+// Per seed: up to six seconds a step, then the clear-up.
+jest.setTimeout(Math.max(STEPS, 60) * 6_000 + 240_000);
 
 /** mulberry32 — small, fast, and the same everywhere. */
 const prng = (seed) => () => {
@@ -26,7 +32,7 @@ const prng = (seed) => () => {
 const FAULTS = ['hang', 'loseAnswer', 'badGateway', 'serverError', 'reset', 'rateLimited', { delayMs: 2000 }];
 const STATUSES = ['operational', 'degraded', 'partial_outage', 'major_outage', 'under_maintenance'];
 
-const runOnce = async (seed) => {
+const runOnce = async (seed, stepCount = STEPS) => {
     const random = prng(seed);
     const pick = (list) => list[Math.floor(random() * list.length)];
     const steps = [];
@@ -67,7 +73,7 @@ const runOnce = async (seed) => {
         ];
         const total = actions.reduce((sum, [weight]) => sum + weight, 0);
 
-        for (let step = 0; step < STEPS; step += 1) {
+        for (let step = 0; step < stepCount; step += 1) {
             let roll = random() * total;
             const [, name, act] = actions.find(([weight]) => (roll -= weight) < 0);
             steps.push(name);
@@ -110,13 +116,25 @@ const runOnce = async (seed) => {
     }
 };
 
+export const REGRESSION_SEEDS = [
+    2000, // an edit's answer lost, the page changing back: the old hash said "unchanged"
+    2003, // killed between post and row: an announcement nobody tracked, never finished
+    3006, // a pending row reposted: Discord handed back the old message with its old content
+    4002, // access restored to a channel discord.js had not cached: no event, no retry
+    4004, // kicked during a gateway drop: discord.js kept the guild, the bot kept asking
+];
+
 maybe('chaos', () => {
+    // SIM_SEEDS=regression runs the list above; SIM_SEEDS=1,2,3 any list; otherwise new seeds.
+    const listed = process.env.SIM_SEEDS === 'regression' ? REGRESSION_SEEDS
+        : process.env.SIM_SEEDS ? process.env.SIM_SEEDS.split(',').map(Number) : null;
     const base = Number(process.env.SIM_SEED || Date.now() % 1_000_000);
-    for (let run = 0; run < RUNS; run += 1) {
-        const seed = base + run;
+    const seeds = listed ?? Array.from({ length: RUNS }, (_, run) => base + run);
+    const steps = listed && !process.env.SIM_CHAOS_STEPS ? 60 : STEPS;
+    for (const seed of seeds) {
         test(`seed ${seed}`, async () => {
-            console.log(`[chaos] SIM_SEED=${seed}`);
-            await runOnce(seed);
+            console.log(`[chaos] SIM_SEED=${seed} SIM_CHAOS_STEPS=${steps}`);
+            await runOnce(seed, steps);
         });
     }
 });
