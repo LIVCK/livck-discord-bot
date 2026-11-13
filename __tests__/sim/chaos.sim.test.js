@@ -116,22 +116,24 @@ const runOnce = async (seed, stepCount = STEPS) => {
     }
 };
 
+/** [seed, steps] — a seed only replays the same run with the same number of steps. */
 export const REGRESSION_SEEDS = [
-    2000, // an edit's answer lost, the page changing back: the old hash said "unchanged"
-    2003, // killed between post and row: an announcement nobody tracked, never finished
-    3006, // a pending row reposted: Discord handed back the old message with its old content
-    4002, // access restored to a channel discord.js had not cached: no event, no retry
-    4004, // kicked during a gateway drop: discord.js kept the guild, the bot kept asking
+    [2000, 60], // an edit's answer lost, the page changing back: the old hash said "unchanged"
+    [2003, 60], // killed between post and row: an announcement nobody tracked, never finished
+    [3006, 60], // a pending row reposted: Discord handed back the old message with its old content
+    [4002, 60], // access restored to a channel discord.js had not cached: no event, no retry
+    [4004, 60], // kicked during a gateway drop: discord.js kept the guild, the bot kept asking
+    [31455, 40], // posted, answer lost, then taken down: the announcement stayed (CI found it)
 ];
 
 maybe('chaos', () => {
     // SIM_SEEDS=regression runs the list above; SIM_SEEDS=1,2,3 any list; otherwise new seeds.
+    // A listed seed without its steps runs with SIM_CHAOS_STEPS, or 60.
     const listed = process.env.SIM_SEEDS === 'regression' ? REGRESSION_SEEDS
-        : process.env.SIM_SEEDS ? process.env.SIM_SEEDS.split(',').map(Number) : null;
+        : process.env.SIM_SEEDS ? process.env.SIM_SEEDS.split(',').map((seed) => [Number(seed), Number(process.env.SIM_CHAOS_STEPS || 60)]) : null;
     const base = Number(process.env.SIM_SEED || Date.now() % 1_000_000);
-    const seeds = listed ?? Array.from({ length: RUNS }, (_, run) => base + run);
-    const steps = listed && !process.env.SIM_CHAOS_STEPS ? 60 : STEPS;
-    for (const seed of seeds) {
+    const runs = listed ?? Array.from({ length: RUNS }, (_, run) => [base + run, STEPS]);
+    for (const [seed, steps] of runs) {
         test(`seed ${seed}`, async () => {
             console.log(`[chaos] SIM_SEED=${seed} SIM_CHAOS_STEPS=${steps}`);
             await runOnce(seed, steps);

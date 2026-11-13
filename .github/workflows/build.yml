@@ -119,8 +119,9 @@ jobs:
           SIM_REDIS_HOST: 127.0.0.1
           SIM_REDIS_PORT: '6379'
           SIM_LOG_DIR: ${{ github.workspace }}/sim-logs
+        # jest directly: `npm run test:sim -- <files>` would add them to the whole suite.
         run: >-
-          npm run test:sim --
+          node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand
           __tests__/sim/lifecycle.sim.test.js
           __tests__/sim/faults.sim.test.js
           __tests__/sim/membership.sim.test.js
