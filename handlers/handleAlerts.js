@@ -8,7 +8,7 @@ import { buildRoleMentions } from '../util/roleMentions.js'
 import translation, { withLocale } from '../util/Translation.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
-import { syncMessage, isChannelGone, UNKNOWN_MESSAGE } from '../util/messageSync.js'
+import { syncMessage, isChannelGone, isPending, UNKNOWN_MESSAGE } from '../util/messageSync.js'
 import { claimReap } from '../util/subscriptionReaper.js'
 import { ALERT_KIND, resolveText } from '../dto/statuspage.js'
 import {
@@ -161,7 +161,8 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
     // Role pings fire only for a NEW message: Discord does not re-notify on edit, so attaching
     // them to an update would be noise without a ping. A notice never pings at all — it is not
     // an outage and must not wake anyone.
-    const mentions = (parentRecord || alert.kind === ALERT_KIND.NOTICE)
+    // A pending parent has not been confirmed posted, so this may still be its first post.
+    const mentions = ((parentRecord && !isPending(parentRecord)) || alert.kind === ALERT_KIND.NOTICE)
         ? { content: '', roleIds: [], allowedMentions: {} }
         : await buildRoleMentions(subscription.id, 'NEWS')
 
@@ -188,7 +189,7 @@ const deliverAlert = async (subscription, alert, snapshot, locale, footer, clien
             where: { subscriptionId: subscription.id, serviceId: alert.id, category: 'NEWS' },
         }))?.messageId
 
-    if (!parentId) return
+    if (!parentId || parentId.startsWith('pending:')) return
 
     const updateLabel = translation.trans('messages.alerts.update_button')
 
@@ -344,7 +345,9 @@ const removeAlertThread = async (subscription, parentRecord, client) => {
 
     for (const row of ordered) {
         try {
-            await channel.messages.delete(row.messageId)
+            // A pending row's message may exist, but its id is not known, and asking Discord
+            // for it would mean posting it. Only the row goes.
+            if (!isPending(row)) await channel.messages.delete(row.messageId)
         } catch (error) {
             // Already gone is success: the row is stale and should go with the rest.
             if (error?.code !== UNKNOWN_MESSAGE) throw error

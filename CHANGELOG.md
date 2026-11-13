@@ -53,6 +53,13 @@ status pages just as much.
 
 ### Fixed
 
+- **An announcement is never left without its ending after a crash.** The row that remembers a
+  message is written before the message is sent, marked pending, and confirmed after. A bot
+  killed in between used to leave an announcement no later process knew about; when its incident
+  resolved before the restart, the thread said "investigating" for good.
+- **A lost answer to an edit can no longer leave a message showing the wrong state.** The stored
+  content hash is forgotten before each edit and written again once Discord confirms, so a page
+  that changed and then changed back is not mistaken for unchanged.
 - **A status page on its own port can be subscribed.** The URL was normalised to its host
   name alone, so `https://status.example.com:8443` was saved — and polled — without the port.
 - **A message is not posted twice when the bot dies right after posting it.** Killed between

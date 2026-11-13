@@ -34,7 +34,14 @@ afterEach(async () => {
 
 const rows = () => {
     const created = [];
-    return { created, Message: { create: async (row) => { created.push(row); return row; } } };
+    let id = 0;
+    return {
+        created,
+        Message: {
+            create: async (row) => { const stored = { id: (id += 1), ...row }; created.push(stored); return stored; },
+            update: async (values, { where }) => { Object.assign(created.find((r) => r.id === where.id), values); return [1]; },
+        },
+    };
 };
 
 test('the library\'s own retries do not post it again', async () => {
@@ -62,8 +69,11 @@ test('nor does the next attempt, once the channel answers again', async () => {
     await syncMessage({ channel: resolved, record: null, payload, models, create }).catch(() => {});
     fake.script(CHANNEL, 'ok');
 
-    // The backoff's retry, on a later cycle: still no row, so it posts again.
-    await expect(syncMessage({ channel: resolved, record: null, payload, models, create })).resolves.toBe('created');
+    // The backoff's retry, on a later cycle: the row is still pending, so it posts again — with
+    // the nonce the row was written with.
+    expect(models.created).toHaveLength(1);
+    expect(models.created[0].messageId).toMatch(/^pending:/);
+    await expect(syncMessage({ channel: resolved, record: models.created[0], payload, models, create })).resolves.toBe('created');
 
     expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
     // And the row points at the message that is actually there.
@@ -75,7 +85,10 @@ test('a process killed between the post and the row: the next one posts nothing 
     // in __tests__/sim mid-burst: the next process, with a fresh nonce, posted it again.
     const resolved = await client.channels.fetch(CHANNEL);
     const create = { subscriptionId: 1, category: 'ALERT', serviceId: 'upd-3' };
-    const dying = { Message: { create: () => new Promise(() => {}) } };
+    // The process dies after the POST and before the row is confirmed: the pending row it wrote
+    // first is what the next process finds.
+    const pendingRows = [];
+    const dying = { Message: { create: async (row) => { pendingRows.push({ id: 99, ...row }); return pendingRows.at(-1); }, update: () => new Promise(() => {}) } };
 
     syncMessage({ channel: resolved, record: null, payload, models: dying, create });
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -83,10 +96,13 @@ test('a process killed between the post and the row: the next one posts nothing 
 
     clearPendingNonces(); // the process is gone, and with it everything it remembered
     const models = rows();
-    await expect(syncMessage({ channel: resolved, record: null, payload, models, create })).resolves.toBe('created');
+    const [pending] = pendingRows;
+    expect(pending.messageId).toMatch(/^pending:/);
+    models.created.push(pending);
+    await expect(syncMessage({ channel: resolved, record: pending, payload, models, create })).resolves.toBe('created');
 
     expect(fake.messagesIn(CHANNEL)).toHaveLength(1);
-    expect(models.created.map((row) => row.messageId)).toEqual(fake.messagesIn(CHANNEL).map((m) => m.id));
+    expect(pending.messageId).toBe(fake.messagesIn(CHANNEL)[0].id);
 });
 
 test('a message an admin deleted is posted again with a nonce of its own', async () => {
@@ -96,7 +112,12 @@ test('a message an admin deleted is posted again with a nonce of its own', async
     const nonces = [];
     const send = (body, channel) => { nonces.push(body.nonce); return channel.send(body); };
     const created = [];
-    const models = { Message: { create: async (row) => { const r = { ...row, destroy: async () => {} }; created.push(r); return r; } } };
+    const models = {
+        Message: {
+            create: async (row) => { const r = { id: created.length + 1, ...row, destroy: async () => {} }; created.push(r); return r; },
+            update: async (values, { where }) => { Object.assign(created.find((r) => r.id === where.id), values); return [1]; },
+        },
+    };
 
     await syncMessage({ channel: resolved, record: null, payload, models, create, send });
     const first = fake.messagesIn(CHANNEL)[0].id;

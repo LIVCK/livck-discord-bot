@@ -140,6 +140,12 @@ export const clearPendingNonces = () => {
     reposting.clear();
 };
 
+/** What a row holds in place of a message id while its message may or may not exist yet. */
+export const PENDING = 'pending:';
+
+/** A row written before its message was sent, and not confirmed since. */
+export const isPending = (record) => typeof record?.messageId === 'string' && record.messageId.startsWith(PENDING);
+
 /** True when the stored message is older than the heartbeat interval. */
 const needsHeartbeat = (record, now) => {
     const last = record.updatedAt ? new Date(record.updatedAt).getTime() : 0;
@@ -219,12 +225,24 @@ export const syncMessage = async ({
         return 'skipped';
     }
 
-    if (!record) {
-        const { key, nonce } = nonceFor(create);
+    if (!record || isPending(record)) {
+        // WRITTEN DOWN BEFORE IT IS SENT. A row that only existed after the POST left nothing
+        // behind when the process died in between: the message stood in the channel, and if its
+        // incident resolved before the next process came up, no process ever looked at it again
+        // — an announcement stuck on "investigating" for good. The simulation in __tests__/sim
+        // found exactly that. Now the row says "maybe posted, with this nonce" first; whoever
+        // finds it posts with the same nonce, Discord hands back the message it already made,
+        // and the close-out can finish the thread like any other.
+        const { key, nonce: fresh } = nonceFor(create);
+        const nonce = record ? record.messageId.slice(PENDING.length) : fresh;
+        const row = record ?? await models.Message.create({ ...create, messageId: `${PENDING}${nonce}`, contentHash: null });
         const once = { ...payload, nonce, enforceNonce: true };
+        // A failure here leaves the row pending: maybe posted, maybe not. The next attempt finds
+        // out, with the same nonce.
         const sent = await (send ? send(once, resolved) : resolved.send(once));
         try {
-            await models.Message.create({ ...create, messageId: sent.id, contentHash: hash });
+            await models.Message.update({ messageId: sent.id, contentHash: hash }, { where: { id: row.id } });
+            Object.assign(row, { messageId: sent.id, contentHash: hash });
             pendingNonces.delete(key);
         } catch (error) {
             pendingNonces.delete(key);
@@ -244,6 +262,15 @@ export const syncMessage = async ({
     }
 
     try {
+        // UNKNOWN UNTIL DISCORD SAYS SO. An edit whose answer is lost may have happened or not,
+        // and the hash still named the old content. If the page then went back to exactly that
+        // content, the next cycle compared, found "unchanged" and left the channel showing the
+        // edit in between — for good on an alert, until the heartbeat on a status. Forgetting
+        // the hash first makes the next cycle send it again whatever happened; the PATCH is
+        // idempotent. Found by the simulation in __tests__/sim (chaos, a lost answer, a crash).
+        await models.Message.update({ contentHash: null }, { where: { id: record.id } });
+        record.contentHash = null;
+
         // One PATCH. No preceding fetch — the message ID is all Discord needs.
         await resolved.messages.edit(record.messageId, payload);
         await touch(models, record, hash);
@@ -261,4 +288,4 @@ export const syncMessage = async ({
     }
 };
 
-export default { hashPayload, syncMessage, isChannelGone, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };
+export default { hashPayload, syncMessage, isChannelGone, isPending, PENDING, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };

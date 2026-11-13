@@ -201,7 +201,7 @@ export class StatuspagePauseManager {
                         const record = await models.Message.findOne({
                             where: { subscriptionId: subscription.id, category: 'STATUS' },
                         });
-                        if (!record?.messageId) return false;
+                        if (!record?.messageId || record.messageId.startsWith('pending:')) return false;
 
                         const channel = await client.channels.fetch(subscription.channelId);
                         if (!channel) return false;
