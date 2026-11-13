@@ -47,6 +47,8 @@ status pages just as much.
 
 ### Fixed
 
+- **A status page on its own port can be subscribed.** The URL was normalised to its host
+  name alone, so `https://status.example.com:8443` was saved — and polled — without the port.
 - **A message is not posted twice when the bot dies right after posting it.** Killed between
   Discord making a message and the bot recording it, the next process posted it again. The
   first nonce of every message is now derived from what the message is, so any process that
