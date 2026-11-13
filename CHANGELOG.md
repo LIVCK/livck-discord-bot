@@ -155,6 +155,11 @@ status pages just as much.
 
 ### Changed
 
+- **The Docker image is only published from code that passed.** `latest` used to be pushed on
+  every push to `main`, whatever the tests said, a closed pull request published an image
+  tagged `merge`, and release tags built none. Now the tests and the simulation run first, the
+  image is built and simulated itself, and only then pushed — `latest` from `main`, `1.2.3` and
+  `1.2` from a release tag. Pull requests build and simulate the image without pushing it.
 - **Status messages are only edited when they actually change.** Each `Message` stores a hash of
   its last payload. Combined with dropping the redundant `channel.messages.fetch()` before every
   edit, this removes almost all Discord API traffic in steady state — the bot previously spent

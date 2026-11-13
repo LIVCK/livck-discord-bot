@@ -87,7 +87,10 @@ export const createWorld = async ({ env: overrides = {}, discord: discordOptions
 
         /** Start a bot process. `cwd` may be another checkout of the bot. */
         async start({ cwd = process.env.SIM_BOT_DIR || undefined, label = `bot${bots.length + 1}`, env: extra = {} } = {}) {
-            const bot = startBot({ cwd, env: { ...env, ...extra }, label });
+            // SIM_BOT_IMAGE runs the version under test as its Docker image; an older checkout
+            // (`cwd`, for a rollout) always runs from its directory.
+            const image = cwd ? null : process.env.SIM_BOT_IMAGE || null;
+            const bot = startBot({ cwd, env: { ...env, ...extra }, label, image });
             bots.push(bot);
             await bot.waitFor(/Logged in as/, { timeout: 30_000 });
             return bot;

@@ -72,6 +72,15 @@ needs no database and runs in the ordinary `npm test`.
 new seed finding something unrelated. The nightly run hunts with ten new seeds and four times
 the load on top. A seed it turns red goes into `REGRESSION_SEEDS` once its fault is fixed.
 
+The image build (`.github/workflows/build.yml`) runs the tests and the simulation first and
+publishes nothing unless both pass; it then builds the image and simulates THAT image — its own
+entrypoint and migrations — before pushing it. `SIM_BOT_IMAGE=<image>` does the same locally:
+
+```bash
+docker build -f docker/Dockerfile -t livck-bot:local .
+SIM_BOT_IMAGE=livck-bot:local npm run test:sim -- __tests__/sim/lifecycle.sim.test.js
+```
+
 The rollout starts from the pull request's base branch, or from the repository variable
 `SIM_BASELINE_REF` when that is set — set it to whatever production actually runs. When a
 scenario fails, every bot's full log is uploaded as the `sim-logs` artifact (`SIM_LOG_DIR`).

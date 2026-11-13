@@ -3,15 +3,16 @@ name: Simulation
 # The real bot process against a simulated Discord and simulated status pages, with a real
 # MariaDB and Redis. See __tests__/sim/README.md.
 #
-# Pull requests and pushes run every scenario and the chaos REGRESSION seeds — runs that once
+# Pull requests and the image build run every scenario and the chaos REGRESSION seeds — runs that once
 # found a real fault — so a change is judged on what it does, not on a new random seed finding
 # something unrelated. The nightly run hunts with new seeds on top; a seed it turns red belongs
 # in REGRESSION_SEEDS (__tests__/sim/chaos.sim.test.js) once its fault is fixed.
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  # Called by the image build (build.yml) on main and for release tags, which publishes nothing
+  # unless this passes. That is also what covers a push to main.
+  workflow_call:
   schedule:
     - cron: '30 2 * * *'
   workflow_dispatch:
@@ -34,9 +35,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces the run before it. Nothing else is ever cancelled:
+# the run the image build waits for must not be ended by the nightly one, or the other way round.
 concurrency:
-  group: simulation-${{ github.ref }}
-  cancel-in-progress: true
+  group: simulation-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   simulate:

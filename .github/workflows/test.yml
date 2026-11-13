@@ -1,11 +1,14 @@
 name: Tests
 
 on:
+  # main is tested by the image build (build.yml), which calls this before it publishes.
   push:
-    branches: [main, develop]
+    branches: [develop]
   # Every pull request, whatever it targets: work lands on feature branches first, and a pull
   # request into one of those ran no tests at all.
   pull_request:
+  # Called by the image build, which publishes nothing unless this passes.
+  workflow_call:
 
 permissions:
   contents: read
@@ -32,10 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
-
-      - name: Generate coverage report
+      # One run: the coverage run IS the test run, and fails the job like it.
+      - name: Run tests with coverage
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov

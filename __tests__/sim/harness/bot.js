@@ -123,8 +123,23 @@ export const migrate = async ({ cwd = process.cwd(), env }) => {
  * Start the bot. `cwd` may be another checkout — an older release, for a rollout.
  * @returns the process, with its log and ways to wait on it
  */
-export const startBot = ({ cwd = process.cwd(), env, label = 'bot' }) => {
-    const child = spawn(process.execPath, ['--require', PRELOAD, 'server.js'], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+/**
+ * The command that runs the bot: `node server.js` in a checkout, or — with `image` — the Docker
+ * image itself, through its own entrypoint (migrations first, then the bot), exactly as it is
+ * deployed. The preload goes in through NODE_OPTIONS, so the image needs no change for it.
+ */
+const command = ({ cwd, env, image, name }) => {
+    if (!image) return [process.execPath, ['--require', PRELOAD, 'server.js'], { cwd, env }];
+    const pass = Object.entries({ ...env, NODE_OPTIONS: '--require /sim/preload.cjs' })
+        .filter(([key]) => !['PATH', 'HOME'].includes(key))
+        .flatMap(([key, value]) => ['-e', `${key}=${value}`]);
+    return ['docker', ['run', '--rm', '--name', name, '--network', 'host', '-v', `${PRELOAD}:/sim/preload.cjs:ro`, ...pass, image], { env: process.env }];
+};
+
+export const startBot = ({ cwd = process.cwd(), env, label = 'bot', image = null }) => {
+    const name = `livck-sim-${env.DB_DATABASE}-${label}`;
+    const [file, args, options] = command({ cwd, env, image, name });
+    const child = spawn(file, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
     const lines = [];
     // SIM_LOG_DIR keeps every bot's whole log, one file per database and process — what CI
     // uploads when a scenario fails.
@@ -192,8 +207,9 @@ export const startBot = ({ cwd = process.cwd(), env, label = 'bot' }) => {
         /** SIGTERM and wait — a deploy. */
         async stop({ timeout = 20_000 } = {}) {
             if (exit) return exit;
-            child.kill('SIGTERM');
-            const timer = setTimeout(() => child.kill('SIGKILL'), timeout);
+            if (image) spawn('docker', ['stop', '-t', String(Math.round(timeout / 1000)), name], { stdio: 'ignore' });
+            else child.kill('SIGTERM');
+            const timer = setTimeout(() => (image ? spawn('docker', ['kill', name], { stdio: 'ignore' }) : child.kill('SIGKILL')), timeout + 5000);
             await exited;
             clearTimeout(timer);
             return exit;
@@ -202,7 +218,8 @@ export const startBot = ({ cwd = process.cwd(), env, label = 'bot' }) => {
         /** SIGKILL — the host died. */
         async kill() {
             if (exit) return exit;
-            child.kill('SIGKILL');
+            if (image) spawn('docker', ['kill', name], { stdio: 'ignore' });
+            else child.kill('SIGKILL');
             return exited;
         },
 
