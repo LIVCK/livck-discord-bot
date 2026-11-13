@@ -120,8 +120,13 @@ export const createWorld = async ({ env: overrides = {}, discord: discordOptions
                 + (last.length > 30 ? `\n  … and ${last.length - 30} more` : '') + world.report());
         },
 
-        /** With nothing changing, `cycles` cycles may not send Discord a single request. */
-        async quiet(bot, cycles = 3) {
+        /**
+         * With nothing changing, `cycles` cycles may not send Discord a single request. `settle`
+         * cycles go first: after a crash the new process resends, once, what it cannot know
+         * arrived — that is a catch-up, and only what comes after it counts as noise.
+         */
+        async quiet(bot, cycles = 3, { settle = 0 } = {}) {
+            if (settle > 0) await bot.cycles(settle);
             const since = Date.now();
             await bot.cycles(cycles);
             const requests = discord.requestsSince(since, (e) => e.channelId);

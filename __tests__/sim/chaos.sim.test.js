@@ -81,7 +81,7 @@ const runOnce = async (seed) => {
         discord.heal();
         for (const channel of channels) if (discord.channel(channel).access !== 'ok') discord.setAccess(channel, 'ok');
         await world.converge({ timeout: 120_000 });
-        await world.quiet(bot);
+        await world.quiet(bot, 4, { settle: 3 });
         world.clean();
         await bot.stop();
     } catch (error) {

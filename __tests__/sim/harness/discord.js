@@ -465,6 +465,9 @@ export const startSimDiscord = async ({ memberGraceMs = 3000, heartbeatMs = 5000
             }
             if (packet.op === 2) {
                 ws.identified = true;
+                // A new session may be a new process, which cannot know whether the last write of
+                // the one before reached Discord: one resend of each message is its due.
+                for (const message of messages.values()) message.clientKnows = false;
                 const member = [...guilds.values()].filter((g) => g.member);
                 send(ws, {
                     op: 0, t: 'READY', s: ++sequence, d: {
