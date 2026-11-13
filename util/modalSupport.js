@@ -1,24 +1,22 @@
 /**
  * Does this discord.js still understand the modals the bot builds?
  *
- * `/livck subscribe` uses Type 18 (Label) components, which the pinned discord.js does not
- * support, so `scripts/patch-discordjs.js` rewrites two of its files at postinstall. Both are
- * load-bearing and both fail silently:
+ * `/livck subscribe` uses Type 18 (Label) components. discord.js reads them itself from 14.23
+ * on; before that `scripts/patch-discordjs.js` rewrote two of its files at postinstall, and
+ * both rewrites failed silently whenever the source had moved or postinstall never ran.
+ * The patch is gone, but the two failures it guarded against are the same for any
+ * discord.js that does not read Labels:
  *
- *   ModalSubmitInteraction.transformComponent — without it a Label yields no customId at all,
- *   every field is skipped, and subscribe answers "error" for ever. No subscription can be
- *   created by anyone.
+ *   ModalSubmitInteraction.transformComponent — a Label yields no customId at all, every
+ *   field is skipped, and subscribe answers "error" for ever. No subscription can be created
+ *   by anyone.
  *
- *   ModalSubmitFields — without it `interaction.fields.getTextInputValue` throws a TypeError,
- *   which breaks adding or editing a custom link and changing the API token.
+ *   ModalSubmitFields — `interaction.fields.getTextInputValue` cannot find the field, which
+ *   breaks adding or editing a custom link and changing the API token.
  *
- * The patch script warns and exits 0 when it cannot find what to rewrite, and node_modules
- * restored from a build cache never runs postinstall at all. Either way the bot starts, looks
- * healthy, and is missing the only way to add a status page.
- *
- * So this asks the library a question instead of grepping its source: given exactly the shape
- * Discord sends, does it come back readable? A rewritten patch, a different discord.js, a
- * cached install — all of them answer honestly.
+ * Neither shows at startup; the bot comes up healthy and missing the only way to add a status
+ * page. So this asks the library at boot, with exactly the shape Discord sends, and refuses
+ * to start on one that gets it wrong — a downgrade, a lock file out of step, a cached install.
  */
 
 import { ModalSubmitInteraction, ModalSubmitFields } from 'discord.js';
@@ -73,7 +71,7 @@ export const requireModalSupport = () => {
 
     console.error('discord.js is missing the Type 18 modal support this bot needs:');
     for (const problem of problems) console.error(`  - ${problem}`);
-    console.error('Run `node scripts/patch-discordjs.js` (npm install does it automatically).');
+    console.error('It needs discord.js 14.23 or later (package-lock.json has 14.28.1); run `npm ci`.');
 
     // Unconditionally, like every other startup gate. It was skipped under NODE_ENV=test,
     // which made the one thing worth asserting about a gate — that it actually stops the boot

@@ -88,7 +88,12 @@ e2e('an incident from first report to resolution', () => {
         ({ handleAlerts, clearCloseoutCooldowns } = await import('../../handlers/handleAlerts.js'));
 
         const { Client, GatewayIntentBits } = await import('discord.js');
-        client = new Client({ intents: [GatewayIntentBits.Guilds] });
+        // Configured like production (discord/restPolicy.js): a 429 is final, refused requests are
+        // collected. What Discord accepts is only worth proving for the client the bot really runs.
+        const { createRestPolicy } = await import('../../discord/restPolicy.js');
+        const restPolicy = createRestPolicy();
+        client = new Client({ intents: [GatewayIntentBits.Guilds], rest: restPolicy.options });
+        restPolicy.attach(client.rest);
         await client.login(credentials.DISCORD_BOT_TOKEN);
         channel = await client.channels.fetch(credentials.TEST_CHANNEL_ID);
 
@@ -255,6 +260,44 @@ e2e('an incident from first report to resolution', () => {
         const stamps = messages.map((m) => m.embeds[0].timestamp).map((t) => new Date(t).getTime());
 
         expect(stamps).toEqual([...stamps].sort((a, b) => a - b));
+    }, 180000);
+
+    test('a correction to the text reaches both the announcement and an old reply', async () => {
+        // Operators fix typos, add detail, and correct what they first got wrong — hours after
+        // the update was posted. A feed that froze each message at the text it was born with
+        // would leave the channel disagreeing with the status page for the rest of the
+        // incident, and the reply nobody looks at again is exactly where that hides.
+        //
+        // Nothing here changes STATE. Only the prose moves, which is the whole point: the
+        // content hash has to notice a body edit on its own.
+        const before = await rows();
+        const original = atStage(3);
+
+        const corrected = {
+            ...original,
+            body: { de: 'KORREKTUR: Ein Transceiver, nicht die Karte.' },
+            updates: original.updates.map((u, i) => i === 0
+                ? { ...u, body: { de: 'KORREKTUR: betroffen war nur er1, nicht der Standort.' } }
+                : u),
+        };
+
+        await cycle([corrected]);
+
+        // Nothing new was posted — the same messages now say something else.
+        const after = await rows();
+        expect(after.map((r) => r.messageId)).toEqual(before.map((r) => r.messageId));
+
+        const parent = await fetchFresh(after[0].messageId);
+        const firstReply = await fetchFresh(after[1].messageId);
+
+        expect(parent.embeds[0].description).toContain('KORREKTUR: Ein Transceiver');
+        expect(firstReply.embeds[0].description).toContain('KORREKTUR: betroffen war nur er1');
+
+        // And a second pass over the corrected text stays silent, so a correction costs one
+        // edit and not one per cycle for ever after.
+        const stamp = (await fetchFresh(after[0].messageId)).editedTimestamp;
+        await cycle([corrected]);
+        expect((await fetchFresh(after[0].messageId)).editedTimestamp).toBe(stamp);
     }, 180000);
 
     test('and when the incident leaves the payload, nothing is repeated', async () => {

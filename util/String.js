@@ -9,7 +9,10 @@ export const normalizeUrl = (url, ignorePath = false) => {
 
         const parsedUrl = new URL(url);
 
-        let normalized = `${parsedUrl.protocol}//${parsedUrl.hostname}${ignorePath ? '' : parsedUrl.pathname}`;
+        // `host`, not `hostname`: a status page on its own port (`https://status.example.com:8443`)
+        // was subscribed as the same host without it — a different server, or none. A default
+        // port is not part of `host`, so every URL without an explicit port is unchanged.
+        let normalized = `${parsedUrl.protocol}//${parsedUrl.host}${ignorePath ? '' : parsedUrl.pathname}`;
 
         if (normalized.endsWith('/')) {
             normalized = normalized.slice(0, -1);

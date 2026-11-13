@@ -7,9 +7,9 @@ WORKDIR /opt/app
 COPY . /opt/app
 
 # `npm ci`, not `npm install`: it installs exactly what package-lock.json says and fails when
-# the lock and package.json disagree. That matters more here than usual — the postinstall step
-# rewrites two files inside discord.js, so the bot is tied to one exact version of its source.
-# A resolved-fresh install picks up 14.27, where those lines have moved, and the patch fails.
+# the lock and package.json disagree. discord.js in particular: the bot refuses to start on a
+# version that cannot read the subscribe modal (util/modalSupport.js), and discord/restPolicy.js
+# is written against how @discordjs/rest 2.6 answers a 429.
 RUN npm ci --omit=dev
 
 COPY ./docker/entrypoint.sh /opt/app/entrypoint.sh

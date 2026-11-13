@@ -68,6 +68,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleAlerts } = await import('../../handlers/handleAlerts.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { HttpError } = await import('../../util/errors.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -116,6 +118,7 @@ const subscription = (overrides = {}) => ({
 });
 
 beforeEach(() => {
+    resetDelivery();
     api.responses = { alerts: { data: [alert()] } };
     api.calls = [];
 
@@ -313,9 +316,12 @@ describe('channel problems', () => {
         expect(db.destroyed).toEqual([1]);
     });
 
-    test('losing access removes the subscription', async () => {
-        await handleAlerts(7, clientThatFails(channelError(50001)));
-        expect(db.destroyed).toEqual([1]);
+    test('losing access keeps the subscription', async () => {
+        // 50001 is a channel the bot can no longer SEE — a category made private, a role
+        // edited. The channel is still there, and deleting the subscription cost the guild its
+        // setup over a permission it could fix in a minute. It backs off instead.
+        await expect(handleAlerts(7, clientThatFails(channelError(50001)))).resolves.toBeUndefined();
+        expect(db.destroyed).toEqual([]);
     });
 
     test('an unrecognised Discord error leaves the subscription alone', async () => {

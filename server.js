@@ -23,23 +23,29 @@ try {
 }
 
 const bot = (await import('./discord/bot.js')).default;
-const { startUpdateLoop, stopUpdateLoop } = await import('./services/updateLoop.js');
+const { startUpdateLoop, stopUpdateLoop, whenCycleDone } = await import('./services/updateLoop.js');
+const { drainDeliveries } = await import('./util/delivery.js');
 
-const client = await bot(models);
+// Bound late: the shutdown needs the client to close it. A gateway lost before that is a
+// failed login, which bot.js already treats as fatal.
+let shutdown = null;
+const client = await bot(models, {
+    onGatewayLost: (reason) => (shutdown ? shutdown(`Discord gateway ${reason}`, 1) : process.exit(1)),
+});
 
 startUpdateLoop(client);
 
 // Stopping on request rather than being killed — see util/shutdown.js.
-const { createShutdown } = await import('./util/shutdown.js');
+const { createBotShutdown } = await import('./util/shutdown.js');
 const cache = (await import('./database/redis.js')).default;
 
-const shutdown = createShutdown({
-    stopLoop: stopUpdateLoop,
-    close: [
-        () => client.destroy(),
-        () => models.database.close(),
-        () => (cache.isOpen ? cache.quit() : Promise.resolve()),
-    ],
+shutdown = createBotShutdown({
+    client,
+    stopUpdateLoop,
+    whenCycleDone,
+    drainDeliveries,
+    closeDatabase: () => models.database.close(),
+    cache,
 });
 
 for (const signal of ['SIGTERM', 'SIGINT']) {

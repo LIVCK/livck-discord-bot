@@ -15,7 +15,8 @@ import logger from '../util/logger.js';
  * `disableOfflineQueue` turns that into an immediate rejection, which callers can handle.
  */
 const client = redis.createClient({
-    url: `redis://${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    // REDIS_DB picks a logical database (default 0). The simulation gives every scenario its own.
+    url: `redis://${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}${process.env.REDIS_DB ? `/${process.env.REDIS_DB}` : ''}`,
     disableOfflineQueue: true,
     socket: {
         connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT_MS || 5000),

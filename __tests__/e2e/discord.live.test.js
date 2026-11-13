@@ -154,9 +154,18 @@ e2e('against a real Discord bot', () => {
         process.env.DISCORD_BOT_TOKEN = credentials.DISCORD_BOT_TOKEN;
         process.env.DISCORD_CLIENT_ID = credentials.DISCORD_CLIENT_ID;
 
-        const { Client, GatewayIntentBits } = await import('discord.js');
-        client = new Client({ intents: [GatewayIntentBits.Guilds] });
+        const { Client, Events, GatewayIntentBits } = await import('discord.js');
+        // Configured like production (discord/restPolicy.js): a 429 is final, refused requests are
+        // collected. What Discord accepts is only worth proving for the client the bot really runs.
+        const { createRestPolicy } = await import('../../discord/restPolicy.js');
+        const restPolicy = createRestPolicy();
+        client = new Client({ intents: [GatewayIntentBits.Guilds], rest: restPolicy.options });
+        restPolicy.attach(client.rest);
+        // The event discord/bot.js listens on. `ready` was renamed in 14.22 and fires only
+        // under the new name in 15; a login that never got here would hang the suite.
+        const ready = new Promise((resolve) => client.once(Events.ClientReady, resolve));
         await client.login(credentials.DISCORD_BOT_TOKEN);
+        await ready;
 
         channel = await client.channels.fetch(credentials.TEST_CHANNEL_ID);
 

@@ -70,6 +70,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleAlerts, clearCloseoutCooldowns } = await import('../../handlers/handleAlerts.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { ALERT_KIND, BODY_FORMAT, SOURCE, STATUS, makeAlert, makeSnapshot, makeUpdate } =
     await import('../../dto/statuspage.js');
 
@@ -125,6 +127,7 @@ const trackedMessage = (serviceId, ageHours = 2) => ({
 });
 
 beforeEach(() => {
+    resetDelivery();
     // A vanished alert is only re-asked about every CLOSEOUT_RECHECK_MS; the cooldown lives in
     // the module, so consecutive tests reusing an alert id would throttle each other.
     clearCloseoutCooldowns();
@@ -346,6 +349,33 @@ describe('a channel that fails during the close-out', () => {
 
         expect(db.destroyed).toHaveLength(REAP_LIMIT);
         resetReaper();
+    });
+});
+
+describe('a channel sitting out its delivery backoff', () => {
+    test('is not the reason the status page is asked again every cycle', async () => {
+        // Two threads whose alerts are gone, in a channel that refuses the bot. The first
+        // ending fails and backs the channel off. Every cycle after that, the second one used
+        // to clear its cooldown, ask the status page, find the channel in backoff and forget
+        // the attempt again: one detail request per vanished alert per cycle, for the three
+        // days of the window — the flood CLOSEOUT_RECHECK_MS exists to stop.
+        db.messages.push(trackedMessage('inc-1'), { ...trackedMessage('inc-2'), messageId: 'msg-2' });
+        provider.closed['inc-1'] = incident({ state: 'resolved', updates: [] });
+        provider.closed['inc-2'] = incident({ id: 'inc-2', state: 'resolved', updates: [] });
+
+        const refusing = {
+            channels: {
+                fetch: async (id) => ({
+                    id,
+                    send: async () => { throw Object.assign(new Error('Missing Permissions'), { code: 50013, status: 403 }); },
+                    messages: { edit: async () => { throw Object.assign(new Error('Missing Permissions'), { code: 50013, status: 403 }); } },
+                }),
+            },
+        };
+
+        for (let i = 0; i < 5; i += 1) await handleAlerts(7, refusing);
+
+        expect(provider.closedCalls).toEqual(['inc-1']);
     });
 });
 

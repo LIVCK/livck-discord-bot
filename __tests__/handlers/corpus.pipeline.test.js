@@ -20,6 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { jest } from '@jest/globals';
+import { updateLikeSequelize } from '../fixtures/memoryModels.js';
 
 const CORPUS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/corpus');
 const files = fs.readdirSync(CORPUS).filter((f) => f.endsWith('.json') && f.startsWith('cloud-')).sort();
@@ -70,7 +71,7 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                     // and would have failed in CI from then on, at no particular time.
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    update: async function (fields) { Object.assign(this, fields); this.updatedAt = new Date(); },
+                    update: async function (fields) { return updateLikeSequelize(this, fields); },
                     destroy: async function () { db.messages = db.messages.filter((m) => m !== this); },
                 };
                 db.messages.push(record);
@@ -81,6 +82,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery } = await import('../../util/delivery.js');
 const { toSnapshot } = await import('../../providers/cloud.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -124,6 +127,7 @@ describe.each(files)('%s', (file) => {
     const payload = JSON.parse(fs.readFileSync(path.join(CORPUS, file), 'utf8'));
 
     beforeEach(() => {
+        resetDelivery();
         db.messages = [];
         db.destroyed = [];
         nextRowId = 1;

@@ -12,6 +12,12 @@ status pages just as much.
 
 ### Added
 
+- **A simulation of production in CI.** The real bot process runs against a simulated Discord
+  (REST and gateway) and simulated status pages, with a real database and Redis. A referee
+  checks every request the bot makes, and the expected contents of every channel are worked
+  out from the simulated world and compared — through incidents, kicks, permission changes,
+  network faults, crashes, load, a rollout from the deployed version and seeded chaos. See
+  `__tests__/sim/README.md`. `REDIS_DB` selects a Redis database other than 0.
 - **LIVCK Cloud status pages.** Which product a page runs is detected from response headers on
   first contact and stored, so `/livck subscribe` is unchanged for customers: paste a URL, done.
 - **Threads are finished when their alert ends.** The Cloud drops an incident from
@@ -47,6 +53,95 @@ status pages just as much.
 
 ### Fixed
 
+- **An alert taken off the page takes even a message the bot never got the id of.** Posted with
+  the answer lost, then taken down before a retry learned the id, the announcement used to stay.
+  The bot now finds its own messages among the channel's recent ones by the alert's link.
+- **An announcement is never left without its ending after a crash.** The row that remembers a
+  message is written before the message is sent, marked pending, and confirmed after. A bot
+  killed in between used to leave an announcement no later process knew about; when its incident
+  resolved before the restart, the thread said "investigating" for good. A message recovered
+  that way is checked against what it should show, and edited if Discord handed back an older
+  version of it, and posted under a fresh nonce if it was deleted meanwhile (Discord answers a
+  nonce whose message is gone with 10008 instead of posting).
+- **A lost answer to an edit can no longer leave a message showing the wrong state.** The stored
+  content hash is forgotten before each edit and written again once Discord confirms, so a page
+  that changed and then changed back is not mistaken for unchanged.
+- **A status page on its own port can be subscribed.** The URL was normalised to its host
+  name alone, so `https://status.example.com:8443` was saved — and polled — without the port.
+- **A message is not posted twice when the bot dies right after posting it.** Killed between
+  Discord making a message and the bot recording it, the next process posted it again. The
+  first nonce of every message is now derived from what the message is, so any process that
+  tries to post it asks Discord for the same one; a message being reposted on purpose (an
+  admin deleted it) still gets a fresh nonce.
+- **A refused request reached the bot without Discord's error code.** The refused-request
+  summary read the response body to name the code, but discord.js hands its listeners the body
+  it is about to read itself; every 401/403/429 then failed with an internal assertion instead
+  of `Missing Access` or `Missing Permissions`, so a channel the bot could not see was never
+  recognised as one. The summary names status and route only now.
+- **A channel the bot can no longer see keeps its subscription.** Missing Access (50001) deleted
+  the subscription as if the channel were gone, so making a category private for a moment, or
+  editing the bot's role, cost a guild its whole setup. The channel now backs off — 1 minute
+  up to 6 hours — and any channel or role change in that guild, or any `/livck` there, lets it
+  try again at once (read from the gateway itself: discord.js reports no change for a channel it
+  could not see, which is the one that matters). Only a deleted channel (10003) still removes a subscription.
+- **A bot removed from a server stops asking it.** Kicked while running, the server's
+  subscriptions are deleted the moment Discord reports it; an outage, which Discord reports
+  differently, deletes nothing. Kicked while offline, the server is missing from the list
+  Discord sends at login (or on reconnecting, where discord.js itself would have kept believing
+  in it), and its subscriptions are skipped — no request at all — but kept,
+  because a bot holding the wrong token sees the same and must not delete on it. Invited back,
+  they resume by themselves.
+- **One channel could stop the bot for everyone.** A cycle waited for its slowest page before
+  the next one was scheduled, and inside a page every channel waited for the one before it.
+  discord.js retries a 429 without limit (and without emitting `rateLimited`), so a single
+  rate-limited or silent channel held every status page for as long as Discord kept refusing
+  it — in production twenty to fifty minutes at a time, which is why an incident could take
+  ten minutes to reach a channel while the log showed nothing but INVALID REQUEST warnings.
+  Now every delivery has its own deadline, the channels of a page are delivered concurrently,
+  a page still running is skipped instead of awaited, and a 429 Discord actually sends is
+  final instead of retried for ever.
+- **A channel the bot may not post in was asked again every 15 seconds**, for ever, each
+  refusal counting towards Discord's IP ban. A failing channel now backs off on its own
+  (30s up to 10 minutes) without affecting its page; the first success or any `/livck` in
+  that guild clears it.
+- The subscription removal brake let more through than its limit once deliveries ran in
+  parallel (measured: 30 removed with a limit of 25). Asking and counting is one step now.
+- **A shutdown closed the database under the cycle still running.** The loop stopped
+  scheduling and the connections were closed in the same breath, so a message sent in that
+  moment had no row and was posted again by the next process. Shutdown now waits for the
+  cycle and for deliveries that outlived it, bounded by `SHUTDOWN_DEADLINE_MS`.
+- A database outage printed some forty lines of stack trace every 15 seconds. It is one line
+  per outage now, and one when the database is back.
+- `DB_PORT` and `DB_DIALECT` were honoured by `migrate.js` but ignored by the bot itself, so
+  a database outside port 3306 was migrated and then never reached.
+- **In a burst every channel was reported as not answering, and alerts came last.** Discord
+  takes 50 requests per second and discord.js queues the rest, with each delivery's deadline
+  running in that queue. The first cycle after a restart, with every heartbeat due, sent them
+  all in together: each one overran, each channel was logged as silent, and an incident alert
+  stood behind every status edit. At most 25 deliveries (`DISCORD_DELIVERY_SLOTS`) are now with
+  discord.js at a time, the deadline starts when a delivery gets its slot, and alerts go first.
+- **A lost gateway went unnoticed.** Status updates go over REST and kept arriving, while
+  slash commands, which only come over the gateway, were silently no longer answered. After a
+  close discord.js does not recover from (a reset token, an intent not enabled) or ten minutes
+  without a connection (`GATEWAY_STALL_MINUTES`), the bot now shuts down cleanly with exit code
+  1 for its supervisor to restart. A drop lasting more than 30 seconds is logged once, and so is
+  its end; the routine reconnects Discord asks for say nothing.
+- **A message could be posted several times when Discord's answer got lost.** A POST that
+  reaches Discord but whose answer does not — a network blip on the way back, or Discord
+  answering slower than the client's 15 seconds — was sent again by discord.js, up to three
+  times, and once more by the delivery's backoff later. Against the real API with the answers
+  dropped: six copies of one incident, one of them recorded. Every new message now carries a
+  nonce with `enforce_nonce`, kept from its first attempt until its row is written, so Discord
+  returns the message it already made instead of making another.
+- A message Discord accepted while its row could not be written (database gone at the wrong
+  moment) is taken back, instead of being posted a second time on the next cycle.
+- A shutdown could let a page that overran its deadline start a delivery after the drain had
+  begun, which is the post-without-a-row the drain exists to prevent. Deliveries asked for once
+  the drain has started are not started.
+- A failed delivery after a 429 logged an empty reason (`(RateLimitError[…]): , next attempt`).
+- Waits discord.js sits out by itself were logged one line each, so a heartbeat across a
+  few hundred channels wrote a few hundred lines. They are counted per route now and appear
+  in the once-a-minute Discord summary, next to the refused requests.
 - **Automatic pausing never triggered.** Two independent causes: `LIVCK.get()` returned
   `{data: []}` on every error instead of throwing (so an unreachable page looked like an empty
   one), and `server.js` did not load `failureCount`/`lastFailure`, leaving the counter
@@ -63,6 +158,11 @@ status pages just as much.
 
 ### Changed
 
+- **The Docker image is only published from code that passed.** `latest` used to be pushed on
+  every push to `main`, whatever the tests said, a closed pull request published an image
+  tagged `merge`, and release tags built none. Now the tests and the simulation run first, the
+  image is built and simulated itself, and only then pushed — `latest` from `main`, `1.2.3` and
+  `1.2` from a release tag. Pull requests build and simulate the image without pushing it.
 - **Status messages are only edited when they actually change.** Each `Message` stores a hash of
   its last payload. Combined with dropping the redundant `channel.messages.fetch()` before every
   edit, this removes almost all Discord API traffic in steady state — the bot previously spent
@@ -91,8 +191,15 @@ status pages just as much.
   `debug`, leaving one summary line per cycle. Expected network failures log a single line with
   no stack trace, and repeats for the same page are suppressed until the message changes — a
   dead domain went from ~5760 log entries a day to roughly ten.
-- Discord rate limiting is now reported through a `rateLimited` listener; previously discord.js
-  queued silently and the only symptom was updates arriving later and later.
+- **discord.js 14.28.1** (from 14.22.1). It reads the Type 18 Label components of the subscribe
+  modal itself, so `scripts/patch-discordjs.js` and the `postinstall` step that rewrote two of
+  its files are gone, and with them the pin to one exact version of its source. The startup
+  check in `util/modalSupport.js` stays and refuses a discord.js that cannot read the modal.
+  Replies use `flags: MessageFlags.Ephemeral` and the login line listens for `clientReady`:
+  `ephemeral` and `ready` print deprecation warnings in 14 and do nothing in 15.
+- Discord rate limiting is now reported: waits per route, and refused requests per route and
+  Discord error code, in one line per minute. Previously discord.js queued silently and the
+  only symptom was updates arriving later and later.
 
 ### Security
 
@@ -102,6 +209,9 @@ status pages just as much.
   destroyed a subscription and `edit_api_token_` read and wrote a status page API token that
   way. Every id-driven path is now scoped to `interaction.guildId`, matching what the
   slash-command paths already did.
+- undici is 6.29 through discord.js 14.28, which closes the two advisories against the version
+  14.22 shipped (unbounded decompression of a response, and a WebSocket frame length that
+  crashes the parser).
 - Discord's `invalidRequestWarning` is now armed (`invalidRequestWarningInterval: 250`). It was
   disabled by default, and it is the only advance warning before Discord blocks a bot's IP at
   the Cloudflare layer for accumulating 401/403/429 responses — which the bot produces whenever

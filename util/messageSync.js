@@ -37,15 +37,19 @@ export const UNKNOWN_CHANNEL = 10003;
 export const MISSING_ACCESS = 50001;
 
 /**
- * The channel is gone for good as far as this bot is concerned — deleted, or no longer
- * visible to it. The subscription can never be delivered again, so the handlers drop it.
+ * The channel is gone for good — deleted. The subscription can never be delivered again, so
+ * the handlers drop it.
  *
- * Deliberately NOT in here: 50013 (Missing Permissions), which is what a channel where the
- * bot may look but not post returns. That is a server setting an admin can fix in seconds,
- * and deleting the subscription over it would be unrecoverable.
+ * Deliberately NOT in here:
+ * - 50013 (Missing Permissions): the bot may look but not post. A server setting an admin can
+ *   fix in seconds, and deleting the subscription over it would be unrecoverable.
+ * - 50001 (Missing Access): the bot can no longer see the channel. Just as often a setting —
+ *   a category made private, a role edited, the bot's role removed for an afternoon — and the
+ *   channel is still there. It used to delete the subscription, so one careless permission
+ *   change cost a guild its whole setup. It backs off instead, on a ladder of its own (see
+ *   util/delivery.js).
  */
-export const isChannelGone = (error) =>
-    error?.code === UNKNOWN_CHANNEL || error?.code === MISSING_ACCESS;
+export const isChannelGone = (error) => error?.code === UNKNOWN_CHANNEL;
 
 /**
  * Stable fingerprint of what would be sent to Discord.
@@ -73,6 +77,97 @@ export const hashPayload = ({ embeds = [], components = [], content = '' } = {})
 
     return crypto.createHash('sha256').update(JSON.stringify(shape)).digest('hex');
 };
+
+/**
+ * A message that reached Discord although the answer did not.
+ *
+ * A POST can arrive and its answer get lost: a network blip on the way back, or Discord itself
+ * answering slower than the client's 15 seconds. @discordjs/rest then sends the same POST again,
+ * up to three times, and after that the delivery's backoff tries once more on a later cycle.
+ * Every one of them was a new message. Measured against the real API with the answers dropped
+ * on the way back: one incident, six copies in the channel, one of them recorded.
+ *
+ * Discord's answer is a nonce with `enforce_nonce`: the same nonce from the same bot within a
+ * few minutes returns the message it already made instead of making another. So each message
+ * keeps ONE nonce from its first attempt until its row is written — across the library's
+ * retries and the backoff's — and only then is it forgotten, so a message an admin deleted is
+ * posted again with a fresh one.
+ *
+ * THE SAME NONCE IN THE NEXT PROCESS, TOO. A process killed between the POST and the row —
+ * SIGKILL, an OOM, the host going away — left the message in the channel and nothing in the
+ * database, and the next process posted it again with a fresh nonce. The simulation in
+ * __tests__/sim does exactly that mid-burst and found the duplicate replies. So the first
+ * nonce for a message is derived from what the message IS (subscription, category, alert or
+ * update id): every process that tries to post it uses the same one.
+ *
+ * Except when the message is being posted AGAIN on purpose — an admin deleted it, or the bot
+ * took it back because its row could not be written. Then the old nonce would hand back the
+ * old, deleted message, so those get a random one. That is remembered in memory only; after a
+ * restart the derived nonce comes back, the edit after it finds the message gone (10008), and
+ * the repost that follows gets its random nonce. One cycle late, never a duplicate.
+ */
+const pendingNonces = new Map();
+const reposting = new Set();
+const MAX_PENDING_NONCES = 10_000;
+
+const keyOf = (create) => `${create.subscriptionId}:${create.category}:${create.serviceId ?? ''}`;
+
+const remember = (collection, key, value) => {
+    if (collection.size >= MAX_PENDING_NONCES) {
+        const oldest = collection.keys().next().value;
+        collection.delete(oldest);
+    }
+    if (collection instanceof Map) collection.set(key, value);
+    else collection.add(key);
+};
+
+/** At most 25 characters, which Discord allows for a nonce. */
+const derivedNonce = (key) => crypto.createHash('sha256').update(`livck-message:${key}`).digest('base64url').slice(0, 25);
+
+const nonceFor = (create) => {
+    const key = keyOf(create);
+    let nonce = pendingNonces.get(key);
+    if (!nonce) {
+        nonce = reposting.has(key) ? crypto.randomBytes(15).toString('base64url') : derivedNonce(key);
+        remember(pendingNonces, key, nonce);
+    }
+    return { key, nonce };
+};
+
+/** For tests: forget everything a process remembers, as a restart does. */
+export const clearPendingNonces = () => {
+    pendingNonces.clear();
+    reposting.clear();
+};
+
+/**
+ * Does the message Discord returned show what `payload` says? Compared on what a reader sees —
+ * text, embed titles, descriptions, fields, footers, colours, buttons — because Discord adds
+ * fields of its own (`type`, component ids) that a payload never has.
+ */
+const shows = (message, payload) => {
+    const plain = (item) => (item && typeof item.toJSON === 'function' ? item.toJSON() : item?.data ?? item);
+    const strip = (value) => (Array.isArray(value) ? value.map(strip)
+        : value && typeof value === 'object'
+            ? Object.fromEntries(Object.entries(value).filter(([k]) => !['id', 'type', 'timestamp', 'content_scan_version', 'proxy_url', 'proxy_icon_url', 'width', 'height', 'flags'].includes(k)).map(([k, v]) => [k, strip(v)]))
+            : value);
+    const view = (m) => JSON.stringify(strip({
+        content: m.content || '',
+        embeds: (m.embeds ?? []).map(plain),
+        components: (m.components ?? []).map(plain),
+    }));
+    try {
+        return view(message) === view(payload);
+    } catch {
+        return false;
+    }
+};
+
+/** What a row holds in place of a message id while its message may or may not exist yet. */
+export const PENDING = 'pending:';
+
+/** A row written before its message was sent, and not confirmed since. */
+export const isPending = (record) => typeof record?.messageId === 'string' && record.messageId.startsWith(PENDING);
 
 /** True when the stored message is older than the heartbeat interval. */
 const needsHeartbeat = (record, now) => {
@@ -153,21 +248,83 @@ export const syncMessage = async ({
         return 'skipped';
     }
 
-    if (!record) {
-        const sent = await (send ? send(payload, resolved) : resolved.send(payload));
-        await models.Message.create({ ...create, messageId: sent.id, contentHash: hash });
+    if (!record || isPending(record)) {
+        // WRITTEN DOWN BEFORE IT IS SENT. A row that only existed after the POST left nothing
+        // behind when the process died in between: the message stood in the channel, and if its
+        // incident resolved before the next process came up, no process ever looked at it again
+        // — an announcement stuck on "investigating" for good. The simulation in __tests__/sim
+        // found exactly that. Now the row says "maybe posted, with this nonce" first; whoever
+        // finds it posts with the same nonce, Discord hands back the message it already made,
+        // and the close-out can finish the thread like any other.
+        const { key, nonce: fresh } = nonceFor(create);
+        const nonce = record ? record.messageId.slice(PENDING.length) : fresh;
+        const row = record ?? await models.Message.create({ ...create, messageId: `${PENDING}${nonce}`, contentHash: null });
+        const post = (n) => {
+            const once = { ...payload, nonce: n, enforceNonce: true };
+            return send ? send(once, resolved) : resolved.send(once);
+        };
+        // A failure here leaves the row pending: maybe posted, maybe not. The next attempt finds
+        // out, with the same nonce.
+        let sent;
+        try {
+            sent = await post(nonce);
+        } catch (error) {
+            if (error?.code !== UNKNOWN_MESSAGE) throw error;
+            // The nonce names a message that has been deleted since — taken back after a failed
+            // write, or by an admin — and Discord refuses it with 10008 for a few minutes rather
+            // than posting anew (checked against the real API). A nonce of its own, then.
+            const again = crypto.randomBytes(15).toString('base64url');
+            await models.Message.update({ messageId: `${PENDING}${again}` }, { where: { id: row.id } });
+            row.messageId = `${PENDING}${again}`;
+            remember(pendingNonces, key, again);
+            sent = await post(again);
+        }
+        // A pending row means an earlier attempt may have made the message, and the nonce then
+        // hands back THAT message — with the content it had then, not this payload's. Recording
+        // this payload's hash for it made a stale message look current (the simulation's chaos
+        // found it). Its content is unknown, so the next cycle edits it to what it should be.
+        const confirmed = record && !shows(sent, payload) ? null : hash;
+        try {
+            await models.Message.update({ messageId: sent.id, contentHash: confirmed }, { where: { id: row.id } });
+            Object.assign(row, { messageId: sent.id, contentHash: confirmed });
+            pendingNonces.delete(key);
+        } catch (error) {
+            pendingNonces.delete(key);
+            remember(reposting, key);
+            // Discord has the message and the database does not, so nothing would ever edit
+            // it, and the next cycle — finding no row — would post it a second time. Take it
+            // back while the id is still known. If Discord refuses that too, the duplicate is
+            // unavoidable, and the line says which message it is.
+            try {
+                await resolved.messages.delete(sent.id);
+            } catch (deleteError) {
+                logger.warn(`[MessageSync] Message ${sent.id} was posted but not recorded, and could not be taken back: ${deleteError.message}`);
+            }
+            throw error;
+        }
         return 'created';
     }
 
     try {
+        // UNKNOWN UNTIL DISCORD SAYS SO. An edit whose answer is lost may have happened or not,
+        // and the hash still named the old content. If the page then went back to exactly that
+        // content, the next cycle compared, found "unchanged" and left the channel showing the
+        // edit in between — for good on an alert, until the heartbeat on a status. Forgetting
+        // the hash first makes the next cycle send it again whatever happened; the PATCH is
+        // idempotent. Found by the simulation in __tests__/sim (chaos, a lost answer, a crash).
+        await models.Message.update({ contentHash: null }, { where: { id: record.id } });
+        record.contentHash = null;
+
         // One PATCH. No preceding fetch — the message ID is all Discord needs.
         await resolved.messages.edit(record.messageId, payload);
         await touch(models, record, hash);
         return 'updated';
     } catch (error) {
         if (error.code === UNKNOWN_MESSAGE) {
-            // Someone deleted it in Discord; drop the row so the next cycle posts a new one.
+            // Someone deleted it in Discord; drop the row so the next cycle posts a new one —
+            // with a nonce of its own, or Discord would hand back the deleted one.
             await record.destroy();
+            if (create) remember(reposting, keyOf(create));
             logger.debug(`[MessageSync] Message ${record.messageId} is gone, will repost`);
             return 'recreate';
         }
@@ -175,4 +332,4 @@ export const syncMessage = async ({
     }
 };
 
-export default { hashPayload, syncMessage, isChannelGone, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };
+export default { hashPayload, syncMessage, isChannelGone, isPending, PENDING, UNKNOWN_MESSAGE, UNKNOWN_CHANNEL, MISSING_ACCESS };

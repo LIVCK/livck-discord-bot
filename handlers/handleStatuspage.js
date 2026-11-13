@@ -5,9 +5,10 @@ import { fetchSnapshot } from '../providers/index.js'
 import logger from '../util/logger.js'
 import { groupSubscriptions } from '../util/subscriptionGroups.js'
 import { syncMessage, isChannelGone } from '../util/messageSync.js'
-import { mayReap, recordReap } from '../util/subscriptionReaper.js'
+import { claimReap } from '../util/subscriptionReaper.js'
 import { withLocale } from '../util/Translation.js'
 import { withPageLock } from '../util/pageLock.js'
+import { deliver, forEachLimited, DELIVERY_CONCURRENCY, logDeliveryFailure, logDeliverySuccess } from '../util/delivery.js'
 
 /** Discord allows 5 buttons per row and 5 rows. */
 const MAX_BUTTONS = 25
@@ -154,13 +155,19 @@ const renderStatusPage = async (statuspageId, client) => {
             continue
         }
 
-        for (const subscription of subscriptions) {
+        // Concurrently, each with its own deadline: a channel that stalls holds up itself and
+        // nothing else. They were delivered one after the other, so the channel after a stuck
+        // one waited for it — see util/delivery.js.
+        await forEachLimited(subscriptions, DELIVERY_CONCURRENCY, async (subscription) => {
+            if (!subscription.eventTypes.STATUS) return
+
             try {
                 // Its own locale slot: the renderer selects a language and the delivery that
                 // follows awaits, and the loop runs 100 pages and both handlers concurrently.
                 // Without this the last flow to resume decides the language for all of them.
-                await withLocale(subscription.locale || 'de', () => deliverStatus(subscription, snapshot, client))
-                logger.resetOnce(`deliver:${subscription.id}`)
+                const outcome = await deliver(subscription, 'status', () =>
+                    withLocale(subscription.locale || 'de', () => deliverStatus(subscription, snapshot, client)))
+                if (outcome.status === 'done') logDeliverySuccess('status', subscription)
             } catch (error) {
                 if (isChannelGone(error)) {
                     logger.info(
@@ -168,25 +175,19 @@ const renderStatusPage = async (statuspageId, client) => {
                     )
                     // Braked: see util/subscriptionReaper.js. A wrong token makes EVERY channel
                     // answer 10003, and this is the line that would delete every subscription.
-                    if (!mayReap()) continue
+                    if (!claimReap()) return
                     await models.Subscription.destroy({ where: { id: subscription.id } })
-                    recordReap()
-                    continue
+                    return
                 }
 
                 // A delivery failure belongs to THIS channel, not to the status page, and it
                 // must not travel any further. Letting it out of the handler advanced the
                 // page's backoff, so a single guild that revoked "Send Messages" (50013) could
                 // pause the page and announce "unreachable" to every OTHER guild watching it.
-                // Logged once per subscription until the message changes, and cleared above on
-                // the first delivery that succeeds again.
-                logger.once(
-                    `deliver:${subscription.id}`, 'error',
-                    `[handleStatusPage] Could not deliver to channel ${subscription.channelId} ` +
-                    `(${error.code ?? error.name}): ${error.message}`
-                )
+                // The channel gets its own backoff instead (util/delivery.js).
+                logDeliveryFailure('handleStatusPage', 'status', subscription, error)
             }
-        }
+        })
     }
 
     // Every token/locale group failed: the page itself is the problem, so let the update

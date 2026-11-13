@@ -7,6 +7,7 @@
  */
 
 import { jest } from '@jest/globals';
+import { updateLikeSequelize } from '../fixtures/memoryModels.js';
 
 /** Controls what the stubbed LIVCK client returns, per test. */
 const api = {
@@ -56,13 +57,13 @@ jest.unstable_mockModule('../../models/index.js', () => ({
                 return [row ? 1 : 0];
             },
             create: async (row) => {
-                // Behaves like a Sequelize instance: update() persists and bumps updatedAt,
-                // which is what the dirty check and the heartbeat both read back.
+                // Behaves like a Sequelize instance: update() persists, and bumps updatedAt only
+                // when something changed, which is what the heartbeat reads back.
                 const record = {
                     id: db.messages.length + 1,
                     ...row,
                     updatedAt: new Date(),
-                    update: async (fields) => { Object.assign(record, fields); record.updatedAt = new Date(); },
+                    update: async (fields) => updateLikeSequelize(record, fields),
                     destroy: async () => { db.messages = db.messages.filter((m) => m !== record); },
                 };
                 db.messages.push(record);
@@ -73,6 +74,8 @@ jest.unstable_mockModule('../../models/index.js', () => ({
 }));
 
 const { handleStatusPage } = await import('../../handlers/handleStatuspage.js');
+// A failed delivery backs the channel off for the life of the process; each test starts clean.
+const { resetDelivery, setMembershipCheck } = await import('../../util/delivery.js');
 const { HttpError } = await import('../../util/errors.js');
 const { clearSnapshotCache } = await import('../../providers/index.js');
 
@@ -132,6 +135,7 @@ const categoriesResponse = (state = 'AVAILABLE') => ({
 });
 
 beforeEach(() => {
+    resetDelivery();
     api.responses = {
         categories: { 'cat-1': { id: 'cat-1', name: 'Platform' } },
         'category/cat-1/monitors': { data: [{ id: 'm1', name: 'API', state: 'AVAILABLE' }] },
@@ -465,14 +469,32 @@ describe('channel problems', () => {
         expect(db.destroyed).toEqual([1]);
     });
 
-    test('losing access removes the subscription', async () => {
+    test('a guild the bot is no longer in gets no request at all, and keeps its subscription', async () => {
+        // Kicked while the bot was offline: the guild list at login says so. Asking the
+        // channel anyway is one invalid request per cycle, and deleting on this basis is what
+        // a bot with the wrong token would do to every subscription — see guildMembership.js.
+        db.statuspage.Subscriptions = [
+            subscription({ id: 1, guildId: 'left', channelId: 'chan-left' }),
+            subscription({ id: 2, guildId: 'still-in', channelId: 'chan-in' }),
+        ];
+        setMembershipCheck((guildId) => guildId === 'still-in');
+
+        await handleStatusPage(7, makeClient());
+
+        expect(discord.sentTo).toEqual(['chan-in']);
+        expect(db.destroyed).toEqual([]);
+    });
+
+    test('losing access keeps the subscription', async () => {
+        // A channel the bot can no longer see is usually a permission, not a deleted channel.
+        // It backs off (util/delivery.js) and comes back once the permission does.
         const error = new Error('Missing Access');
         error.code = 50001;
         discord.channelError = error;
 
-        await handleStatusPage(7, makeClient());
+        await expect(handleStatusPage(7, makeClient())).resolves.toBeUndefined();
 
-        expect(db.destroyed).toEqual([1]);
+        expect(db.destroyed).toEqual([]);
     });
 
     test('any other Discord error leaves the subscription alone', async () => {

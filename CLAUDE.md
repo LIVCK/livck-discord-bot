@@ -53,6 +53,18 @@ fetch instead of two.
   announcement at all. See `services/statuspagePauseManager.js`.
 - **Embed limits** are enforced in `util/discordLimits.js`; Discord rejects an over-limit
   message whole, so an unguarded layout means the page posts nothing.
+- **One channel never holds up another.** Every delivery runs through `util/delivery.js`: a
+  deadline, one delivery at a time per subscription and lane (so a late answer is never
+  followed by a duplicate post), and a backoff for a channel that refuses. The channels of a
+  page go out concurrently, and the loop skips a page that is still running instead of
+  waiting for it. At most `DISCORD_DELIVERY_SLOTS` deliveries are with discord.js at once,
+  alerts first, so a burst queues in front of the deadline rather than inside it. A 429 Discord actually sends is final (`discord/restPolicy.js`) — discord.js
+  would otherwise retry it for ever, silently, and that is what froze the whole bot in
+  production. `__tests__/services/loopIsolation.test.js`, `loopSoak.test.js` and `loopBurst.test.js`
+  run the real discord.js client against `__tests__/fixtures/fakeDiscord.js` to hold this in place.
+- **Guilds the bot is not in** get no request at all (`discord/guildMembership.js`). A kick
+  reported live deletes that guild's subscriptions; a guild merely missing from the list at
+  login is skipped but never deleted — that is also what a bot with the wrong token sees.
 
 ### How an alert ends
 
@@ -174,6 +186,20 @@ timestamps are moved into the present, because the bot ignores anything outside 
 window and there is no other way to watch an old incident happen again. Everything else about
 alerts is checked at one instant; this is the only thing that checks the PROGRESSION, where
 every step depends on state written by the cycle before.
+
+**The simulation** (needs a MariaDB and a Redis it may use; see `__tests__/sim/README.md`): the
+real bot process against a simulated Discord — REST and gateway — and simulated status pages.
+A referee checks every request the bot makes (duplicates, orphaned replies, edits that change
+nothing, requests to guilds it left, size limits, the global rate limit); an oracle works out
+from the simulated world what every channel must contain and compares. Scenarios cover the
+incident lifecycle, kicks and permissions, every network fault, SIGTERM and SIGKILL mid-burst,
+`/livck subscribe` through real interactions, load, a rollout from the deployed version, and
+seeded chaos. CI runs it on every pull request (`.github/workflows/simulation.yml`).
+
+```bash
+npm run test:sim
+SIM_SEED=123456 npm run test:sim -- __tests__/sim/chaos.sim.test.js   # replay a chaos run
+```
 
 **Contract checks against the live APIs** (network only, no database):
 

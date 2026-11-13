@@ -7,7 +7,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { createShutdown } from '../../util/shutdown.js';
+import { createShutdown, createBotShutdown } from '../../util/shutdown.js';
 
 const harness = (overrides = {}) => {
     const events = [];
@@ -46,6 +46,33 @@ describe('on a signal', () => {
 
         expect(new Set(events)).toEqual(new Set(['stopLoop', 'discord', 'database', 'redis']));
         expect(exit).toHaveBeenCalledWith(0);
+    });
+});
+
+describe('leaving because something is broken', () => {
+    test('tears down the same way, and exits non-zero so the supervisor sees a failure', async () => {
+        // A gateway Discord will not let back in (util/gatewayWatch.js). Leaving with 0 would
+        // read as a requested stop, and a restart policy of on-failure would leave it stopped.
+        const { shutdown, events, exit } = harness();
+
+        await shutdown('gateway', 1);
+
+        expect(new Set(events)).toEqual(new Set(['stopLoop', 'discord', 'database', 'redis']));
+        expect(exit).toHaveBeenCalledWith(1);
+    });
+
+    test('keeps the code when the deadline cuts it short', async () => {
+        jest.useFakeTimers();
+        try {
+            const { shutdown, exit } = harness({ close: [() => new Promise(() => {})], deadlineMs: 100 });
+
+            shutdown('gateway', 1);
+            await jest.advanceTimersByTimeAsync(150);
+
+            expect(exit).toHaveBeenCalledWith(1);
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });
 
@@ -133,5 +160,91 @@ describe('with nothing to close', () => {
 
         expect(stopLoop).toHaveBeenCalled();
         expect(exit).toHaveBeenCalledWith(0);
+    });
+});
+
+describe('work still in flight', () => {
+    test('is waited for before anything is closed', async () => {
+        // A delivery can outlive its cycle now (util/delivery.js), and a message that reaches
+        // Discord after the database closed is posted without the row that remembers it — so
+        // the next process posts it a second time.
+        const events = [];
+        let finish;
+        const pending = new Promise((resolve) => { finish = resolve; });
+
+        const shutdown = createShutdown({
+            stopLoop: () => events.push('stopLoop'),
+            drain: [async () => { await pending; events.push('drained'); }],
+            close: [async () => { events.push('database'); }],
+            exit: () => {},
+            log: () => {},
+        });
+
+        const done = shutdown('SIGTERM');
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(events).toEqual(['stopLoop']);
+
+        finish();
+        await done;
+        expect(events).toEqual(['stopLoop', 'drained', 'database']);
+    });
+
+    test('is not waited for past the point where the connections could still be closed', async () => {
+        const events = [];
+        const exit = jest.fn();
+
+        const shutdown = createShutdown({
+            stopLoop: () => {},
+            drain: [() => new Promise(() => {})],
+            close: [async () => { events.push('database'); }],
+            deadlineMs: 400,
+            exit,
+            log: () => {},
+        });
+
+        await shutdown('SIGTERM');
+
+        expect(events).toEqual(['database']);
+        expect(exit).toHaveBeenCalledWith(0);
+    });
+});
+
+describe('the bot\'s own shutdown, as server.js assembles it', () => {
+    const parts = (events, { deliveryMs = 50 } = {}) => ({
+        client: {
+            gatewayWatch: { stop: () => events.push('gatewayWatch.stop') },
+            destroy: async () => { events.push('discord'); },
+        },
+        stopUpdateLoop: () => events.push('stopLoop'),
+        whenCycleDone: async () => { events.push('cycle done'); },
+        drainDeliveries: async () => {
+            await new Promise((resolve) => setTimeout(resolve, deliveryMs));
+            events.push('deliveries done');
+        },
+        closeDatabase: async () => { events.push('database'); },
+        cache: { isOpen: true, quit: async () => { events.push('redis'); } },
+        exit: () => events.push('exit'),
+        log: () => {},
+    });
+
+    test('lets the cycle and every delivery still out finish before anything closes', async () => {
+        // A delivery can outlive its cycle (util/delivery.js), and a message that reaches
+        // Discord after the database closed has no row: the next process posts it again.
+        const events = [];
+
+        await createBotShutdown(parts(events))('SIGTERM');
+
+        expect(events.slice(0, 4)).toEqual(['stopLoop', 'gatewayWatch.stop', 'cycle done', 'deliveries done']);
+        expect(new Set(events.slice(4, 7))).toEqual(new Set(['discord', 'database', 'redis']));
+        expect(events.at(-1)).toBe('exit');
+    });
+
+    test('stops watching the gateway before it closes it', async () => {
+        // Otherwise the closing connection reads as a lost one and asks for a restart.
+        const events = [];
+
+        await createBotShutdown(parts(events))('SIGTERM');
+
+        expect(events.indexOf('gatewayWatch.stop')).toBeLessThan(events.indexOf('discord'));
     });
 });

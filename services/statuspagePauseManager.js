@@ -25,6 +25,7 @@ import { classifyError } from '../util/errors.js';
 import logger from '../util/logger.js';
 import translation, { withLocale } from '../util/Translation.js';
 import cache from '../database/redis.js';
+import { deliver, forEachLimited, DELIVERY_CONCURRENCY } from '../util/delivery.js';
 
 /**
  * Wait before the next attempt, indexed by `backoffLevel - 1`.
@@ -190,34 +191,41 @@ export class StatuspagePauseManager {
                 where: { statuspageId: statuspage.id },
             });
 
-            for (const subscription of subscriptions) {
+            // Through the same delivery as every other status edit (util/delivery.js): with a
+            // deadline, concurrently, never alongside a render of the same message, and not at
+            // all for a channel that is sitting out a backoff. One-by-one and unbounded, a
+            // single silent channel held up the very page that had just become unreachable.
+            await forEachLimited(subscriptions, DELIVERY_CONCURRENCY, async (subscription) => {
                 try {
-                    const record = await models.Message.findOne({
-                        where: { subscriptionId: subscription.id, category: 'STATUS' },
+                    const outcome = await deliver(subscription, 'status', async () => {
+                        const record = await models.Message.findOne({
+                            where: { subscriptionId: subscription.id, category: 'STATUS' },
+                        });
+                        if (!record?.messageId || record.messageId.startsWith('pending:')) return false;
+
+                        const channel = await client.channels.fetch(subscription.channelId);
+                        if (!channel) return false;
+
+                        const existing = await channel.messages.fetch(record.messageId);
+                        const embed = existing?.embeds?.[0]?.toJSON?.();
+                        if (!embed) return false;
+
+                        const locale = subscription.locale || 'de';
+                        const note = withLocale(locale, () => translation.trans('messages.pause.footer'));
+
+                        const payload = {
+                            embeds: [{ ...embed, footer: { ...embed.footer, text: note } }],
+                            components: existing.components ?? [],
+                        };
+
+                        await channel.messages.edit(record.messageId, payload);
+                        await models.Message.update(
+                            { contentHash: hashPayload(payload) },
+                            { where: { id: record.id } }
+                        );
+                        return true;
                     });
-                    if (!record?.messageId) continue;
-
-                    const channel = await client.channels.fetch(subscription.channelId);
-                    if (!channel) continue;
-
-                    const existing = await channel.messages.fetch(record.messageId);
-                    const embed = existing?.embeds?.[0]?.toJSON?.();
-                    if (!embed) continue;
-
-                    const locale = subscription.locale || 'de';
-                    const note = withLocale(locale, () => translation.trans('messages.pause.footer'));
-
-                    const payload = {
-                        embeds: [{ ...embed, footer: { ...embed.footer, text: note } }],
-                        components: existing.components ?? [],
-                    };
-
-                    await channel.messages.edit(record.messageId, payload);
-                    await models.Message.update(
-                        { contentHash: hashPayload(payload) },
-                        { where: { id: record.id } }
-                    );
-                    marked += 1;
+                    if (outcome.status === 'done' && outcome.value === true) marked += 1;
                 } catch (error) {
                     // A channel we can no longer reach is not worth a stack trace; the update
                     // loop removes such subscriptions on its own next pass.
@@ -225,7 +233,7 @@ export class StatuspagePauseManager {
                         `[PauseManager] Could not mark channel ${subscription.channelId}: ${error.message}`
                     );
                 }
-            }
+            });
         } catch (error) {
             logger.error('[PauseManager] Error marking status messages stale:', error);
         }

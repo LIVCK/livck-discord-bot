@@ -5,6 +5,7 @@ import { handleAlerts } from '../handlers/handleAlerts.js';
 import cache from '../database/redis.js';
 import StatuspagePauseManager from './statuspagePauseManager.js';
 import logger from '../util/logger.js';
+import { queuedDeliveries } from '../util/delivery.js';
 
 /**
  * The update cycle.
@@ -81,7 +82,60 @@ const claim = async (statuspageId) => {
     }
 };
 
-export const INTERVAL = 15 * 1000;
+/**
+ * Time between cycles. 15s in production; the simulation in __tests__/sim runs the real process
+ * with a shorter one so a scenario of many cycles finishes in seconds rather than minutes.
+ */
+export const INTERVAL = Math.max(250, Number(process.env.UPDATE_INTERVAL_MS || 15 * 1000));
+
+/**
+ * How long a cycle waits for one page before it moves on without it.
+ *
+ * The cycle used to wait for its slowest page, and the next cycle is scheduled only when this
+ * one is done — so a single page that took forty minutes stopped every other page for forty
+ * minutes. Every request a page makes has its own timeout now (10s to the status page, 10s per
+ * Discord delivery), so a page should never get here; this is the guarantee for the case where
+ * something without a timeout turns up anyway.
+ *
+ * A page that runs past it is not cancelled. It keeps running, is listed in `active`, and the
+ * cycles that start in the meantime leave it alone until it has finished.
+ */
+const PAGE_DEADLINE_MS = Number(process.env.UPDATE_PAGE_DEADLINE_MS || 20_000);
+
+/** Pages this process is working on right now, by id. */
+const active = new Set();
+
+/** Process a page, or report that it overran the deadline and is still going. */
+const processWithDeadline = (page, client) => {
+    active.add(page.id);
+    const work = processStatuspage(page, client).finally(() => active.delete(page.id));
+
+    let timer;
+    const overrun = new Promise((resolve) => {
+        timer = setTimeout(() => resolve({ overran: true }), PAGE_DEADLINE_MS);
+        timer.unref?.();
+    });
+
+    return Promise.race([work, overrun]).then((result) => {
+        clearTimeout(timer);
+        if (result?.overran) {
+            // Deliveries waiting for a slot (util/delivery.js) mean the bot has more to send
+            // than Discord takes per second: every page is slow, none of them is stuck, and the
+            // cycle line says how many are waiting. A warning per page would blame each one.
+            if (queuedDeliveries() > 0) {
+                logger.debug(`[UpdateLoop] ${page.url} still waiting for Discord after ${PAGE_DEADLINE_MS / 1000}s`);
+                return result;
+            }
+            logger.once(
+                `overrun:${page.id}`, 'warn',
+                `[UpdateLoop] ${page.url} still running after ${PAGE_DEADLINE_MS / 1000}s; continuing without it`
+            );
+        } else {
+            logger.resetOnce(`overrun:${page.id}`);
+        }
+        return result;
+    });
+};
 
 /**
  * Columns the loop needs.
@@ -139,7 +193,7 @@ export const processStatuspage = async (statuspage, client) => {
 /**
  * Process every status page that is due.
  *
- * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, marked: number}>}
+ * @returns {Promise<{due: number, updated: number, skipped: number, failed: number, marked: number, busy: number, overran: number, duration: number}>}
  */
 export const runCycle = async (client) => {
     const now = new Date();
@@ -170,16 +224,20 @@ export const runCycle = async (client) => {
         },
     });
 
-    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, marked: 0 };
+    const startedAt = Date.now();
+    const busy = due.filter((page) => active.has(page.id)).length;
+    const ready = due.filter((page) => !active.has(page.id));
+
+    const summary = { due: due.length, updated: 0, skipped: 0, failed: 0, marked: 0, busy, overran: 0 };
 
     if (due.length === 0) {
         logger.debug('[UpdateLoop] Nothing due');
         return summary;
     }
 
-    for (let i = 0; i < due.length; i += BATCH_SIZE) {
-        const batch = due.slice(i, i + BATCH_SIZE);
-        const results = await Promise.allSettled(batch.map((page) => processStatuspage(page, client)));
+    for (let i = 0; i < ready.length; i += BATCH_SIZE) {
+        const batch = ready.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(batch.map((page) => processWithDeadline(page, client)));
 
         for (const result of results) {
             if (result.status === 'rejected') {
@@ -192,13 +250,23 @@ export const runCycle = async (client) => {
             if (result.value?.skipped) summary.skipped += 1;
             if (result.value?.failed) summary.failed += 1;
             if (result.value?.marked) summary.marked += 1;
+            if (result.value?.overran) summary.overran += 1;
         }
     }
 
+    summary.duration = Date.now() - startedAt;
+
     // One summary line per cycle instead of several lines per statuspage.
+    const extra = [
+        summary.marked > 0 ? `${summary.marked} marked stale` : null,
+        summary.overran > 0 ? `${summary.overran} overran` : null,
+        summary.busy > 0 ? `${summary.busy} still running` : null,
+        queuedDeliveries() > 0 ? `${queuedDeliveries()} deliveries waiting for Discord` : null,
+    ].filter(Boolean).map((part) => ` · ${part}`).join('');
+
     logger.info(
         `[UpdateLoop] ${summary.due} due · ${summary.updated} updated · ${summary.skipped} cached · ` +
-        `${summary.failed} failed${summary.marked > 0 ? ` · ${summary.marked} marked stale` : ''}`
+        `${summary.failed} failed${extra} · ${(summary.duration / 1000).toFixed(1)}s`
     );
 
     return summary;
@@ -207,16 +275,43 @@ export const runCycle = async (client) => {
 /** The timer for the next cycle, so a shutdown can cancel it instead of being killed. */
 let nextCycle = null;
 let stopping = false;
+/** The cycle running right now, so a shutdown can wait for it. */
+let current = null;
+let databaseDown = false;
+
+/** Sequelize's names for "could not reach the database at all", as opposed to a bad query. */
+const isDatabaseUnavailable = (error) =>
+    /^Sequelize(Connection|ConnectionRefused|ConnectionTimedOut|ConnectionAcquireTimeout|HostNotFound|HostNotReachable|InvalidConnection|AccessDenied)Error$/
+        .test(String(error?.name));
 
 /** Run forever, one cycle every INTERVAL. A cycle never brings the process down. */
 export const startUpdateLoop = async (client) => {
     if (stopping) return;
 
     try {
-        await runCycle(client);
+        current = runCycle(client);
+        await current;
+        if (databaseDown) {
+            databaseDown = false;
+            logger.resetOnce('loop:database');
+            logger.info('[UpdateLoop] Database reachable again');
+        }
     } catch (error) {
-        logger.error('[UpdateLoop] Critical error in update loop:', error);
+        if (isDatabaseUnavailable(error)) {
+            // One line for the whole outage. The full Sequelize error is some forty lines of
+            // stack and was printed every cycle, four times a minute, for as long as the
+            // database stayed away; it says nothing the first line does not.
+            databaseDown = true;
+            logger.once(
+                'loop:database', 'error',
+                `[UpdateLoop] Database unavailable (${error.name}: ${error.message}); ` +
+                `trying again every ${INTERVAL / 1000}s`
+            );
+        } else {
+            logger.error('[UpdateLoop] Critical error in update loop:', error);
+        }
     } finally {
+        current = null;
         if (!stopping) {
             nextCycle = setTimeout(() => startUpdateLoop(client), INTERVAL);
         }
@@ -239,4 +334,7 @@ export const stopUpdateLoop = () => {
     }
 };
 
-export default { runCycle, processStatuspage, startUpdateLoop, stopUpdateLoop, INTERVAL };
+/** Resolves when the cycle in flight, if any, is done. */
+export const whenCycleDone = () => (current ? current.then(() => {}, () => {}) : Promise.resolve());
+
+export default { runCycle, processStatuspage, startUpdateLoop, stopUpdateLoop, whenCycleDone, INTERVAL };

@@ -133,6 +133,8 @@ export const nestedGroups = (depth, leaves, { hidesAt = null, status = 'operatio
     return node;
 };
 
+// Every `updates` list below is newest first: that is the order the Cloud API sends, and
+// providers/cloud.js reverses it. A factory in the other order tests the opposite of reality.
 export const cloudIncident = ({
     state = 'investigating',
     severity = 'major',
@@ -151,7 +153,7 @@ export const cloudIncident = ({
         status: INCIDENT_STATES[Math.min(i, INCIDENT_STATES.length - 1)],
         message: { de: `Update ${i + 1}`, en: `Update ${i + 1}` },
         created_at: `2026-09-10T1${i}:00:00+00:00`,
-    })),
+    })).reverse(),
     affected_components: [],
     affected_services: [],
     attachments: [],
@@ -175,7 +177,7 @@ export const cloudMaintenance = ({
         status: MAINTENANCE_STATES[Math.min(i, MAINTENANCE_STATES.length - 1)],
         message: { de: `Wartungs-Update ${i + 1}`, en: `Maintenance update ${i + 1}` },
         created_at: `2026-09-12T0${8 + i}:30:00+00:00`,
-    })),
+    })).reverse(),
     affected_components: [],
     affected_services: [],
 });
@@ -188,7 +190,7 @@ export const cloudNotice = ({ title = { de: 'Hinweis', en: 'Notice' }, updates =
         id: nextId('nu'),
         message: { de: `Hinweis-Update ${i + 1}`, en: `Notice update ${i + 1}` },
         created_at: `2026-09-09T0${9 + i}:00:00+00:00`,
-    })),
+    })).reverse(),
     affected_components: [],
 });
 

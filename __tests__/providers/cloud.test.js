@@ -197,6 +197,34 @@ describe('splitUpdates', () => {
         expect(result.body).toBe('Looking into it');
         expect(result.updates).toEqual([]);
     });
+
+    test('the order holds for what the API actually sends', () => {
+        // Captured from status.emeraldhost.de. Everything above assumes newest first; the
+        // generated corpus and the payload factory had it the other way round for a long time
+        // without a single test noticing, so this pins it to a real answer instead.
+        const incident = load('emeraldhost.incident.json');
+        const { body, updates: rest } = splitUpdates(incident.updates);
+
+        expect(body.de).toMatch(/^Wir untersuchen derzeit/);
+        expect(rest.map((u) => u.state)).toEqual(['identified', 'monitoring', 'resolved']);
+        expect(rest.map((u) => u.createdAt)).toEqual([...rest.map((u) => u.createdAt)].sort());
+    });
+
+    test('the factory and the corpus send the same order as the API', async () => {
+        const { cloudIncident } = await import('../fixtures/payloadFactory.js');
+        const times = (list) => list.map((u) => u.created_at);
+        const newestFirst = (list) => expect(times(list)).toEqual([...times(list)].sort().reverse());
+
+        newestFirst(cloudIncident({ updates: 3 }).updates);
+        for (const file of fs.readdirSync(path.join(FIXTURES, 'corpus')).filter((f) => f.startsWith('cloud-'))) {
+            const payload = load(`corpus/${file}`);
+            // `maintenances` is grouped ({active, upcoming, …}), the others are plain lists.
+            const all = (value) => (Array.isArray(value) ? value : Object.values(value ?? {}).flat());
+            for (const item of [...all(payload.active_incidents), ...all(payload.maintenances), ...all(payload.notices)]) {
+                newestFirst(item.updates ?? []);
+            }
+        }
+    });
 });
 
 describe('toSnapshot against recorded payloads', () => {

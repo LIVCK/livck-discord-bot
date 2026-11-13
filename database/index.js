@@ -3,9 +3,12 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Port and dialect exactly as migrate.js reads them. Hard-coding them here meant a database
+// outside 3306 was migrated fine and then never reached by the bot itself.
 const connection = new Sequelize(process.env.DB_DATABASE, process.env.DB_USERNAME, process.env.DB_PASSWORD, {
     host: process.env.DB_HOST,
-    dialect: 'mariadb',
+    port: Number(process.env.DB_PORT || 3306),
+    dialect: process.env.DB_DIALECT || 'mariadb',
     logging: false,
 });
 connection.authenticate()

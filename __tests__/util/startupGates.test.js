@@ -12,7 +12,7 @@
 
 import { jest } from '@jest/globals';
 import { missingEnv, requireEnv, REQUIRED } from '../../util/env.js';
-import { checkModalSupport, requireModalSupport } from '../../util/discordPatch.js';
+import { checkModalSupport, requireModalSupport } from '../../util/modalSupport.js';
 
 /** Run `fn` with process.exit and the console captured. */
 const withCapturedExit = (fn) => {
@@ -74,9 +74,9 @@ describe('the modal-support gate', () => {
         expect(exited).toBeNull();
     });
 
-    test('when the patch is missing it names the command that fixes it', async () => {
-        // The realistic case is node_modules restored from a build cache, where postinstall
-        // never ran. Simulated by breaking transformComponent for the length of the test.
+    test('on a discord.js that cannot read Labels it says which version is needed', async () => {
+        // The realistic case is an install that does not match the lock file — a downgrade or
+        // a cached node_modules. Simulated by breaking transformComponent for the test.
         const { ModalSubmitInteraction } = await import('discord.js');
         const original = ModalSubmitInteraction.transformComponent;
 
@@ -91,7 +91,8 @@ describe('the modal-support gate', () => {
 
             const { exited, said } = withCapturedExit(() => requireModalSupport());
             expect(exited).toBe(1);
-            expect(said).toContain('scripts/patch-discordjs.js');
+            expect(said).toContain('discord.js 14.23');
+            expect(said).toContain('npm ci');
         } finally {
             ModalSubmitInteraction.transformComponent = original;
         }

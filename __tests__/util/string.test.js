@@ -53,10 +53,12 @@ describe('String Utilities', () => {
       expect(normalizeUrl('demo.status.livck.com')).toBe('https://demo.status.livck.com');
     });
 
-    test('should not include ports in normalized URL', () => {
-      // normalizeUrl only uses hostname, not hostname:port
-      const result = normalizeUrl('https://status.livck.com:8080');
-      expect(result).toBe('https://status.livck.com');
+    test('keeps a port that is not the default, and drops one that is', () => {
+      // It used to drop every port: a page on :8080 was subscribed as a different server.
+      expect(normalizeUrl('https://status.livck.com:8080', true)).toBe('https://status.livck.com:8080');
+      expect(normalizeUrl('http://127.0.0.1:41234/', true)).toBe('http://127.0.0.1:41234');
+      expect(normalizeUrl('https://status.livck.com:443')).toBe('https://status.livck.com');
+      expect(normalizeUrl('http://status.livck.com:80/x')).toBe('http://status.livck.com/x');
     });
 
     test('should handle query params', () => {

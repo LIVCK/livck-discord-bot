@@ -32,12 +32,16 @@ jest.unstable_mockModule('discord.js', () => ({
     },
 }));
 
+// Loading the command files reaches the models, which open a database connection at import
+// time — against whatever database the machine has, and logging after the suite has finished.
+jest.unstable_mockModule('../../models/index.js', () => ({ default: {} }));
+
 // Loading the command files reaches database/redis.js, which builds its URL at import time.
 jest.unstable_mockModule('../../database/redis.js', () => ({
     default: { get: async () => null, set: async () => {}, del: async () => {} },
 }));
 
-jest.unstable_mockModule('../../util/discordPatch.js', () => ({
+jest.unstable_mockModule('../../util/modalSupport.js', () => ({
     requireModalSupport: () => {}, checkModalSupport: () => [], default: {},
 }));
 

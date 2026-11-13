@@ -45,13 +45,14 @@ describe('hashPayload', () => {
 
 /** Minimal stand-ins — the point is which Discord calls happen, not what they return. */
 const makeChannel = () => {
-    const calls = { send: 0, edit: 0, fetch: 0 };
+    const calls = { send: 0, edit: 0, fetch: 0, deleted: [] };
     return {
         calls,
         send: async () => { calls.send += 1; return { id: 'new-message-id' }; },
         messages: {
             edit: async () => { calls.edit += 1; return { id: 'existing' }; },
             fetch: async () => { calls.fetch += 1; return { id: 'existing' }; },
+            delete: async (id) => { calls.deleted.push(id); },
         },
     };
 };
@@ -149,6 +150,119 @@ describe('syncMessage', () => {
         });
 
         expect(result).toBe('updated');
+    });
+
+    test('writes the row down before it posts, and confirms it after', async () => {
+        // A row written only after the POST left nothing behind when the process died in
+        // between; see util/messageSync.js and __tests__/sim/faults.sim.test.js.
+        const channel = makeChannel();
+        const models = makeModels();
+        const order = [];
+        channel.send = async () => { order.push('send'); return { id: 'new-message-id' }; };
+        const create = models.Message.create;
+        models.Message.create = async (row) => { order.push(`create ${row.messageId.split(':')[0]}`); return create(row); };
+
+        await syncMessage({ channel, record: null, payload, models, create: { subscriptionId: 1, category: 'STATUS' } });
+
+        expect(order).toEqual(['create pending', 'send']);
+        expect(models.updated.at(-1).values.messageId).toBe('new-message-id');
+        expect(models.created[0].messageId).toBe('new-message-id');
+    });
+
+    test('a pending row is posted with the nonce it was written with', async () => {
+        const channel = makeChannel();
+        const nonces = [];
+        // Discord hands back the message an earlier attempt made, with that attempt's content.
+        channel.send = async (body) => { nonces.push(body.nonce); return { id: 'm1', content: '', embeds: [{ title: 'Status', description: 'damals' }], components: [] }; };
+        const record = { id: 7, messageId: 'pending:the-nonce-0123456789xyz', contentHash: null };
+
+        await expect(syncMessage({ channel, record, payload, models: makeModels(), create: { subscriptionId: 1, category: 'NEWS', serviceId: 'x' } }))
+            .resolves.toBe('created');
+        expect(nonces).toEqual(['the-nonce-0123456789xyz']);
+        expect(record.messageId).toBe('m1');
+        // Discord may have handed back the message an earlier attempt made, with that attempt's
+        // content: unknown, so the next cycle edits it.
+        expect(record.contentHash).toBeNull();
+        const next = await syncMessage({ channel, record, payload, models: makeModels(), create: {} });
+        expect(next).toBe('updated');
+    });
+
+    test('a pending row whose message already shows the payload is simply confirmed', async () => {
+        const channel = makeChannel();
+        channel.send = async (body) => ({ id: 'm1', content: '', embeds: body.embeds.map((e) => ({ ...e, type: 'rich' })), components: [] });
+        const record = { id: 7, messageId: 'pending:abc', contentHash: null };
+
+        await syncMessage({ channel, record, payload, models: makeModels(), create: {} });
+        expect(record.contentHash).toBe(hashPayload(payload));
+    });
+
+    test('nothing is posted when the row cannot even be written down', async () => {
+        const channel = makeChannel();
+        const models = makeModels();
+        models.Message.create = async () => { throw new Error('database went away'); };
+
+        await expect(syncMessage({ channel, record: null, payload, models, create: {} })).rejects.toThrow('database went away');
+        expect(channel.calls.send).toBe(0);
+    });
+
+    test('takes a new message back when its row cannot be confirmed', async () => {
+        // Posted, then the database refused the confirmation: the row still says pending, and the
+        // message is taken back so the next attempt does not leave two.
+        const channel = makeChannel();
+        const models = makeModels();
+        models.Message.update = async () => { throw new Error('database went away'); };
+
+        await expect(syncMessage({ channel, record: null, payload, models, create: {} }))
+            .rejects.toThrow('database went away');
+
+        expect(channel.calls.send).toBe(1);
+        expect(channel.calls.deleted).toEqual(['new-message-id']);
+    });
+
+    test('still reports the database error when the take-back fails too', async () => {
+        const channel = makeChannel();
+        channel.messages.delete = async () => { throw new Error('discord unreachable'); };
+        const models = makeModels();
+        models.Message.update = async () => { throw new Error('database went away'); };
+
+        await expect(syncMessage({ channel, record: null, payload, models, create: {} }))
+            .rejects.toThrow('database went away');
+    });
+
+    test('a heartbeat refresh is written down, so the next cycle stays quiet', async () => {
+        // The bug this guards came back once already: `record.update({contentHash})` with the
+        // hash it already has is a no-op in Sequelize, updatedAt never moves, and every status
+        // message is edited every fifteen seconds from then on. The record double here behaves
+        // like Sequelize does — an instance update moves nothing that did not change.
+        const channel = makeChannel();
+        const models = makeModels();
+        const record = makeRecord(hashPayload(payload), new Date(Date.now() - 60 * 60 * 1000));
+
+        expect(await syncMessage({ channel, record, payload, models, create: {}, heartbeat: true })).toBe('updated');
+        expect(await syncMessage({ channel, record, payload, models, create: {}, heartbeat: true })).toBe('skipped');
+
+        expect(channel.calls.edit).toBe(1);
+        // Forgotten before the edit, written after it.
+        expect(models.updated.map((u) => u.values.contentHash)).toEqual([null, hashPayload(payload)]);
+    });
+
+    test('an edit whose answer never came is sent again, even when the content went back', async () => {
+        // The page changed, the edit reached Discord, the answer did not; then the page changed
+        // back. Comparing against the old hash said "unchanged", and the channel kept showing
+        // the edit in between. Found by the simulation (__tests__/sim, chaos).
+        const channel = makeChannel();
+        const models = makeModels();
+        const original = { embeds: [{ title: 'Status', description: 'grün' }] };
+        const changed = { embeds: [{ title: 'Status', description: 'rot' }] };
+        const record = makeRecord(hashPayload(original), new Date());
+
+        channel.messages.edit = async () => { throw Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }); };
+        await expect(syncMessage({ channel, record, payload: changed, models, create: {} })).rejects.toThrow('aborted');
+
+        let edits = 0;
+        channel.messages.edit = async () => { edits += 1; return {}; };
+        await expect(syncMessage({ channel, record, payload: original, models, create: {} })).resolves.toBe('updated');
+        expect(edits).toBe(1);
     });
 
     test('a fresh unchanged message is left alone even with heartbeat on', async () => {

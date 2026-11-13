@@ -1,8 +1,9 @@
 /**
  * A brake on removing subscriptions.
  *
- * A channel that answers 10003 (Unknown Channel) or 50001 (Missing Access) is treated as gone
- * for good, and the subscription is deleted. That is right for the case it was written for —
+ * A channel that answers 10003 (Unknown Channel) is treated as gone for good, and the
+ * subscription is deleted. (50001, Missing Access, used to be too; it backs off now, because
+ * the channel is usually still there — see util/messageSync.js.) That is right for the case it was written for —
  * somebody deleted the channel — and it is a customer's configuration, gone for good, with no
  * undo and no record of what it was.
  *
@@ -52,10 +53,26 @@ export const mayReap = () => {
 /** Record a deletion that actually happened. */
 export const recordReap = () => { reaped += 1; };
 
+/**
+ * Ask and count in ONE step: true means this caller may delete one subscription, and that
+ * deletion is already counted.
+ *
+ * `mayReap()` followed by an awaited delete and then `recordReap()` is a check-then-act, and
+ * since deliveries run concurrently it lets through more than the limit: ten channels that
+ * fail at the same moment all ask before any of them has counted. Measured with thirty gone
+ * channels and a limit of 25: thirty subscriptions deleted. The brake exists for exactly the
+ * case where everything fails at once.
+ */
+export const claimReap = () => {
+    if (!mayReap()) return false;
+    reaped += 1;
+    return true;
+};
+
 /** How many have been removed in this run. */
 export const reapCount = () => reaped;
 
 /** Reset. For tests, and for nothing else. */
 export const resetReaper = () => { reaped = 0; announced = false; };
 
-export default { mayReap, recordReap, reapCount, resetReaper, REAP_LIMIT };
+export default { mayReap, recordReap, claimReap, reapCount, resetReaper, REAP_LIMIT };

@@ -1,23 +1,20 @@
 /**
- * The modal path, and the monkey-patch it stands on.
+ * The modal path, and what it needs from discord.js.
  *
- * `/livck subscribe` uses Type 18 (Label) components, which the pinned discord.js does not
- * support, so `scripts/patch-discordjs.js` rewrites two of its files at postinstall. Both are
- * load-bearing, and both used to fail in silence:
+ * `/livck subscribe` uses Type 18 (Label) components. discord.js has read them itself since
+ * 14.23; this bot used to patch two of its files at postinstall instead, and both failures that
+ * patch guarded against still apply to any version that gets Labels wrong:
  *
- *   - Without the transformComponent patch a Label comes back with no customId at all. Every
- *     field is skipped, `url` and `channelId` stay null, and subscribe answers "error" —
- *     for everyone, for ever. Nobody can add a status page.
- *   - Without the ModalSubmitFields patch `interaction.fields.getTextInputValue` throws a
- *     TypeError, breaking the custom-link and API-token modals.
+ *   - transformComponent gives a Label no customId. Every field is skipped, `url` and
+ *     `channelId` stay null, and subscribe answers "error" — for everyone, for ever.
+ *   - ModalSubmitFields cannot find the field, breaking the custom-link and API-token modals.
  *
- * The script warned and exited 0 when it could not find what to rewrite, and node_modules
- * restored from a build cache never runs postinstall at all. Either way `npm install` was
- * green and the bot came up missing its most important command.
+ * Neither fails at startup on its own, so util/modalSupport.js checks and this holds the check
+ * to the installed version.
  */
 
 import { ModalSubmitInteraction } from 'discord.js';
-import { checkModalSupport } from '../../util/discordPatch.js';
+import { checkModalSupport } from '../../util/modalSupport.js';
 
 /** Exactly what Discord sends for the subscribe modal: snake_case, nested under `component`. */
 const RAW_SUBMISSION = [
@@ -48,8 +45,8 @@ const parse = (components) => {
 
 describe('the installed discord.js', () => {
     test('understands the modals this bot builds', () => {
-        // The check the bot runs at startup. If this fails, the patch did not apply — and the
-        // bot would otherwise have started and quietly refused every subscription.
+        // The check the bot runs at startup. If this fails, the installed discord.js cannot read
+        // Labels — and the bot would otherwise have started and quietly refused every subscription.
         expect(checkModalSupport()).toEqual([]);
     });
 
@@ -62,8 +59,8 @@ describe('the installed discord.js', () => {
     });
 
     test('keeps a Label select value readable', () => {
-        // `values` is dropped entirely by the unpatched version, which is how the channel,
-        // language and layout would all be lost while the URL still arrived.
+        // `values` was dropped entirely before 14.23, which is how the channel, language and
+        // layout would all be lost while the URL still arrived.
         const out = ModalSubmitInteraction.transformComponent(RAW_SUBMISSION[1]);
         const inner = out.component ?? out;
 
@@ -71,7 +68,7 @@ describe('the installed discord.js', () => {
     });
 
     test('still handles an ordinary action row', () => {
-        // The custom-link and API-token modals use plain rows; the patch must not break them.
+        // The custom-link and API-token modals use plain rows.
         const out = ModalSubmitInteraction.transformComponent({
             type: 1,
             components: [{ type: 4, custom_id: 'label', value: 'Dokumentation' }],
@@ -95,8 +92,8 @@ describe('parsing a real submission', () => {
         });
     });
 
-    test('and without the patch it would arrive empty — which is the whole point', () => {
-        // discord.js's original implementation, transcribed. A Label has no `components` and
+    test('and on a discord.js without Label support it would arrive empty', () => {
+        // discord.js 14.22's implementation, transcribed. A Label has no `components` and
         // no `custom_id` of its own, so it falls through to the leaf branch and yields
         // `customId: undefined` — the handler then skips every field and replies "error".
         const unpatched = (raw) => (raw.components
