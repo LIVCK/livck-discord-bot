@@ -56,7 +56,9 @@ status pages just as much.
 - **An announcement is never left without its ending after a crash.** The row that remembers a
   message is written before the message is sent, marked pending, and confirmed after. A bot
   killed in between used to leave an announcement no later process knew about; when its incident
-  resolved before the restart, the thread said "investigating" for good.
+  resolved before the restart, the thread said "investigating" for good. A message recovered
+  that way is checked against what it should show, and edited if Discord handed back an older
+  version of it.
 - **A lost answer to an edit can no longer leave a message showing the wrong state.** The stored
   content hash is forgotten before each edit and written again once Discord confirms, so a page
   that changed and then changed back is not mistaken for unchanged.

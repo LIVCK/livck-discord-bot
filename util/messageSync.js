@@ -140,6 +140,29 @@ export const clearPendingNonces = () => {
     reposting.clear();
 };
 
+/**
+ * Does the message Discord returned show what `payload` says? Compared on what a reader sees —
+ * text, embed titles, descriptions, fields, footers, colours, buttons — because Discord adds
+ * fields of its own (`type`, component ids) that a payload never has.
+ */
+const shows = (message, payload) => {
+    const plain = (item) => (item && typeof item.toJSON === 'function' ? item.toJSON() : item?.data ?? item);
+    const strip = (value) => (Array.isArray(value) ? value.map(strip)
+        : value && typeof value === 'object'
+            ? Object.fromEntries(Object.entries(value).filter(([k]) => !['id', 'type', 'timestamp', 'content_scan_version', 'proxy_url', 'proxy_icon_url', 'width', 'height', 'flags'].includes(k)).map(([k, v]) => [k, strip(v)]))
+            : value);
+    const view = (m) => JSON.stringify(strip({
+        content: m.content || '',
+        embeds: (m.embeds ?? []).map(plain),
+        components: (m.components ?? []).map(plain),
+    }));
+    try {
+        return view(message) === view(payload);
+    } catch {
+        return false;
+    }
+};
+
 /** What a row holds in place of a message id while its message may or may not exist yet. */
 export const PENDING = 'pending:';
 
@@ -240,9 +263,14 @@ export const syncMessage = async ({
         // A failure here leaves the row pending: maybe posted, maybe not. The next attempt finds
         // out, with the same nonce.
         const sent = await (send ? send(once, resolved) : resolved.send(once));
+        // A pending row means an earlier attempt may have made the message, and the nonce then
+        // hands back THAT message — with the content it had then, not this payload's. Recording
+        // this payload's hash for it made a stale message look current (the simulation's chaos
+        // found it). Its content is unknown, so the next cycle edits it to what it should be.
+        const confirmed = record && !shows(sent, payload) ? null : hash;
         try {
-            await models.Message.update({ messageId: sent.id, contentHash: hash }, { where: { id: row.id } });
-            Object.assign(row, { messageId: sent.id, contentHash: hash });
+            await models.Message.update({ messageId: sent.id, contentHash: confirmed }, { where: { id: row.id } });
+            Object.assign(row, { messageId: sent.id, contentHash: confirmed });
             pendingNonces.delete(key);
         } catch (error) {
             pendingNonces.delete(key);

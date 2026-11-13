@@ -172,13 +172,28 @@ describe('syncMessage', () => {
     test('a pending row is posted with the nonce it was written with', async () => {
         const channel = makeChannel();
         const nonces = [];
-        channel.send = async (body) => { nonces.push(body.nonce); return { id: 'm1' }; };
+        // Discord hands back the message an earlier attempt made, with that attempt's content.
+        channel.send = async (body) => { nonces.push(body.nonce); return { id: 'm1', content: '', embeds: [{ title: 'Status', description: 'damals' }], components: [] }; };
         const record = { id: 7, messageId: 'pending:the-nonce-0123456789xyz', contentHash: null };
 
         await expect(syncMessage({ channel, record, payload, models: makeModels(), create: { subscriptionId: 1, category: 'NEWS', serviceId: 'x' } }))
             .resolves.toBe('created');
         expect(nonces).toEqual(['the-nonce-0123456789xyz']);
         expect(record.messageId).toBe('m1');
+        // Discord may have handed back the message an earlier attempt made, with that attempt's
+        // content: unknown, so the next cycle edits it.
+        expect(record.contentHash).toBeNull();
+        const next = await syncMessage({ channel, record, payload, models: makeModels(), create: {} });
+        expect(next).toBe('updated');
+    });
+
+    test('a pending row whose message already shows the payload is simply confirmed', async () => {
+        const channel = makeChannel();
+        channel.send = async (body) => ({ id: 'm1', content: '', embeds: body.embeds.map((e) => ({ ...e, type: 'rich' })), components: [] });
+        const record = { id: 7, messageId: 'pending:abc', contentHash: null };
+
+        await syncMessage({ channel, record, payload, models: makeModels(), create: {} });
+        expect(record.contentHash).toBe(hashPayload(payload));
     });
 
     test('nothing is posted when the row cannot even be written down', async () => {
